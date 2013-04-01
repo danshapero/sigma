@@ -53,23 +53,27 @@ subroutine cg_solve(solver,A,x,b)                                          !
     ! local variables
     real(kind(1d0)) :: alpha,beta,dpr,res2
 
-    call A%matvec(x,solver%q)
-    solver%r = b-solver%q
-    solver%p = solver%r
-    res2 = dot_product( solver%r,solver%r )
+    associate( p=>solver%p, q=>solver%q, r=>solver%r, z=>solver%z )
+
+    call A%matvec(x,q)
+    r = b-q
+    p = r
+    res2 = dot_product(r,r)
 
     do while ( dsqrt(res2)>solver%tolerance )
-        call A%matvec(solver%p,solver%q)
-        dpr = dot_product(solver%p,solver%q)
+        call A%matvec(p,q)
+        dpr = dot_product(p,q)
         alpha = res2/dpr
-        x = x+alpha*solver%p
-        solver%r = solver%r-alpha*solver%q
-        dpr = dot_product(solver%r,solver%r)
+        x = x+alpha*p
+        r = r-alpha*q
+        dpr = dot_product(r,r)
         beta = dpr/res2
-        solver%p = solver%r+beta*solver%p
+        p = r+beta*p
         res2 = dpr
         solver%iterations = solver%iterations+1
     enddo
+
+    end associate
 
 end subroutine cg_solve
 
@@ -89,29 +93,33 @@ subroutine cg_subblock_solve(solver,A,x,b,i1,i2)                           !
     real(kind(1d0)) :: alpha,beta,dpr,res2
     integer :: i
 
-    call A%subblock_matvec(x,solver%q,i1,i2,i1,i2)
-    solver%r = b-solver%q
+    associate( p=>solver%p, q=>solver%q, r=>solver%r, z=>solver%z )
+
+    call A%subblock_matvec(x,q,i1,i2,i1,i2)
+    r = b-q
     do i=1,i1-2
-        solver%r(i) = 0.d0
+        r(i) = 0.d0
     enddo
     do i=i2+1,solver%nn
-        solver%r(i) = 0.d0
+        r(i) = 0.d0
     enddo
-    solver%p = solver%r
-    res2 = dot_product(solver%r,solver%r)
+    p = r
+    res2 = dot_product(r,r)
 
     do while ( dsqrt(res2)>solver%tolerance )
-        call A%subblock_matvec(solver%p,solver%q,i1,i2,i1,i2)
-        dpr = dot_product(solver%p,solver%q)
+        call A%subblock_matvec(p,q,i1,i2,i1,i2)
+        dpr = dot_product(p,q)
         alpha = res2/dpr
-        x = x+alpha*solver%p
-        solver%r = solver%r-alpha*solver%q
-        dpr = dot_product(solver%r,solver%r)
+        x = x+alpha*p
+        r = r-alpha*q
+        dpr = dot_product(r,r)
         beta = dpr/res2
-        solver%p = solver%r+beta*solver%p
+        p = r+beta*p
         res2 = dpr
         solver%iterations = solver%iterations+1
     enddo
+
+    end associate
 
 end subroutine cg_subblock_solve
 
@@ -131,26 +139,30 @@ subroutine cg_subset_solve(solver,A,x,b,setlist,set)                       !
     real(kind(1d0)) :: alpha,beta,dpr,res2
     integer :: i
 
-    call A%subset_matvec(x,solver%q,setlist,set,set)
-    solver%r = b-solver%q
+    associate( p=>solver%p, q=>solver%q, r=>solver%r, z=>solver%z )
+
+    call A%subset_matvec(x,q,setlist,set,set)
+    r = b-q
     do i=1,solver%nn
-        if (setlist(i) /= set) solver%r(i) = 0.d0
+        if (setlist(i) /= set) r(i) = 0.d0
     enddo
-    solver%p = solver%r
-    res2 = dot_product(solver%r,solver%r)
+    p = r
+    res2 = dot_product(r,r)
 
     do while ( dsqrt(res2)>solver%tolerance )
-        call A%subset_matvec(solver%p,solver%q,setlist,set,set)
-        dpr = dot_product(solver%p,solver%q)
+        call A%subset_matvec(p,q,setlist,set,set)
+        dpr = dot_product(p,q)
         alpha = res2/dpr
-        x = x+alpha*solver%p
-        solver%r = solver%r-alpha*solver%q
-        dpr = dot_product(solver%r,solver%r)
+        x = x+alpha*p
+        r = r-alpha*q
+        dpr = dot_product(r,r)
         beta = dpr/res2
-        solver%p = solver%r+beta*solver%p
+        p = r+beta*p
         res2 = dpr
         solver%iterations = solver%iterations+1
     enddo
+
+    end associate
 
 end subroutine cg_subset_solve
 

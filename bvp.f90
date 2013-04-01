@@ -8,7 +8,6 @@
 program bvp
 
     use mesh_mod
-!    use workspace_mod
     use sparse_matrix_mod
     use csr_matrix_mod
     use iterative_solver_mod
@@ -62,7 +61,11 @@ program bvp
     call assemble(mesh,B)
     call mass_matrix(mesh,B)
 
-!    call A%write_to_file("a")
+    if (trim(modename) == "robin") then
+        call assemble_boundary(mesh,R)
+        call robin_matrix(mesh,R)
+        call A%subset_matrix_add(R)
+    endif
 
 
 
@@ -89,6 +92,11 @@ program bvp
         rcode = nf90_inq_varid(ncid,'u',gid)
         rcode = nf90_get_var(ncid,gid,u)
         rcode = nf90_close(ncid)
+
+        if (trim(modename) == "robin") then
+            call R%matvec(u,z)
+            f = f+z
+        endif
     endif
 
 
@@ -99,11 +107,15 @@ program bvp
     allocate(cg_solver::krylov)
     call krylov%init(mesh%nn,1.0D-8)
 
-    do i=1,A%nrow
-        if ( mesh%bnd(i)/=0 ) f(i) = 0.d0
-    enddo
+    if (trim(modename) == "dirichlet") then
+        do i=1,A%nrow
+            if ( mesh%bnd(i)/=0 ) f(i) = 0.d0
+        enddo
 
-    call krylov%subset_solve(A,u,f,mesh%bnd,0)
+        call krylov%subset_solve(A,u,f,mesh%bnd,0)
+    elseif (trim(modename) == "robin") then
+        call krylov%solve(A,u,f)
+    endif
 
 
 

@@ -18,6 +18,7 @@ contains
     procedure :: matvec => csr_matvec
     procedure :: subblock_matvec => csr_subblock_matvec
     procedure :: subset_matvec => csr_subset_matvec
+    procedure :: subset_matrix_add => csr_subset_matrix_add
     procedure :: write_to_file => csr_write_to_file
 end type csr_matrix
 
@@ -357,6 +358,46 @@ subroutine csr_sub_matrix_add(A,B,C,ierr)                                  !
     enddo
 
 end subroutine csr_sub_matrix_add
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+!==========================================================================!
+!==========================================================================!
+!====== Matrix addition routines                                      =====!
+!==========================================================================!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
+subroutine csr_subset_matrix_add(A,B)                                      !
+!--------------------------------------------------------------------------!
+    implicit none
+    ! input/output variables
+    class (csr_matrix), intent(inout) :: A
+    class (csr_matrix), intent(in) :: B
+    ! local variables
+    integer :: i,j,k
+
+    do i=1,A%nrow
+        do j=A%ia(i),A%ia(i+1)-1
+            do k=B%ia(i),B%ia(i+1)
+                if ( B%ja(k)==A%ja(j) ) A%val(j) = A%val(j)+B%val(k)
+            enddo
+        enddo
+    enddo
+
+end subroutine csr_subset_matrix_add
 
 
 

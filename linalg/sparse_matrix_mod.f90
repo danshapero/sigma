@@ -16,6 +16,7 @@ contains
     procedure(matvec_interface), deferred :: matvec
     procedure(subblock_matvec_interface), deferred :: subblock_matvec
     procedure(subset_matvec_interface), deferred :: subset_matvec
+    procedure(subset_matrix_add_interface), deferred :: subset_matrix_add
     procedure(write_to_file_interface), deferred :: write_to_file
 end type sparse_matrix
 
@@ -86,6 +87,13 @@ subroutine subset_matvec_interface(A,x,y,setlist,set1,set2)
     real(kind(1d0)), intent(inout) :: y(:)
     integer, intent(in) :: setlist(:), set1, set2
 end subroutine subset_matvec_interface
+
+
+subroutine subset_matrix_add_interface(A,B)
+    import :: sparse_matrix
+    class (sparse_matrix), intent(inout) :: A
+    class (sparse_matrix), intent(in) :: B
+end subroutine
 
 
 subroutine write_to_file_interface(A,filename)
