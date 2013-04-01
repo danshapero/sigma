@@ -1,4 +1,4 @@
-module abstract_matrix_mod
+module sparse_matrix_mod
 
 	implicit none
 
@@ -106,4 +106,4 @@ contains
 ! Nothing! This module is just for defining the abstract sparse_matrix type
 
 
-end module abstract_matrix_mod
+end module sparse_matrix_mod

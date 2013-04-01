@@ -1,6 +1,6 @@
 module csr_matrix_mod
 
-    use abstract_matrix_mod
+    use sparse_matrix_mod
 
     implicit none
 

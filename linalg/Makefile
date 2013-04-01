@@ -1,4 +1,4 @@
-OBJECTS = abstract_matrix_mod.o csr_matrix_mod.o linalg_mod.o
+OBJECTS = sparse_matrix_mod.o csr_matrix_mod.o iterative_solver_mod.o cg_solver_mod.o
 DFLAGS = -g -fbounds-check
 
 FC = gfortran

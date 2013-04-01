@@ -8,9 +8,11 @@
 program bvp
 
     use mesh_mod
-    use abstract_matrix_mod
+!    use workspace_mod
+    use sparse_matrix_mod
     use csr_matrix_mod
-    use linalg_mod
+    use iterative_solver_mod
+    use cg_solver_mod
     use fem_mod
     use netcdf
 
@@ -23,10 +25,13 @@ program bvp
     type (tri_mesh) :: mesh
 
     ! stiffness and mass matrices
-    type (csr_matrix) :: A, B, R
+    class (sparse_matrix), allocatable :: A, B, R
 
     ! rhs/solution vectors
     real(kind(1d0)), allocatable :: u(:),f(:),g(:),z(:)
+
+    ! solvers
+    class (iterative_solver), allocatable :: krylov
 
     ! some other locals
     integer :: i,j,k,n
@@ -47,13 +52,17 @@ program bvp
     ! Read the mesh
     call read_mesh(meshname,mesh)
 
+    allocate(csr_matrix::A)
+    allocate(csr_matrix::B)
+    allocate(csr_matrix::R)
+
     call assemble(mesh,A)
     call stiffness_matrix(mesh,A,1.d0)
 
     call assemble(mesh,B)
     call mass_matrix(mesh,B)
 
-    call A%write_to_file("a")
+!    call A%write_to_file("a")
 
 
 
@@ -87,13 +96,14 @@ program bvp
 !--------------------------------------------------------------------------!
 ! Solve for u using the conjugate gradient method                          !
 !--------------------------------------------------------------------------!
-    call allocate_linalg_workarrays( mesh%nn )
+    allocate(cg_solver::krylov)
+    call krylov%init(mesh%nn,1.0D-8)
 
     do i=1,A%nrow
         if ( mesh%bnd(i)/=0 ) f(i) = 0.d0
     enddo
 
-    call subset_cg(A,u,f,1.0D-8,mesh%bnd,0)
+    call krylov%subset_solve(A,u,f,mesh%bnd,0)
 
 
 
