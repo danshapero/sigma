@@ -1,4 +1,4 @@
-OBJECTS = mesh_mod.o linalg/sparse_matrix_mod.o linalg/csr_matrix_mod.o fem_mod.o linalg/iterative_solver_mod.o linalg/cg_solver_mod.o #permutation_mod.o
+OBJECTS = mesh_mod.o linalg/sparse_matrix_mod.o linalg/csr_matrix_mod.o fem_mod.o linalg/iterative_solver_mod.o linalg/cg_solver_mod.o linalg/jacobi_mod.o #permutation_mod.o
 LFLAGS = -lnetcdf -lnetcdff
 IFLAGS = -I/usr/local/include -I./linalg
 DFLAGS = -g -fbounds-check -Wall

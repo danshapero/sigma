@@ -42,7 +42,7 @@ end subroutine cg_init
 
 
 !--------------------------------------------------------------------------!
-subroutine cg_solve(solver,A,x,b)                                          !
+subroutine cg_solve(solver,A,x,b,pc)                                       !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
@@ -50,6 +50,7 @@ subroutine cg_solve(solver,A,x,b)                                          !
     class(sparse_matrix), intent(in) :: A
     real(kind(1d0)), intent(inout) :: x(:)
     real(kind(1d0)), intent(in) :: b(:)
+    class(preconditioner), intent(inout) :: pc
     ! local variables
     real(kind(1d0)) :: alpha,beta,dpr,res2
 
@@ -57,8 +58,9 @@ subroutine cg_solve(solver,A,x,b)                                          !
 
     call A%matvec(x,q)
     r = b-q
-    p = r
-    res2 = dot_product(r,r)
+    call pc%precondition(A,z,r)
+    p = z
+    res2 = dot_product(r,z)
 
     do while ( dsqrt(res2)>solver%tolerance )
         call A%matvec(p,q)
@@ -66,9 +68,10 @@ subroutine cg_solve(solver,A,x,b)                                          !
         alpha = res2/dpr
         x = x+alpha*p
         r = r-alpha*q
-        dpr = dot_product(r,r)
+        call pc%precondition(A,z,r)
+        dpr = dot_product(r,z)
         beta = dpr/res2
-        p = r+beta*p
+        p = z+beta*p
         res2 = dpr
         solver%iterations = solver%iterations+1
     enddo
@@ -80,7 +83,7 @@ end subroutine cg_solve
 
 
 !--------------------------------------------------------------------------!
-subroutine cg_subblock_solve(solver,A,x,b,i1,i2)                           !
+subroutine cg_subblock_solve(solver,A,x,b,pc,i1,i2)                        !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
@@ -88,6 +91,7 @@ subroutine cg_subblock_solve(solver,A,x,b,i1,i2)                           !
     class(sparse_matrix), intent(in) :: A
     real(kind(1d0)), intent(inout) :: x(:)
     real(kind(1d0)), intent(in) :: b(:)
+    class(preconditioner), intent(inout) :: pc
     integer, intent(in) :: i1,i2
     ! local variables
     real(kind(1d0)) :: alpha,beta,dpr,res2
@@ -103,8 +107,9 @@ subroutine cg_subblock_solve(solver,A,x,b,i1,i2)                           !
     do i=i2+1,solver%nn
         r(i) = 0.d0
     enddo
-    p = r
-    res2 = dot_product(r,r)
+    call pc%subblock_precondition(A,z,r,i1,i2)
+    p = z
+    res2 = dot_product(r,z)
 
     do while ( dsqrt(res2)>solver%tolerance )
         call A%subblock_matvec(p,q,i1,i2,i1,i2)
@@ -112,9 +117,10 @@ subroutine cg_subblock_solve(solver,A,x,b,i1,i2)                           !
         alpha = res2/dpr
         x = x+alpha*p
         r = r-alpha*q
-        dpr = dot_product(r,r)
+        call pc%subblock_precondition(A,z,r,i1,i2)
+        dpr = dot_product(r,z)
         beta = dpr/res2
-        p = r+beta*p
+        p = z+beta*p
         res2 = dpr
         solver%iterations = solver%iterations+1
     enddo
@@ -126,7 +132,7 @@ end subroutine cg_subblock_solve
 
 
 !--------------------------------------------------------------------------!
-subroutine cg_subset_solve(solver,A,x,b,setlist,set)                       !
+subroutine cg_subset_solve(solver,A,x,b,pc,setlist,set)                    !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
@@ -134,6 +140,7 @@ subroutine cg_subset_solve(solver,A,x,b,setlist,set)                       !
     class(sparse_matrix), intent(in) :: A
     real(kind(1d0)), intent(inout) :: x(:)
     real(kind(1d0)), intent(in) :: b(:)
+    class(preconditioner), intent(inout) :: pc
     integer, intent(in) :: setlist(:),set
     ! local variables
     real(kind(1d0)) :: alpha,beta,dpr,res2
@@ -146,8 +153,9 @@ subroutine cg_subset_solve(solver,A,x,b,setlist,set)                       !
     do i=1,solver%nn
         if (setlist(i) /= set) r(i) = 0.d0
     enddo
-    p = r
-    res2 = dot_product(r,r)
+    call pc%subset_precondition(A,z,r,setlist,set)
+    p = z
+    res2 = dot_product(r,z)
 
     do while ( dsqrt(res2)>solver%tolerance )
         call A%subset_matvec(p,q,setlist,set,set)
@@ -155,9 +163,10 @@ subroutine cg_subset_solve(solver,A,x,b,setlist,set)                       !
         alpha = res2/dpr
         x = x+alpha*p
         r = r-alpha*q
-        dpr = dot_product(r,r)
+        call pc%subset_precondition(A,z,r,setlist,set)
+        dpr = dot_product(r,z)
         beta = dpr/res2
-        p = r+beta*p
+        p = z+beta*p
         res2 = dpr
         solver%iterations = solver%iterations+1
     enddo

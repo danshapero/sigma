@@ -215,7 +215,7 @@ subroutine csr_add_values(A,rows,cols,values)                              !
     integer, intent(in) :: rows(:),cols(:)
     real(kind(1d0)), intent(in) :: values(size(rows),size(cols))
     ! local variables
-    integer :: i,j,k,l
+    integer :: i,j,k
 
     do j=1,size(cols)
         do i=1,size(rows)
@@ -322,42 +322,6 @@ subroutine csr_subset_matvec(A,x,y,setlist,set1,set2)                      !
     enddo
 
 end subroutine csr_subset_matvec
-
-
-
-!--------------------------------------------------------------------------!
-subroutine csr_sub_matrix_add(A,B,C,ierr)                                  !
-!--------------------------------------------------------------------------!
-    implicit none
-    ! input/output variables
-    class (csr_matrix), intent(in) :: A,B
-    class (csr_matrix), intent(inout) :: C
-    integer, intent(out) :: ierr
-    ! local variables
-    integer :: i,j,k,col
-
-    ierr = 0
-    if ( A%nrow/=B%nrow .or. A%ncol/=B%ncol ) then
-        ierr = 1
-        return
-    endif
-
-    if ( .not.allocated(C%ia) ) then
-        call csr_init_matrix( C,A%nrow,A%ncol,A%nnz,A%ia,A%ja )
-    endif
-
-    do i=1,A%nrow
-        do j=B%ia(i),B%ia(i+1)-1
-            col = B%ja(j)
-            do k=A%ia(i),A%ia(i+1)-1
-                if ( A%ja(k) == col ) then
-                    C%val(k) = A%val(k)+B%val(j)
-                endif
-            enddo
-        enddo
-    enddo
-
-end subroutine csr_sub_matrix_add
 
 
 

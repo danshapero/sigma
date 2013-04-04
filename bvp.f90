@@ -12,6 +12,7 @@ program bvp
     use csr_matrix_mod
     use iterative_solver_mod
     use cg_solver_mod
+    use jacobi_mod
     use fem_mod
     use netcdf
 
@@ -30,7 +31,8 @@ program bvp
     real(kind(1d0)), allocatable :: u(:),f(:),g(:),z(:)
 
     ! solvers
-    class (iterative_solver), allocatable :: krylov
+    class(iterative_solver), allocatable :: krylov
+    class(preconditioner), allocatable :: pc
 
     ! some other locals
     integer :: i,j,k,n
@@ -107,14 +109,16 @@ program bvp
     allocate(cg_solver::krylov)
     call krylov%init(mesh%nn,1.0D-8)
 
+    allocate(jacobi::pc)
+    call pc%init(A,0)
+
     if (trim(modename) == "dirichlet") then
         do i=1,A%nrow
             if ( mesh%bnd(i)/=0 ) f(i) = 0.d0
         enddo
-
-        call krylov%subset_solve(A,u,f,mesh%bnd,0)
+        call krylov%subset_solve(A,u,f,pc,mesh%bnd,0)
     elseif (trim(modename) == "robin") then
-        call krylov%solve(A,u,f)
+        call krylov%solve(A,u,f,pc)
     endif
 
 
