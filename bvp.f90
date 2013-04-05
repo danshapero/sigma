@@ -35,7 +35,7 @@ program bvp
     class(preconditioner), allocatable :: pc
 
     ! some other locals
-    integer :: i,j,k,n
+    integer :: i
 
     ! variables for reading/writing netcdf
     integer :: rcode,ncid,nodesid,fid,gid,uid

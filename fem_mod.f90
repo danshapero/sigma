@@ -17,7 +17,7 @@ subroutine assemble(mesh,A)                                                !
     type (tri_mesh), intent(in) :: mesh
     class (sparse_matrix), intent(inout) :: A
     ! local variables
-    integer :: i,j,lastindex,nn,nl
+    integer :: i,lastindex,nn,nl
     integer, dimension(2) :: edge
     integer, dimension( mesh%nn+2*mesh%nl ) :: rows,cols
 
@@ -57,7 +57,7 @@ subroutine stiffness_matrix(mesh,A,kappa)                                  !
     real(kind(1d0)), intent(in) :: kappa
     class (sparse_matrix), intent(inout) :: A
     ! local variables
-    integer :: i,j,k,n
+    integer :: n
     integer, dimension(3) :: elem
     real(kind(1d0)) :: area
     real(kind(1d0)), dimension(3,3) :: AE
@@ -97,7 +97,7 @@ subroutine mass_matrix(mesh,B)                                             !
     type (tri_mesh), intent(in) :: mesh
     class (sparse_matrix), intent(inout) :: B
     ! local variables
-    integer :: i,j,k,n
+    integer :: i,n
     integer, dimension(3) :: elem
     real(kind(1d0)) :: area
     real(kind(1d0)), dimension(3,3) :: BE
@@ -275,6 +275,8 @@ function gradient(mesh,u,n)                                                !
     integer, dimension(3) :: elem
     real(kind(1d0)) :: dx,det
     real(kind(1d0)), dimension(2,2) :: S,Q
+
+    elem = mesh%elem(:,n)
 
     ! z -> S*z+x_3 maps the reference triangle to the physical triangle
     S(:,1) = mesh%x(:,elem(1))-mesh%x(:,elem(3))

@@ -6,10 +6,12 @@ FC = gfortran
 .PHONY: clean, all
 .SECONDARY:
 
-all: $(OBJECTS)
+lib: $(OBJECTS)
+	ar cru liblinalg.a $(OBJECTS)
+	ranlib liblinalg.a
 
 %.o: %.f90
-	$(FC) -c $<
+	$(FC) -c -fPIC -Wall $<
 
 clean:
 	rm -f *.o *.mod
