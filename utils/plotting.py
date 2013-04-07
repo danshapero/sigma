@@ -23,7 +23,7 @@ from scipy.io.netcdf import NetCDFFile as dataset
 
 
 # Load the mesh files
-nodes = open("meshes/"+sys.argv[1]+".node", "r")
+nodes = open(sys.argv[1]+".node", "r")
 n = int(nodes.readline().split()[0])
 x = np.zeros(n)
 y = np.zeros(n)
@@ -32,7 +32,7 @@ for i in range(n):
 	x[i] = float(line[1])
 	y[i] = float(line[2])
 
-elements = open("meshes/"+sys.argv[1]+".ele", "r")
+elements = open(sys.argv[1]+".ele", "r")
 m = int(elements.readline().split()[0])
 ele = np.zeros((m,3))
 for i in range(m):
