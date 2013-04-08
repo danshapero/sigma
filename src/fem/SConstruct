@@ -1,0 +1,9 @@
+env = Environment(
+    tools=['default','gfortran'],
+    F90='gfortran',
+    LINK='gfortran',
+    F90PATH=['.', '../mesh', '../linalg'])
+
+fem_sources = Split("""fem_mod.f90""")
+
+env.Library('fem',fem_sources, LIBS=['mesh','linalg'], LIBPATH=['../mesh','../linalg'])
