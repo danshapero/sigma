@@ -9,7 +9,7 @@ module jacobi_mod
 
 
 type, extends(preconditioner) :: jacobi
-    real(kind(1d0)), allocatable, private :: diag(:),p(:),q(:)
+    real(kind(1d0)), allocatable, private :: diag(:)
 contains
     procedure :: init => jacobi_init
     procedure :: precondition => jacobi_precondition
@@ -39,7 +39,7 @@ subroutine jacobi_init(pc,A,level)                                         !
     allocate( pc%diag(pc%nn) )
 
     do i=1,A%nrow
-        pc%diag(i) = 1.d0/A%get_value(i,i)
+        pc%diag(i) = A%get_value(i,i)
     enddo
 
 end subroutine jacobi_init
@@ -55,7 +55,7 @@ subroutine jacobi_precondition(pc,A,x,b)                                   !
     real(kind(1d0)), intent(inout) :: x(:)
     real(kind(1d0)), intent(in) :: b(:)
 
-    x = pc%diag*b
+    x = b/pc%diag
 
 end subroutine jacobi_precondition
 
@@ -71,7 +71,7 @@ subroutine jacobi_subblock_precondition(pc,A,x,b,i1,i2)                    !
     real(kind(1d0)), intent(in) :: b(:)
     integer, intent(in) :: i1,i2
 
-    x(i1:i2) = pc%diag(i1:i2)*b(i1:i2)
+    x(i1:i2) = b(i1:i2)/pc%diag(i1:i2)
 
 end subroutine jacobi_subblock_precondition
 
@@ -87,7 +87,7 @@ subroutine jacobi_subset_precondition(pc,A,x,b,setlist,set)                !
     real(kind(1d0)), intent(in) :: b(:)
     integer, intent(in) :: setlist(:),set
 
-    where (setlist == set) x = pc%diag*b
+    where (setlist == set) x = b/pc%diag
 
 end subroutine jacobi_subset_precondition
 
