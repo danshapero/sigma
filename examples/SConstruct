@@ -1,12 +1,16 @@
+#!/usr/bin/env python
+
 env = Environment(
     tools=['default','gfortran'],
     F90='gfortran',
     LINK='gfortran',
-    F90PATH=['.', '../src/linalg', '../src/mesh', '../src/fem', '/usr/local/include'])
+    FORTRANMODDIR='#/include',
+    FORTRANMODDIRPREFIX='-J',
+    F90PATH=['#/include','/usr/local/include'])
 
 bvp_sources = Split("""bvp.f90""")
 
-libsforbvp = Split("""mesh linalg fem netcdf netcdff""")
-libpathforbvp = Split("""../src/mesh ../src/linalg ../src/fem /usr/local/lib""")
+libsforbvp = Split("""linalg mesh fem netcdf netcdff""")
+libpathforbvp = Split("""/usr/local/lib #/src/linalg #/src/mesh #/src/fem""")
 
 env.Program('bvp',bvp_sources, LIBS=libsforbvp, LIBPATH=libpathforbvp)

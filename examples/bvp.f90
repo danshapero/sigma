@@ -77,6 +77,7 @@ program bvp
             print *, '   --rhs <path to right-hand side>                   '
             print *, '   --bnd <path to boundary data>                     '
             print *, '   --bc <type of bc>, robin or dirichlet             '
+            print *, '   --pc <type of preconditioner>, see docs for list  '
             call exit(0)
         end select
     enddo

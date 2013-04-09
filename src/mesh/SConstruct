@@ -1,9 +1,15 @@
+#!/usr/bin/env python
+
 env = Environment(
     tools=['default','gfortran'],
     F90='gfortran',
     LINK='gfortran',
-    F90PATH=['.'])
+    FORTRANMODDIR='#/include',
+    FORTRANMODDIRPREFIX='-J',
+    F90PATH='#/include')
 
 mesh_sources = Split("""mesh_mod.f90""")
 
-env.Library('mesh',mesh_sources)
+meshlib = env.Library('mesh',mesh_sources)
+#env.Alias('install', env.Install('../../lib',meshlib))
+

@@ -1,8 +1,11 @@
-env = Environment(tools=['default','gfortran'],F90='gfortran',LINK='gfortran',F90PATH=['.', 'src/linalg'])
+#!/usr/bin/env python
 
-linalg_sources = Split("""src/linalg/sparse_matrix_mod.f90 
-        src/linalg/csr_matrix_mod.f90 src/linalg/iterative_solver_mod.f90
-        src/linalg/cg_solver_mod.f90 src/linalg/nullpc_mod.f90
-        src/linalg/jacobi_mod.f90""")
+env = Environment(
+    tools=['default','gfortran'],
+    F90='gfortran',
+    LINK='gfortran',
+    FORTRANMODDIR='include',
+    FORTRANMODDIRPREFIX='-J',
+    F90PATH='include')
 
-env.SharedLibrary('linalg',linalg_sources)
+env.SConscript(['src/linalg/SConstruct', 'src/mesh/SConstruct', 'src/fem/SConstruct','examples/SConstruct'])
