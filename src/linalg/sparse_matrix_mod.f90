@@ -6,7 +6,7 @@ module sparse_matrix_mod
 
 type, abstract :: sparse_matrix
     integer :: nrow,ncol,nnz,max_degree
-    logical :: symmetric,pos_def,m_matrix,diagonally_dominant
+    logical :: symmetric,pos_def,m_matrix,diag_dominant
 contains
     procedure(init_matrix_interface), deferred :: init_matrix
     procedure(get_value_interface), deferred :: get_value

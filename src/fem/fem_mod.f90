@@ -80,6 +80,10 @@ subroutine stiffness_matrix(mesh,A,kappa)                                  !
 
     enddo
 
+    A%pos_def = .true.
+    A%symmetric = .true.
+    A%diagonally_dominant = .true.
+
 end subroutine stiffness_matrix
 
 
@@ -117,6 +121,10 @@ subroutine mass_matrix(mesh,B)                                             !
         call B%add_values(elem,elem,BE)
 
     enddo
+
+    B%pos_def = .true.
+    B%symmetric = .true.
+    B%diagonally_dominant = .true.
 
 end subroutine mass_matrix
 
@@ -251,6 +259,10 @@ subroutine robin_matrix(mesh,R)                                            !
             call R%add_values(edge,edge,RE)
         endif
     enddo
+
+    R%pos_def = .true.
+    R%symmetric = .true.
+    R%diagonally_dominant = .true.
 
 end subroutine robin_matrix
 

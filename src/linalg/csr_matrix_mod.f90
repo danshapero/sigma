@@ -361,6 +361,10 @@ subroutine csr_subset_matrix_add(A,B)                                      !
         enddo
     enddo
 
+    A%symmetric = A%symmetric .and. B%symmetric
+    A%pos_def = A%pos_def .and. B%pos_def
+    A%diag_dominant = A%diag_dominant .and. B%diag_dominant
+
 end subroutine csr_subset_matrix_add
 
 

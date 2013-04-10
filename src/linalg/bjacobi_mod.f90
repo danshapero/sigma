@@ -1,6 +1,6 @@
 module bjacobi_mod
 
-    use sparse_matrix
+    use sparse_matrix_mod
     use iterative_solver_mod
 
     implicit none
@@ -10,7 +10,7 @@ module bjacobi_mod
 
 type, extends(preconditioner) :: bjacobi
     real(kind(1d0)), allocatable, private :: diag(:,:,:)
-    integer, allocatable, private :: ipiv(:,:)
+!    integer, allocatable, private :: ipiv(:,:)
     integer, private :: num_blocks
 contains
     procedure :: init => bjacobi_init
@@ -35,30 +35,22 @@ subroutine bjacobi_init(pc,A,level)                                        !
     class(sparse_matrix), intent(in) :: A
     integer, intent(in) :: level
     ! local variables
-    integer :: i,n,start,finish
+    integer :: i,n,start,finish,rows(pc%level)
 
     pc%nn = A%nrow
     pc%level = level
     pc%num_blocks = ceiling( pc%nn/real(level) )
     allocate( pc%diag(level,level,pc%num_blocks) )
-    if (A%pos_def) then
-        dns_solve => chol_dns_solve
-    else
-        allocate( ipiv(level,pc%num_blocks) )
-        dns_solve => lu_dns_solve
-    endif
-
+ 
     do i=1,pc%num_blocks
         start = level*(i-1)+1
         finish = min(level*i,pc%nn)
         n = finish-start+1
-        pc%diag(1:n,1:n,i) = A%get_values( start:finish, start:finish )
+        rows(1:n) = [start,finish]
+        pc%diag(1:n,1:n,i) = A%get_values( rows(1:n), rows(1:n) )
 
-        if (A%pos_def) then
-            call dpotrf('L',n,pc%diag(1:n,1:n,i),n,n)
-        else
-            call dgetrf(n,n,pc%diag(1:n,1:n,i),n,ipiv(1:n,i),n)
-        endif
+        call dpotrf('L',n,pc%diag(1:n,1:n,i),n,n)
+
     enddo
 
 end subroutine bjacobi_init
@@ -79,24 +71,92 @@ subroutine bjacobi_precondition(pc,A,x,b)                                  !
 
     x = b
 
-    if (A%pos_def) then
-        do i=1,pc%num_blocks
-            start = pc%level*(i-1)+1
-            finish = min(pc%level*i,pc%nn)
-            n = finish-start+1
-            call dpotrs('L',n,1,pc%diag(1:n,1:n,i),n,x(start:finish),n,info)
-        enddo
-    else
-        do i=1,pc%num_blocks
-            start = pc%level*(i-1)+1
-            finish = min(pc%level*i,pc%nn)
-            n = finish-start+1
-            call dgetrs('N',n,1,pc%diag(1:n,1:n,i),n,pc%ipiv(1:n,i), &
-                & x(start:finish),n,info)
-        enddo
-    endif
+    do i=1,pc%num_blocks
+        start = pc%level*(i-1)+1
+        finish = min(pc%level*i,pc%nn)
+        n = finish-start+1
+        call dpotrs('L',n,1,pc%diag(1:n,1:n,i),n,x(start:finish),n,info)
+    enddo
 
 end subroutine bjacobi_precondition
+
+
+
+!--------------------------------------------------------------------------!
+subroutine bjacobi_subblock_precondition(pc,A,x,b,i1,i2)                   !
+!--------------------------------------------------------------------------!
+    implicit none
+    ! input/output variables
+    class(bjacobi), intent(inout) :: pc
+    class(sparse_matrix), intent(in) :: A
+    real(kind(1d0)), intent(inout) :: x(:)
+    real(kind(1d0)), intent(in) :: b(:)
+    integer, intent(in) :: i1,i2
+    ! local variables
+    integer :: i,n,start,finish,si,fi,info
+    real(kind(1d0)) :: v(pc%level)
+
+    x = b
+
+    do i=1,pc%num_blocks
+        v = 0.d0
+
+        start = pc%level*(i-1)+1
+        finish = min(pc%level*i,pc%nn)
+        n = finish-start+1
+        si = max(start,i1)-start+1
+        fi = min(finish,i2)-finish+n
+        start = max(start,i1)
+        finish = min(finish,i2)
+
+        v(si:fi) = x(start:finish)
+
+        if (n>0) then
+            call dpotrs('L',n,1,pc%diag(1:n,1:n,i),n,v,n,info)
+            x(start:finish) = v(si:fi)
+        endif
+    enddo
+
+end subroutine bjacobi_subblock_precondition
+
+
+
+!--------------------------------------------------------------------------!
+subroutine bjacobi_subset_precondition(pc,A,x,b,setlist,set)               !
+!--------------------------------------------------------------------------!
+    implicit none
+    ! input/output variables
+    class(bjacobi), intent(inout) :: pc
+    class(sparse_matrix), intent(in) :: A
+    real(kind(1d0)), intent(inout) :: x(:)
+    real(kind(1d0)), intent(in) :: b(:)
+    integer, intent(in) :: setlist(:), set
+    ! local variables
+    integer :: i,j,n,start,finish,info
+    real(kind(1d0)) :: v(pc%level)
+
+    x = b
+
+    do i=1,pc%num_blocks
+        v = 0.d0
+
+        start = pc%level*(i-1)+1
+        finish = min(pc%level*i,pc%nn)
+        n = finish-start+1
+
+        do j=0,n-1
+            if (setlist(start+j) == set) v(1+j) = x(start+j)
+        enddo
+
+        if (n>0) then
+            call dpotrs('L',n,1,pc%diag(1:n,1:n,i),n,v,n,info)
+            do j=0,n-1
+                if (setlist(start+j) == set) x(start+j) = v(1+j)
+            enddo            
+        endif
+    enddo
+
+end subroutine bjacobi_subset_precondition
 
 
 
