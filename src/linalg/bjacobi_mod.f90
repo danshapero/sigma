@@ -1,3 +1,17 @@
+! This module does not work. We need a smarter system for picking out
+! subblocks of the matrix, rather than just taking n x n chunks out in
+! sequence. For example, do a breadth-first search and pick out n x n
+! clusters which are then more likely to be connected.
+
+
+
+
+
+
+
+
+
+
 module bjacobi_mod
 
     use sparse_matrix_mod
@@ -35,21 +49,26 @@ subroutine bjacobi_init(pc,A,level)                                        !
     class(sparse_matrix), intent(in) :: A
     integer, intent(in) :: level
     ! local variables
-    integer :: i,n,start,finish,rows(pc%level)
+    integer :: i,j,n,info,start,finish,rows(level)
 
     pc%nn = A%nrow
     pc%level = level
     pc%num_blocks = ceiling( pc%nn/real(level) )
+
     allocate( pc%diag(level,level,pc%num_blocks) )
+    pc%diag = 0.d0
  
     do i=1,pc%num_blocks
         start = level*(i-1)+1
         finish = min(level*i,pc%nn)
         n = finish-start+1
-        rows(1:n) = [start,finish]
+        do j=1,n
+            rows(j) = start+j-1
+        enddo
         pc%diag(1:n,1:n,i) = A%get_values( rows(1:n), rows(1:n) )
 
-        call dpotrf('L',n,pc%diag(1:n,1:n,i),n,n)
+        call dpotrf('L',n,pc%diag(1:n,1:n,i),n,info)
+        if (info/=0) print *, i,info
 
     enddo
 

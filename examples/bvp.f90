@@ -8,12 +8,7 @@
 program bvp
 
     use mesh_mod
-    use sparse_matrix_mod
-    use csr_matrix_mod
-    use iterative_solver_mod
-    use cg_solver_mod
-    use jacobi_mod
-    use nullpc_mod
+    use linear_algebra_mod
     use fem_mod
     use netcdf
 
@@ -148,7 +143,9 @@ program bvp
         allocate(jacobi::pc)
     end select
 
-    call pc%init(A,0)
+    call pc%init(A,8)
+
+    print *, 'Done initializing preconditioner!'
 
     if (trim(modename) == "dirichlet") then
         do i=1,A%nrow

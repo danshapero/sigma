@@ -355,7 +355,7 @@ subroutine csr_subset_matrix_add(A,B)                                      !
 
     do i=1,A%nrow
         do j=A%ia(i),A%ia(i+1)-1
-            do k=B%ia(i),B%ia(i+1)
+            do k=B%ia(i),B%ia(i+1)-1
                 if ( B%ja(k)==A%ja(j) ) A%val(j) = A%val(j)+B%val(k)
             enddo
         enddo
