@@ -1,18 +1,6 @@
-!--------------------------------------------------------------------------!
-module permutation_mod                                                     !
-!--------------------------------------------------------------------------!
-! This module contains subroutines for permuting the entries of sparse     !
-! matrices and various sundry matrix reordering procedures, such as the    !
-! reverse Cuthill-McKee, multicolor and independent set orderings.         !
-!--------------------------------------------------------------------------!
-! >> Procedure index                                                       !
-! permute_matrix : permute the entries of a sparse matrix                  !
-! bfs : breadth-first search through a sparse matrix; the BFS ordering is  !
-!       the order in which the nodes were visited                          !
-!--------------------------------------------------------------------------!
+module permutation_mod
 
-    use matrix_mod
-    use mesh_mod
+    use sparse_matrix_mod
 
     implicit none
 
@@ -21,47 +9,7 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine permute_matrix(A,B,permutation)                                 !
-!--------------------------------------------------------------------------!
-! Perform a symmetric permutation of the entries of a sparse_matrix        !
-! Input: a sparse_matrix A, to be permuted                                 !
-!        an integer array permutation of length equal to the dimension of  !
-!        A; permutation(i) is the destination of node i in the new order   !
-! Output: a sparse_matrix B, containing the permuted A                     !
-!--------------------------------------------------------------------------!
-    implicit none
-    ! local variables
-    type (sparse_matrix), intent(in) :: A
-    type (sparse_matrix), intent(out) :: B
-    integer, dimension( A%nn ), intent(in) :: permutation
-    ! input/output variables
-    integer :: i,j,astart,bstart
-    integer, dimension( A%nn ) :: q
-
-    do i=1,A%nn
-        q( permutation(i) ) = i
-    enddo
-
-    if (.not.allocated(B%ia)) B = init_matrix( A%nn,A%nnz )
-    B%ia(1) = 1
-    do i=1,A%nn
-        bstart = B%ia(i)
-        astart = A%ia(q(i))
-        B%ia(i+1) = bstart+A%ia(q(i)+1)-A%ia(q(i))
-        do j=0,B%ia(i+1)-B%ia(i)-1
-            B%ja(bstart+j) = permutation( A%ja(astart+j) )
-            B%val(bstart+j) = A%val(astart+j)
-        enddo
-    enddo
-
-    call sort_ja(B)
-
-end subroutine permute_matrix
-
-
-
-!--------------------------------------------------------------------------!
-subroutine bfs(A,permutation)                                              !
+subroutine bfs(A,p)                                                        !
 !--------------------------------------------------------------------------!
 ! Compute the breadth-first search ordering for the matrix A. This order   !
 ! is useful for problems where one intends to use an incomplete Cholesky   !
@@ -69,36 +17,38 @@ subroutine bfs(A,permutation)                                              !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
-    type (sparse_matrix), intent(in) :: A
-    integer, dimension( A%nn ), intent(out) :: permutation
+    class(sparse_matrix), intent(in) :: A
+    integer, intent(out) :: p(A%nrow)
     ! local variables
-    integer :: i,j,col,next
-    integer, dimension( A%nn ) :: q
+    integer :: i,j,col,next,q(A%nrow),nbrs(A%max_degree)
 
     ! q is an auxiliary array, which is the inverse of the permutation by
     ! the time we're done computing it. Using this array makes for a faster
     ! lookup of whether or not a node has been added to the permutation
     ! than searching through it every time.
     q = 0
-    permutation = 0
+    p = 0
     q(1) = 1
-    permutation(1) = 1
+    p(1) = 1
     next = 1
 
-    do i=1,A%nn
-        do j=A%ia( q(i) ),A%ia( q(i)+1 )-1
-            col = A%ja(j)
-            if (permutation(col) == 0) then
-                next = next+1
-                q(next) = col
-                permutation(col) = next
+    do i=1,A%nrow
+        nbrs = A%get_neighbors( q(i) )
+        do j=1,A%max_degree
+            if (nbrs(j)/=0) then
+                if ( p(nbrs(j))==0 .and. nbrs(j)/=i ) then
+                    next = next+1
+                    q(next) = nbrs(j)
+                    p( nbrs(j) ) = next
+                endif
             endif
         enddo
+
     enddo
 
-    ! Reverse the order of the permutation. Can't remember why I do this
-    do i=1,A%nn
-        permutation(i) = A%nn-permutation(i)+1
+    ! Reverse the order of the permutation
+    do i=1,A%nrow
+        p(i) = A%nrow-p(i)+1
     enddo
 
 end subroutine bfs
@@ -106,18 +56,58 @@ end subroutine bfs
 
 
 !--------------------------------------------------------------------------!
-subroutine greedy_multicolor(A,permutation,maxcolor)                       !
+subroutine greedy_multicolor(A,p,maxcolor)                                 !
 !--------------------------------------------------------------------------!
 ! Compute a greedy multi-color ordering for the matrix A.                  !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
-    type (sparse_matrix), intent(in) :: A
-    integer, dimension( A%nn ), intent(out) :: permutation
+    class(sparse_matrix), intent(in) :: A
+    integer, intent(out) :: p(A%nrow)
     integer, intent(out) :: maxcolor
     ! local variables
-    integer :: i,j
-    integer, dimension(A%nn) :: color
+    integer :: i,j,clr,colors(A%nrow),nbrs(A%max_degree), &
+        & num_colors(A%max_degree+1)
+
+    nbrs = 0
+    colors = 0
+    maxcolor = 1
+    p = 0
+    p(1) = 1
+
+    do i=1,A%nrow
+        num_colors = 0
+        nbrs = A%get_neighbors(i)
+        do j=1,A%max_degree
+            if (nbrs(j)/=0) then
+                clr = colors(nbrs(j))
+                if (clr/=0) then
+                    num_colors(clr) = num_colors(clr)+1
+                endif
+            endif
+        enddo
+        do clr=A%max_degree+1,1,-1
+            if (num_colors(clr)==0) colors(i) = clr
+        enddo
+    enddo
+    maxcolor = maxval(colors)
+
+    num_colors = 0
+    do i=1,A%nrow
+        clr = colors(i)
+        num_colors(clr) = num_colors(clr)+1
+    enddo
+
+    do i=maxcolor,2,-1
+        num_colors(i) = sum(num_colors(1:i-1))+1
+    enddo
+    num_colors(1) = 1
+
+    do i=1,A%nrow
+        clr = colors(i)
+        p(i) = num_colors(clr)
+        num_colors(clr) = num_colors(clr)+1
+    enddo
 
 
 end subroutine greedy_multicolor

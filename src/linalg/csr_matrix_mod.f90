@@ -13,8 +13,10 @@ contains
     procedure :: init_matrix => csr_init_matrix
     procedure :: get_value => csr_get_value
     procedure :: get_values => csr_get_values
+    procedure :: get_neighbors => csr_get_neighbors
     procedure :: set_value => csr_set_value, add_value => csr_add_value
     procedure :: set_values => csr_set_values, add_values => csr_add_values
+    procedure :: permute => csr_permute
     procedure :: matvec => csr_matvec
     procedure :: subblock_matvec => csr_subblock_matvec
     procedure :: subset_matvec => csr_subset_matvec
@@ -128,7 +130,7 @@ function csr_get_values(A,rows,cols)                                       !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
-    class (csr_matrix), intent(in) :: A
+    class(csr_matrix), intent(in) :: A
     integer, intent(in) :: rows(:),cols(:)
     real(kind(1d0)) :: csr_get_values(size(rows),size(cols))
     ! local variables
@@ -141,7 +143,28 @@ function csr_get_values(A,rows,cols)                                       !
             enddo
         enddo
     enddo
+
 end function csr_get_values
+
+
+
+!--------------------------------------------------------------------------!
+function csr_get_neighbors(A,row)                                          !
+!--------------------------------------------------------------------------!
+    implicit none
+    ! input/output variables
+    class(csr_matrix), intent(in) :: A
+    integer, intent(in) :: row
+    integer :: csr_get_neighbors( A%max_degree )
+    ! local variables
+    integer :: start,finish
+
+    csr_get_neighbors = 0
+    start = A%ia(row)
+    finish = A%ia(row+1)-1
+    csr_get_neighbors(1:finish-start+1 ) = A%ja( start:finish )
+
+end function csr_get_neighbors
 
 
 
@@ -228,6 +251,61 @@ subroutine csr_add_values(A,rows,cols,values)                              !
 end subroutine csr_add_values
 
 
+
+!--------------------------------------------------------------------------!
+subroutine csr_permute(A,p)                                                !
+!--------------------------------------------------------------------------!
+    implicit none
+    ! input/output variables
+    class(csr_matrix), intent(inout) :: A
+    integer, intent(in) :: p(:)
+    ! local variables
+    type(csr_matrix) :: B
+    integer :: i,j,k,n,astart,bstart, q( A%nrow )
+    real(kind(1d0)) :: Aij
+
+    do i=1,A%nrow
+        q( p(i) ) = i
+    enddo
+
+    allocate( B%ia( A%nrow+1 ), B%ja( A%nnz ), B%val( A%nnz ) )
+
+    B%ia = A%ia
+    B%ja = A%ja
+    B%val = A%val
+
+    A%ia = 0
+    A%ja = 0
+    A%val = 0.d0
+
+    A%ia(1) = 1
+    do i=1,A%nrow
+        astart = A%ia(i)
+        bstart = B%ia(q(i))
+        A%ia(i+1) = astart+B%ia(q(i)+1)-B%ia(q(i))
+        do j=0,A%ia(i+1)-A%ia(i)-1
+            A%ja(astart+j) = p( B%ja(bstart+j) )
+            A%val(astart+j) = B%val(bstart+j)
+        enddo
+    enddo
+
+    ! Sort the array ja so that ja(ia(i)),ja(ia(i)+1)-1 are in order
+    do i=1,A%nrow
+        do j=A%ia(i)+1,A%ia(i+1)-1
+            k = j-1
+            n = A%ja(j)
+            Aij = A%val(j)
+            do while( k>=A%ia(i) .and. A%ja(k)>n )
+                A%ja(k+1) = A%ja(k)
+                A%val(k+1) = A%val(k)
+                k = k-1
+            enddo
+            A%ja(k+1) = n
+            A%val(k+1) = Aij
+        enddo
+    enddo
+
+end subroutine csr_permute
 
 
 
