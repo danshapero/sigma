@@ -15,7 +15,7 @@ contains
     procedure :: precondition => jacobi_precondition
     procedure :: subblock_precondition => jacobi_subblock_precondition
     procedure :: subset_precondition => jacobi_subset_precondition
-
+    procedure :: clear => jacobi_clear
 end type jacobi
 
 
@@ -36,7 +36,9 @@ subroutine jacobi_init(pc,A,level)                                         !
 
     pc%nn = A%nrow
     pc%level = level
-    allocate( pc%diag(pc%nn) )
+    if (.not.allocated(pc%diag)) then
+        allocate( pc%diag(pc%nn) )
+    endif
 
     do i=1,A%nrow
         pc%diag(i) = A%get_value(i,i)
@@ -90,6 +92,19 @@ subroutine jacobi_subset_precondition(pc,A,x,b,setlist,set)                !
     where (setlist == set) x = b/pc%diag
 
 end subroutine jacobi_subset_precondition
+
+
+
+!--------------------------------------------------------------------------!
+subroutine jacobi_clear(pc)                                                !
+!--------------------------------------------------------------------------!
+    implicit none
+    class(jacobi), intent(inout) :: pc
+
+    pc%diag = 0.d0
+    pc%level = 0
+
+end subroutine jacobi_clear
 
 
 

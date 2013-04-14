@@ -15,7 +15,7 @@ contains
     procedure :: precondition => nullpc_precondition
     procedure :: subblock_precondition => nullpc_subblock_precondition
     procedure :: subset_precondition => nullpc_subset_precondition
-
+    procedure :: clear => nullpc_clear
 end type nullpc
 
 
@@ -83,6 +83,18 @@ subroutine nullpc_subset_precondition(pc,A,x,b,setlist,set)                !
     x = b
 
 end subroutine nullpc_subset_precondition
+
+
+
+!--------------------------------------------------------------------------!
+subroutine nullpc_clear(pc)                                                !
+!--------------------------------------------------------------------------!
+    implicit none
+    class(nullpc), intent(inout) :: pc
+
+    ! Do nothing. obviously.
+
+end subroutine nullpc_clear
 
 
 

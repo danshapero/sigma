@@ -31,7 +31,7 @@ contains
     procedure :: precondition => bjacobi_precondition
     procedure :: subblock_precondition => bjacobi_subblock_precondition
     procedure :: subset_precondition => bjacobi_subset_precondition
-
+    procedure :: clear => bjacobi_clear
 end type bjacobi
 
 
@@ -55,7 +55,9 @@ subroutine bjacobi_init(pc,A,level)                                        !
     pc%level = level
     pc%num_blocks = ceiling( pc%nn/real(level) )
 
-    allocate( pc%diag(level,level,pc%num_blocks) )
+    if (.not.allocated(pc%diag)) then
+        allocate( pc%diag(level,level,pc%num_blocks) )
+    endif
     pc%diag = 0.d0
  
     do i=1,pc%num_blocks
@@ -176,6 +178,21 @@ subroutine bjacobi_subset_precondition(pc,A,x,b,setlist,set)               !
     enddo
 
 end subroutine bjacobi_subset_precondition
+
+
+
+!--------------------------------------------------------------------------!
+subroutine bjacobi_clear(pc)                                               !
+!--------------------------------------------------------------------------!
+    implicit none
+    class(bjacobi), intent(inout) :: pc
+
+    pc%level = 0
+    pc%diag = 0.d0
+
+end subroutine bjacobi_clear
+
+
 
 
 

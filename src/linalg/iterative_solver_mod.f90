@@ -31,6 +31,7 @@ contains
     procedure(precondition_interface), deferred :: precondition
     procedure(subblock_precondition_interface), deferred :: subblock_precondition
     procedure(subset_precondition_interface), deferred :: subset_precondition
+    procedure(preconditioner_clear_interface), deferred :: clear
 end type preconditioner
 
 
@@ -118,6 +119,11 @@ subroutine subset_precondition_interface(pc,A,x,b,setlist,set)
     real(kind(1d0)), intent(in) :: b(:)
     integer, intent(in) :: setlist(:), set
 end subroutine subset_precondition_interface
+
+subroutine preconditioner_clear_interface(pc)
+    import :: preconditioner
+    class(preconditioner), intent(inout) :: pc
+end subroutine preconditioner_clear_interface
 
 
 end interface
