@@ -1,27 +1,32 @@
 program poisson
 
     use mesh_mod
-    use matrix_mod
+    use linear_algebra_mod
     use fem_mod
-    use linalg_mod
     use netcdf
 
     implicit none
 
     ! command line arguments
-    character(len=32) :: meshname,solname,rhsname,bndname,modename
+    character(len=32) :: meshname,solname,rhsname,bndname,modename, &
+        & pcname,arg
 
     ! computational mesh
     type (tri_mesh) :: mesh
 
     ! stiffness and mass matrices
-    type (csr_sparse_matrix) :: A, B, R
+    class (sparse_matrix), allocatable :: A, B, R
 
     ! rhs/solution vectors
-    real(kind=8), dimension(:), allocatable :: u,f,g,z
+    real(kind(1d0)), allocatable :: u(:),f(:),g(:),z(:)
 
-    ! some other locals    
-    integer :: i,j,k,n,ierr
+    ! solvers
+    class(iterative_solver), allocatable :: krylov
+    class(preconditioner), allocatable :: pc
+
+    ! some other locals
+    integer :: i,mc
+    integer, allocatable :: p(:),q(:)
 
     ! variables for reading/writing netcdf
     integer :: rcode,ncid,nodesid,fid,gid,uid
@@ -31,36 +36,55 @@ program poisson
 !--------------------------------------------------------------------------!
 ! Read in mesh data                                                        !
 !--------------------------------------------------------------------------!
-    ! Get the command line arguments
-    call getarg(1,meshname)
-    call getarg(2,solname)
-    call getarg(3,rhsname)
-    call getarg(4,bndname)
-    call getarg(5,modename)
+    ! Parse the command line arguments
 
+    rhsname = "none                            "
+    bndname = "none                            "
+    pcname = "none                            "
+
+    do i=1,iargc()
+        call getarg(i,arg)
+
+        select case(trim(arg))
+        case('--out')
+            call getarg(i+1,solname)
+        case('--mesh')
+            call getarg(i+1,meshname)
+        case('--rhs')
+            call getarg(i+1,rhsname)
+        case('--bc')
+            call getarg(i+1,modename)
+        case('--bnd')
+            call getarg(i+1,bndname)
+        case('--pc')
+            call getarg(i+1,pcname)
+        case('--help')
+            print *, 'This program solves boundary value problems for the  '
+            print *, 'Laplace operator with either Dirichlet or Robin      '
+            print *, 'boundary conditions.                                 '
+            print *, 'Arguments:                                           '
+            print *, '   --out <path to output file>                       '
+            print *, '   --mesh <path to mesh>                             '
+            print *, '   --rhs <path to right-hand side>                   '
+            print *, '   --bnd <path to boundary data>                     '
+            print *, '   --bc <type of bc>, robin or dirichlet             '
+            print *, '   --pc <type of preconditioner>, see docs for list  '
+            call exit(0)
+        end select
+    enddo
+           
     ! Read the mesh
     call read_mesh(meshname,mesh)
 
-    print *, 'Hi there!'
+    allocate(csr_matrix::A)
+    allocate(csr_matrix::B)
+    allocate(csr_matrix::R)
 
-    ! Assemble and fill the matrices
-    call init_matrix(A, mesh%nn, mesh%nn, mesh%nn+2*mesh%nl )
     call assemble(mesh,A)
-    call stiffness_matrix(mesh,1.d0,A)
-    call init_matrix(B, mesh%nn, mesh%nn, mesh%nn+2*mesh%nl )
-    B%ia = A%ia
-    B%ja = A%ja
+    call stiffness_matrix(mesh,A,1.d0)
+
+    call assemble(mesh,B)
     call mass_matrix(mesh,B)
-
-    print *, 'Hello again!'
-
-    if (trim(modename) == "robin") then
-        call assemble_boundary(mesh,R)
-        call robin_matrix(mesh,R)
-        call sub_matrix_add(A,R,A,ierr)
-    endif
-
-    print *, 'Salutations!'
 
 
 
@@ -71,8 +95,6 @@ program poisson
     u = 0.d0
     f = 0.d0
     g = 0.d0
-
-    print *, 'Bonjour!'
 
     if (trim(rhsname) /= "none") then
         ! Get the values of the right-hand side from a file
@@ -85,60 +107,29 @@ program poisson
         f = z
     endif
 
-    print *, 'Sup!'
-
     if (trim(bndname) /= "none") then
         rcode = nf90_open(bndname,nf90_nowrite,ncid)
         rcode = nf90_inq_varid(ncid,'u',gid)
         rcode = nf90_get_var(ncid,gid,u)
         rcode = nf90_close(ncid)
 
-        if (trim(modename) == "robin") then
-            call R%matvec(u,z)
-            f = f+z
-        endif
     endif
 
-    print *, 'Yo!'
+    call A%write_to_file("a")
 
 !--------------------------------------------------------------------------!
-! Solve for u using the conjugate gradient method                          !
+! Do some tests n stuff                                                    !
 !--------------------------------------------------------------------------!
-    call allocate_linalg_workarrays( mesh%nn )
 
-    if (trim(modename) == "dirichlet") then
+    allocate(p(A%nrow),q(A%nrow))
 
-        print *, minval(f),maxval(f)
+    call greedy_multicolor(A,p,mc)
 
-        do n=1,A%nrow
-            if ( mesh%bnd(n) /= 0 ) f(n) = 0.d0
-        enddo
+!    do i=1,A%nrow
+!        q( p(i) ) = i
+!    enddo
 
-        print *, 'In Xanadu'
-
-        call subset_cg(A,u,f,1.0E-8,mesh%bnd,0)
-    elseif (trim(modename) == "robin") then
-        call cg(A,u,f,1.0E-8)
-    endif
-
-    print *, minval(u),maxval(u)
-
-!--------------------------------------------------------------------------!
-! Write u to a netcdf file                                                 !
-!--------------------------------------------------------------------------!
-    rcode = nf90_create(trim(solname)//'.nc',nf90_clobber,ncid)
-    rcode = nf90_def_dim(ncid,'nodes',mesh%nn,nodesid)
-    rcode = nf90_def_var(ncid,'u',nf90_double,nodesid,uid)
-    rcode = nf90_enddef(ncid)
-    rcode = nf90_close(ncid)
-    rcode = nf90_open(trim(solname)//'.nc',nf90_write,ncid)
-    rcode = nf90_put_var(ncid,uid,u)
-    rcode = nf90_close(ncid)
-
-
-
-
-
-
+    call A%permute(p)
+    call A%write_to_file("ap")
 
 end program poisson

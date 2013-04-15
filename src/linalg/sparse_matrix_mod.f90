@@ -8,6 +8,7 @@ type, abstract :: sparse_matrix
     integer :: nrow,ncol,nnz,max_degree
     logical :: symmetric,pos_def,m_matrix,diag_dominant
 contains
+    ! Constructor and accessors/mutators
     procedure(init_matrix_interface), deferred :: init_matrix
     procedure(get_value_interface), deferred :: get_value
     procedure(get_values_interface), deferred :: get_values
@@ -15,10 +16,15 @@ contains
     procedure(set_value_interface), deferred :: set_value, add_value
     procedure(set_values_interface), deferred :: set_values, add_values
     procedure(permute_interface), deferred :: permute
+    procedure(subset_matrix_add_interface), deferred :: subset_matrix_add
+    ! matrix multiplication routines
     procedure(matvec_interface), deferred :: matvec
     procedure(subblock_matvec_interface), deferred :: subblock_matvec
     procedure(subset_matvec_interface), deferred :: subset_matvec
-    procedure(subset_matrix_add_interface), deferred :: subset_matrix_add
+    ! forward- and back-solves for triangular systems
+    procedure(trisolve_interface), deferred :: backsolve, forwardsolve
+    ! routines for i/o and validation
+    procedure(convert_to_coo_interface), deferred :: convert_to_coo
     procedure(write_to_file_interface), deferred :: write_to_file
 end type sparse_matrix
 
@@ -80,6 +86,13 @@ subroutine permute_interface(A,p)
 end subroutine permute_interface
 
 
+subroutine subset_matrix_add_interface(A,B)
+    import :: sparse_matrix
+    class(sparse_matrix), intent(inout) :: A
+    class(sparse_matrix), intent(in) :: B
+end subroutine
+
+
 subroutine matvec_interface(A,x,y)
     import :: sparse_matrix
     class(sparse_matrix), intent(in) :: A
@@ -106,10 +119,19 @@ subroutine subset_matvec_interface(A,x,y,setlist,set1,set2)
 end subroutine subset_matvec_interface
 
 
-subroutine subset_matrix_add_interface(A,B)
+subroutine trisolve_interface(A,x,b)
     import :: sparse_matrix
-    class(sparse_matrix), intent(inout) :: A
-    class(sparse_matrix), intent(in) :: B
+    class(sparse_matrix), intent(in) :: A
+    real(kind(1d0)), intent(out) :: x(:)
+    real(kind(1d0)), intent(in) :: b(:)
+end subroutine
+
+
+subroutine convert_to_coo_interface(A,rows,cols,vals)
+    import :: sparse_matrix
+    class(sparse_matrix), intent(in) :: A
+    integer, intent(out) :: rows(:),cols(:)
+    real(kind(1d0)), intent(out) :: vals(:)
 end subroutine
 
 

@@ -1,13 +1,7 @@
 #!/usr/bin/env python
 
-env = Environment(
-    tools=['default','gfortran'],
-    F90='gfortran',
-    LINK='gfortran',
-    F90FLAGS='-fbounds-check -g',
-    FORTRANMODDIR='#/include',
-    FORTRANMODDIRPREFIX='-J',
-    F90PATH='#/include')
+Import('masterEnv')
+env = masterEnv.Clone(F90FLAGS='-fbounds-check -g')
 
 linalg_sources = Split("""sparse_matrix_mod.f90 
                             csr_matrix_mod.f90
@@ -18,6 +12,9 @@ linalg_sources = Split("""sparse_matrix_mod.f90
                             jacobi_mod.f90
                             linear_algebra_mod.f90""")
 
+linalgobjs = env.Object(linalg_sources)
+
 linalglib = env.Library('linalg',linalg_sources)
+
 #env.Alias('install', env.Install('../../lib',linalglib))
 

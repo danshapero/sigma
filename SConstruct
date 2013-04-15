@@ -1,11 +1,14 @@
 #!/usr/bin/env python
+import os, os.path
 
-env = Environment(
+masterEnv = Environment(
     tools=['default','gfortran'],
     F90='gfortran',
     LINK='gfortran',
-    FORTRANMODDIR='include',
+    FORTRANMODDIR='#/include',
     FORTRANMODDIRPREFIX='-J',
-    F90PATH='include')
+    F90PATH=['#/include'])
 
-env.SConscript(['src/linalg/SConstruct', 'src/mesh/SConstruct', 'src/fem/SConstruct','examples/SConstruct'])
+Export('masterEnv')
+
+masterEnv.SConscript(['src/linalg/SConstruct', 'src/mesh/SConstruct', 'src/fem/SConstruct','examples/SConstruct'])

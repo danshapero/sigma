@@ -10,6 +10,7 @@ type, extends(sparse_matrix) :: csr_matrix
     integer, allocatable :: ia(:), ja(:)
     real(kind(1d0)), allocatable :: val(:)
 contains
+    ! Constructor and accessors/mutators
     procedure :: init_matrix => csr_init_matrix
     procedure :: get_value => csr_get_value
     procedure :: get_values => csr_get_values
@@ -17,16 +18,34 @@ contains
     procedure :: set_value => csr_set_value, add_value => csr_add_value
     procedure :: set_values => csr_set_values, add_values => csr_add_values
     procedure :: permute => csr_permute
+    procedure :: subset_matrix_add => csr_subset_matrix_add
+    ! matrix multiplication routines
     procedure :: matvec => csr_matvec
     procedure :: subblock_matvec => csr_subblock_matvec
     procedure :: subset_matvec => csr_subset_matvec
-    procedure :: subset_matrix_add => csr_subset_matrix_add
+    ! forward- and back-solves for triangular systems
+    procedure :: backsolve => csr_backsolve
+    procedure :: forwardsolve => csr_forwardsolve
+    ! routines for i/o and validation
+    procedure :: convert_to_coo => csr_convert_to_coo
     procedure :: write_to_file => csr_write_to_file
 end type csr_matrix
 
 
 
 contains
+
+
+
+
+
+
+!==========================================================================!
+!==========================================================================!
+!===== Accessors & mutators                                            ====!
+!==========================================================================!
+!==========================================================================!
+
 
 
 !--------------------------------------------------------------------------!
@@ -95,16 +114,6 @@ subroutine csr_init_matrix(A,nrow,ncol,nnz,rows,cols)                      !
 
 end subroutine csr_init_matrix
 
-
-
-
-
-
-!==========================================================================!
-!==========================================================================!
-!===== Accessors & mutators                                            ====!
-!==========================================================================!
-!==========================================================================!
 
 
 !--------------------------------------------------------------------------!
@@ -309,6 +318,36 @@ end subroutine csr_permute
 
 
 
+!--------------------------------------------------------------------------!
+subroutine csr_subset_matrix_add(A,B)                                      !
+!--------------------------------------------------------------------------!
+    implicit none
+    ! input/output variables
+    class (csr_matrix), intent(inout) :: A
+    class (csr_matrix), intent(in) :: B
+    ! local variables
+    integer :: i,j,k
+
+    do i=1,A%nrow
+        do j=A%ia(i),A%ia(i+1)-1
+            do k=B%ia(i),B%ia(i+1)-1
+                if ( B%ja(k)==A%ja(j) ) A%val(j) = A%val(j)+B%val(k)
+            enddo
+        enddo
+    enddo
+
+    A%symmetric = A%symmetric .and. B%symmetric
+    A%pos_def = A%pos_def .and. B%pos_def
+    A%diag_dominant = A%diag_dominant .and. B%diag_dominant
+
+end subroutine csr_subset_matrix_add
+
+
+
+
+
+
+
 
 
 
@@ -403,47 +442,95 @@ end subroutine csr_subset_matvec
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-!==========================================================================!
-!==========================================================================!
-!====== Matrix addition routines                                      =====!
-!==========================================================================!
-!==========================================================================!
-
 !--------------------------------------------------------------------------!
-subroutine csr_subset_matrix_add(A,B)                                      !
+subroutine csr_backsolve(A,x,b)                                            !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
-    class (csr_matrix), intent(inout) :: A
-    class (csr_matrix), intent(in) :: B
+    class(csr_matrix), intent(in) :: A
+    real(kind(1d0)), intent(out) :: x(:)
+    real(kind(1d0)), intent(in) :: b(:)
     ! local variables
-    integer :: i,j,k
+    integer :: i,j
+    real(kind(1d0)) :: Aii,z
+
+    do i=A%nrow,1,-1
+        z = b(i)
+        do j=A%ia(i),A%ia(i+1)-1
+            if (A%ja(j)>i) then
+                z = z-A%val(j)*x(A%ja(j))
+            elseif (A%ja(j)==i) then
+                Aii = A%val(j)
+            endif
+        enddo
+        x(i) = z/Aii
+    enddo
+
+end subroutine csr_backsolve
+
+
+
+!--------------------------------------------------------------------------!
+subroutine csr_forwardsolve(A,x,b)                                         !
+!--------------------------------------------------------------------------!
+    implicit none
+    ! input/output variables
+    class(csr_matrix), intent(in) :: A
+    real(kind(1d0)), intent(out) :: x(:)
+    real(kind(1d0)), intent(in) :: b(:)
+    ! local variables
+    integer :: i,j
+    real(kind(1d0)) :: Aii,z
+
+    do i=1,A%nrow
+        z = b(i)
+        do j=A%ia(i),A%ia(i+1)-1
+            if (A%ja(j)<i) then
+                z = z-A%val(j)*x(A%ja(j))
+            elseif (A%ja(j)==i) then
+                Aii = A%val(j)
+            endif
+        enddo
+        x(i) = z/Aii
+    enddo
+
+end subroutine csr_forwardsolve
+
+
+
+
+
+
+
+
+
+!==========================================================================!
+!==========================================================================!
+!======= i/o and validation routines                                   ====!
+!==========================================================================!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
+subroutine csr_convert_to_coo(A,rows,cols,vals)                            !
+!--------------------------------------------------------------------------!
+    implicit none
+    ! input/output variables
+    class(csr_matrix), intent(in) :: A
+    integer, intent(out) :: rows(:),cols(:)
+    real(kind(1d0)), intent(out) :: vals(:)
+    ! local variables
+    integer :: i,j
 
     do i=1,A%nrow
         do j=A%ia(i),A%ia(i+1)-1
-            do k=B%ia(i),B%ia(i+1)-1
-                if ( B%ja(k)==A%ja(j) ) A%val(j) = A%val(j)+B%val(k)
-            enddo
+            rows(j) = i
         enddo
     enddo
 
-    A%symmetric = A%symmetric .and. B%symmetric
-    A%pos_def = A%pos_def .and. B%pos_def
-    A%diag_dominant = A%diag_dominant .and. B%diag_dominant
+    cols = A%ja
+    vals = A%val
 
-end subroutine csr_subset_matrix_add
+end subroutine csr_convert_to_coo
 
 
 
