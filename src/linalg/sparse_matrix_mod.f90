@@ -32,11 +32,12 @@ end type sparse_matrix
 
 abstract interface
 
-subroutine init_matrix_interface(A,nrow,ncol,nnz,rows,cols)
+subroutine init_matrix_interface(A,nrow,ncol,nnz,rows,cols,vals)
     import :: sparse_matrix
     class(sparse_matrix), intent(inout) :: A
     integer, intent(in) :: nrow,ncol,nnz
-    integer, intent(in), optional :: rows(:), cols(:)
+    integer, intent(in), optional :: rows(:),cols(:)
+    real(kind(1d0)), intent(in), optional :: vals(:)
 end subroutine init_matrix_interface
 
 
@@ -131,7 +132,7 @@ subroutine convert_to_coo_interface(A,rows,cols,vals)
     import :: sparse_matrix
     class(sparse_matrix), intent(in) :: A
     integer, intent(out) :: rows(:),cols(:)
-    real(kind(1d0)), intent(out) :: vals(:)
+    real(kind(1d0)), intent(out), optional :: vals(:)
 end subroutine
 
 

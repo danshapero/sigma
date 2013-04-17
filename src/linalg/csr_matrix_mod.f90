@@ -49,13 +49,14 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine csr_init_matrix(A,nrow,ncol,nnz,rows,cols)                      !
+subroutine csr_init_matrix(A,nrow,ncol,nnz,rows,cols,vals)                 !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
     class (csr_matrix), intent(inout) :: A
     integer, intent(in) :: nrow,ncol,nnz
     integer, intent(in), optional :: rows(:),cols(:)
+    real(kind(1d0)), intent(in), optional :: vals(:)
     ! local variables
     integer :: i,j,k,n,startptr
     integer :: work(nrow)
@@ -109,6 +110,10 @@ subroutine csr_init_matrix(A,nrow,ncol,nnz,rows,cols)                      !
                 A%ja(k+1) = n
             enddo
         enddo
+
+        if (present(vals)) then
+            A%val = vals
+        endif
 
     endif
 
@@ -517,7 +522,7 @@ subroutine csr_convert_to_coo(A,rows,cols,vals)                            !
     ! input/output variables
     class(csr_matrix), intent(in) :: A
     integer, intent(out) :: rows(:),cols(:)
-    real(kind(1d0)), intent(out) :: vals(:)
+    real(kind(1d0)), intent(out), optional :: vals(:)
     ! local variables
     integer :: i,j
 
@@ -528,7 +533,7 @@ subroutine csr_convert_to_coo(A,rows,cols,vals)                            !
     enddo
 
     cols = A%ja
-    vals = A%val
+    if (present(vals)) vals = A%val
 
 end subroutine csr_convert_to_coo
 
