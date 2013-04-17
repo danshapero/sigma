@@ -1,8 +1,8 @@
 module linear_algebra_mod
 
     ! Sparse matrix format modules
-    use csr_matrix_mod
     use sparse_matrix_mod
+    use csr_matrix_mod
 
     ! Permutation module
     use permutation_mod
@@ -19,8 +19,40 @@ module linear_algebra_mod
 
 contains
 
-! This module contains nothing. It is a wrapper which uses all of the other
-! modules, so that we need only include a single module to get all of the
-! linear algebra modules in an application.
+
+!--------------------------------------------------------------------------!
+subroutine solver_setup(solver,pc,solver_name,tol_name,pc_name,pc_level)   !
+!--------------------------------------------------------------------------!
+    implicit none
+    class(iterative_solver), intent(inout), allocatable, optional :: solver
+    class(preconditioner), intent(inout), allocatable, optional :: pc
+    char(len=*), intent(in), optional :: solver_name,tol_name,pc_name, &
+        pc_level
+    ! local variables
+    real(kind(1d0)) :: tolerance
+
+    ! Pick which solver to use
+    if (present(solver)) then
+        select case(trim(solvername))
+            case("cg")
+            allocate(solver::cg)
+        case default
+            ! Need to change this when I actually get a new solver, e.g.
+            ! make it default to GMRES or BiCG or something that will
+            ! actually work for general systems.
+            allocate(solver::cg)
+        end select
+
+        ! Set the solver tolerance; default is 1E-6
+        if (present(tol_name)) then
+            read (tol_name,*) tolerance
+        else
+            tolerance = 1.d-6
+        endif
+    endif
+
+    
+end subroutine solver_setup
+
 
 end module linear_algebra_mod
