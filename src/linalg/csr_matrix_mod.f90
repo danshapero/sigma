@@ -21,8 +21,6 @@ contains
     procedure :: subset_matrix_add => csr_subset_matrix_add
     ! matrix multiplication routines
     procedure :: matvec => csr_matvec
-    procedure :: subblock_matvec => csr_subblock_matvec
-    procedure :: subset_matvec => csr_subset_matvec
     ! forward- and back-solves for triangular systems
     procedure :: backsolve => csr_backsolve
     procedure :: forwardsolve => csr_forwardsolve
@@ -385,65 +383,6 @@ subroutine csr_matvec(A,x,y)                                               !
     enddo
 
 end subroutine csr_matvec
-
-
-
-!--------------------------------------------------------------------------!
-subroutine csr_subblock_matvec(A,x,y,i1,i2,j1,j2)                          !
-!--------------------------------------------------------------------------!
-    implicit none
-    ! input/output variables
-    class (csr_matrix), intent(in) :: A
-    real(kind=8), intent(in) :: x(:)
-    real(kind=8), intent(inout) :: y(:)
-    integer, intent(in) :: i1,i2,j1,j2
-    ! local variables
-    real(kind=8) :: z
-    integer :: i,j,k
-
-    do i=i1,i2
-        z = 0.d0
-        do j=A%ia(i),A%ia(i+1)-1
-            k = A%ja(j)
-            if ( j1<=k .and. k<=j2 ) then
-                z = z+A%val(j)*x(k)
-            endif
-        enddo
-        y(i) = z
-    enddo
-
-end subroutine csr_subblock_matvec
-
-
-
-!--------------------------------------------------------------------------!
-subroutine csr_subset_matvec(A,x,y,setlist,set1,set2)                      !
-!--------------------------------------------------------------------------!
-    implicit none
-    ! input/output variables
-    class (csr_matrix), intent(in) :: A
-    real(kind=8), intent(in) :: x(:)
-    real(kind=8), intent(inout) :: y(:)
-    integer, dimension(:), intent(in) :: setlist
-    integer, intent(in) :: set1,set2
-    ! local variables
-    real(kind=8) :: z
-    integer :: i,j,k
-
-    do i=1,A%nrow
-        if ( setlist(i)==set1 ) then
-            z = 0.d0
-            do j=A%ia(i),A%ia(i+1)-1
-                k = A%ja(j)
-                if ( setlist(k)==set2 ) then
-                    z = z+A%val(j)*x(k)
-                endif
-            enddo
-            y(i) = z
-        endif
-    enddo
-
-end subroutine csr_subset_matvec
 
 
 

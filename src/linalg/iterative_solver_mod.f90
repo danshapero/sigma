@@ -3,6 +3,7 @@ module iterative_solver_mod
     use sparse_matrix_mod
 
     implicit none
+    integer, save :: null_mask(0)
 
 
 !--------------------------------------------------------------------------!
@@ -14,8 +15,6 @@ type, abstract :: iterative_solver
 contains
     procedure(solver_init_interface), deferred :: init
     procedure(solve_interface), deferred :: solve
-    procedure(subblock_solve_interface), deferred :: subblock_solve
-    procedure(subset_solve_interface), deferred :: subset_solve
     procedure(solver_destroy_interface), deferred :: destroy
 end type iterative_solver
 
@@ -29,8 +28,6 @@ type, abstract :: preconditioner
 contains
     procedure(preconditioner_init_interface), deferred :: init
     procedure(precondition_interface), deferred :: precondition
-    procedure(subblock_precondition_interface), deferred :: subblock_precondition
-    procedure(subset_precondition_interface), deferred :: subset_precondition
     procedure(preconditioner_clear_interface), deferred :: clear
 end type preconditioner
 
@@ -50,34 +47,15 @@ subroutine solver_init_interface(solver,nn,tolerance)
     real(kind(1d0)), intent(in) :: tolerance
 end subroutine solver_init_interface
 
-subroutine solve_interface(solver,A,x,b,pc)
+subroutine solve_interface(solver,A,x,b,pc,mask)
     import :: iterative_solver, sparse_matrix, preconditioner
     class(iterative_solver), intent(inout) :: solver
     class(sparse_matrix), intent(in) :: A
     real(kind(1d0)), intent(inout) :: x(:)
     real(kind(1d0)), intent(in) :: b(:)
     class(preconditioner), intent(inout) :: pc
+    integer, intent(in) :: mask(:)
 end subroutine solve_interface
-
-subroutine subblock_solve_interface(solver,A,x,b,pc,i1,i2)
-    import :: iterative_solver, sparse_matrix, preconditioner
-    class(iterative_solver), intent(inout) :: solver
-    class(sparse_matrix), intent(in) :: A
-    real(kind(1d0)), intent(inout) :: x(:)
-    real(kind(1d0)), intent(in) :: b(:)
-    class(preconditioner), intent(inout) :: pc
-    integer, intent(in) :: i1,i2
-end subroutine subblock_solve_interface
-
-subroutine subset_solve_interface(solver,A,x,b,pc,setlist,set)
-    import :: iterative_solver, sparse_matrix, preconditioner
-    class(iterative_solver), intent(inout) :: solver
-    class(sparse_matrix), intent(in) :: A
-    real(kind(1d0)), intent(inout) :: x(:)
-    real(kind(1d0)), intent(in) :: b(:)
-    class(preconditioner), intent(inout) :: pc
-    integer, intent(in) :: setlist(:),set
-end subroutine subset_solve_interface
 
 subroutine solver_destroy_interface(solver)
     import :: iterative_solver
@@ -101,24 +79,6 @@ subroutine precondition_interface(pc,A,x,b)
     real(kind(1d0)), intent(inout) :: x(:)
     real(kind(1d0)), intent(in) :: b(:)
 end subroutine precondition_interface
-
-subroutine subblock_precondition_interface(pc,A,x,b,i1,i2)
-    import :: preconditioner, sparse_matrix
-    class(preconditioner), intent(inout) :: pc
-    class(sparse_matrix), intent(in) :: A
-    real(kind(1d0)), intent(inout) :: x(:)
-    real(kind(1d0)), intent(in) :: b(:)
-    integer, intent(in) :: i1,i2
-end subroutine subblock_precondition_interface
-
-subroutine subset_precondition_interface(pc,A,x,b,setlist,set)
-    import :: preconditioner, sparse_matrix
-    class(preconditioner), intent(inout) :: pc
-    class(sparse_matrix), intent(in) :: A
-    real(kind(1d0)), intent(inout) :: x(:)
-    real(kind(1d0)), intent(in) :: b(:)
-    integer, intent(in) :: setlist(:), set
-end subroutine subset_precondition_interface
 
 subroutine preconditioner_clear_interface(pc)
     import :: preconditioner

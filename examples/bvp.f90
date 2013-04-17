@@ -32,7 +32,8 @@ program bvp
     class(preconditioner), allocatable :: pc
 
     ! some other locals
-    integer :: i
+    integer :: i,next
+    integer, allocatable :: mask(:)
 
     ! variables for reading/writing netcdf
     integer :: rcode,ncid,nodesid,fid,gid,uid
@@ -79,6 +80,19 @@ program bvp
            
     ! Read the mesh
     call read_mesh(meshname,mesh)
+
+    if (trim(modename) == "dirichlet") then
+        allocate(mask(sum(abs(mesh%bnd))))
+        next = 0
+        do i=1,mesh%nn
+            if (mesh%bnd(i)/=0) then
+                next = next+1
+                mask(next) = i
+            endif
+        enddo
+    else
+        mask = null_mask
+    endif
 
     allocate(csr_matrix::A)
     allocate(csr_matrix::B)
@@ -151,10 +165,9 @@ program bvp
         do i=1,A%nrow
             if ( mesh%bnd(i)/=0 ) f(i) = 0.d0
         enddo
-        call krylov%subset_solve(A,u,f,pc,mesh%bnd,0)
-    elseif (trim(modename) == "robin") then
-        call krylov%solve(A,u,f,pc)
     endif
+
+    call krylov%solve(A,u,f,pc,mask)
 
     print *, krylov%iterations
 

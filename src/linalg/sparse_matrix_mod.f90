@@ -19,8 +19,6 @@ contains
     procedure(subset_matrix_add_interface), deferred :: subset_matrix_add
     ! matrix multiplication routines
     procedure(matvec_interface), deferred :: matvec
-    procedure(subblock_matvec_interface), deferred :: subblock_matvec
-    procedure(subset_matvec_interface), deferred :: subset_matvec
     ! forward- and back-solves for triangular systems
     procedure(trisolve_interface), deferred :: backsolve, forwardsolve
     ! routines for i/o and validation
@@ -100,24 +98,6 @@ subroutine matvec_interface(A,x,y)
     real(kind(1d0)), intent(in) :: x(:)
     real(kind(1d0)), intent(out) :: y(:)
 end subroutine matvec_interface
-
-
-subroutine subblock_matvec_interface(A,x,y,i1,i2,j1,j2)
-    import :: sparse_matrix
-    class(sparse_matrix), intent(in) :: A
-    real(kind(1d0)), intent(in) :: x(:)
-    real(kind(1d0)), intent(inout) :: y(:)
-    integer, intent(in) :: i1,i2,j1,j2
-end subroutine subblock_matvec_interface
-
-
-subroutine subset_matvec_interface(A,x,y,setlist,set1,set2)
-    import :: sparse_matrix
-    class(sparse_matrix), intent(in) :: A
-    real(kind(1d0)), intent(in) :: x(:)
-    real(kind(1d0)), intent(inout) :: y(:)
-    integer, intent(in) :: setlist(:), set1, set2
-end subroutine subset_matvec_interface
 
 
 subroutine trisolve_interface(A,x,b)
