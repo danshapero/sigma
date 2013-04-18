@@ -26,21 +26,21 @@ subroutine solver_setup(solver,pc,solver_name,tol_name,pc_name,pc_level)   !
     implicit none
     class(iterative_solver), intent(inout), allocatable, optional :: solver
     class(preconditioner), intent(inout), allocatable, optional :: pc
-    char(len=*), intent(in), optional :: solver_name,tol_name,pc_name, &
-        pc_level
+    character(len=32), intent(in), optional :: solver_name,tol_name, &
+        & pc_name,pc_level
     ! local variables
     real(kind(1d0)) :: tolerance
 
     ! Pick which solver to use
     if (present(solver)) then
-        select case(trim(solvername))
+        select case(trim(solver_name))
             case("cg")
-            allocate(solver::cg)
+            allocate(cg_solver::solver)
         case default
             ! Need to change this when I actually get a new solver, e.g.
             ! make it default to GMRES or BiCG or something that will
             ! actually work for general systems.
-            allocate(solver::cg)
+            allocate(cg_solver::solver)
         end select
 
         ! Set the solver tolerance; default is 1E-6

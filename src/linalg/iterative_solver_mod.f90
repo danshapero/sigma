@@ -72,12 +72,13 @@ subroutine preconditioner_init_interface(pc,A,level)
     integer, intent(in) :: level
 end subroutine preconditioner_init_interface
 
-subroutine precondition_interface(pc,A,x,b)
+subroutine precondition_interface(pc,A,x,b,mask)
     import :: preconditioner, sparse_matrix
     class(preconditioner), intent(inout) :: pc
     class(sparse_matrix), intent(in) :: A
     real(kind(1d0)), intent(inout) :: x(:)
     real(kind(1d0)), intent(in) :: b(:)
+    integer, intent(in) :: mask(:)
 end subroutine precondition_interface
 
 subroutine preconditioner_clear_interface(pc)

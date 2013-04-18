@@ -38,13 +38,14 @@ end subroutine nullpc_init
 
 
 !--------------------------------------------------------------------------!
-subroutine nullpc_precondition(pc,A,x,b)                                   !
+subroutine nullpc_precondition(pc,A,x,b,mask)                              !
 !--------------------------------------------------------------------------!
     implicit none
     class(nullpc), intent(inout) :: pc
     class(sparse_matrix), intent(in) :: A
     real(kind(1d0)), intent(inout) :: x(:)
     real(kind(1d0)), intent(in) :: b(:)
+    integer, intent(in) :: mask(:)
 
     x = b
 

@@ -11,8 +11,6 @@ type, extends(preconditioner) :: ilu
 contains
     procedure :: init => ilu_init
     procedure :: precondition => ilu_precondition
-    procedure :: subblock_precondition => ilu_subblock_precondition
-    procedure :: subset_precondition => ilu_subset_precondition
     procedure :: clear => ilu_clear
 end type ilu
 
@@ -89,10 +87,16 @@ subroutine ilu_precondition(pc,A,x,b)                                      !
     class(sparse_matrix), intent(in) :: A
     real(kind(1d0)), intent(inout) :: x(:)
     real(kind(1d0)), intent(in) :: b(:)
+    integer, intent(in) :: mask(:)
 
-    call LU%forwardsolve(x,b)
+    x = b
+    x(mask) = 0.d0
+
+    call LU%forwardsolve(x)
+    x(mask) = 0.d0
     q = x/D
     call LU%backsolve(x,q)
+    x(mask) = 0.d0
 
 end subroutine ilu_precondition
 

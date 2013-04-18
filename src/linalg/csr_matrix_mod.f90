@@ -363,21 +363,28 @@ end subroutine csr_subset_matrix_add
 
 
 !--------------------------------------------------------------------------!
-subroutine csr_matvec(A,x,y)                                               !
+subroutine csr_matvec(A,x,y,rows,cols)                                     !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
     class (csr_matrix), intent(in) :: A
     real(kind=8), intent(in) :: x(:)
     real(kind=8), intent(out) :: y(:)
+    integer, intent(in), optional :: rows(2),cols(2)
     ! local variables
     real(kind=8) :: z
-    integer :: i,j
+    integer :: i,j,ind,r(2),c(2)
 
-    do i=1,A%nrow
+    r = [1, A%nrow]
+    c = [1, A%ncol]
+    if (present(rows)) r = rows
+    if (present(cols)) c = cols
+
+    do i=r(1),r(2)
         z = 0.d0
-        do j=A%ia(i),A%ia(i+1)-1
-            z = z+A%val(j)*x(A%ja(j))
+        do ind=A%ia(i),A%ia(i+1)-1
+            j = A%ja(ind)
+            if ( c(1)<=j .and. j<=c(2) ) z = z+A%val(ind)*x(j)
         enddo
         y(i) = z
     enddo
@@ -387,19 +394,18 @@ end subroutine csr_matvec
 
 
 !--------------------------------------------------------------------------!
-subroutine csr_backsolve(A,x,b)                                            !
+subroutine csr_backsolve(A,x)                                              !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
     class(csr_matrix), intent(in) :: A
-    real(kind(1d0)), intent(out) :: x(:)
-    real(kind(1d0)), intent(in) :: b(:)
+    real(kind(1d0)), intent(inout) :: x(:)
     ! local variables
     integer :: i,j
     real(kind(1d0)) :: Aii,z
 
     do i=A%nrow,1,-1
-        z = b(i)
+        z = x(i)
         do j=A%ia(i),A%ia(i+1)-1
             if (A%ja(j)>i) then
                 z = z-A%val(j)*x(A%ja(j))
@@ -415,19 +421,18 @@ end subroutine csr_backsolve
 
 
 !--------------------------------------------------------------------------!
-subroutine csr_forwardsolve(A,x,b)                                         !
+subroutine csr_forwardsolve(A,x)                                           !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
     class(csr_matrix), intent(in) :: A
-    real(kind(1d0)), intent(out) :: x(:)
-    real(kind(1d0)), intent(in) :: b(:)
+    real(kind(1d0)), intent(inout) :: x(:)
     ! local variables
     integer :: i,j
     real(kind(1d0)) :: Aii,z
 
     do i=1,A%nrow
-        z = b(i)
+        z = x(i)
         do j=A%ia(i),A%ia(i+1)-1
             if (A%ja(j)<i) then
                 z = z-A%val(j)*x(A%ja(j))

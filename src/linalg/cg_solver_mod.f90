@@ -60,7 +60,7 @@ subroutine cg_solve(solver,A,x,b,pc,mask)                                  !
     call A%matvec(z,q)
     r = b-q
     r(mask) = 0.d0
-    call pc%precondition(A,z,r)
+    call pc%precondition(A,z,r,mask)
     p = z
     res2 = dot_product(r,z)
 
@@ -71,7 +71,7 @@ subroutine cg_solve(solver,A,x,b,pc,mask)                                  !
         alpha = res2/dpr
         x = x+alpha*p
         r = r-alpha*q
-        call pc%precondition(A,z,r)
+        call pc%precondition(A,z,r,mask)
         dpr = dot_product(r,z)
         beta = dpr/res2
         p = z+beta*p

@@ -92,19 +92,19 @@ subroutine subset_matrix_add_interface(A,B)
 end subroutine
 
 
-subroutine matvec_interface(A,x,y)
+subroutine matvec_interface(A,x,y,rows,cols)
     import :: sparse_matrix
     class(sparse_matrix), intent(in) :: A
     real(kind(1d0)), intent(in) :: x(:)
     real(kind(1d0)), intent(out) :: y(:)
+    integer, intent(in), optional :: rows(2),cols(2)
 end subroutine matvec_interface
 
 
-subroutine trisolve_interface(A,x,b)
+subroutine trisolve_interface(A,x)
     import :: sparse_matrix
     class(sparse_matrix), intent(in) :: A
-    real(kind(1d0)), intent(out) :: x(:)
-    real(kind(1d0)), intent(in) :: b(:)
+    real(kind(1d0)), intent(inout) :: x(:)
 end subroutine
 
 

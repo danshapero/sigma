@@ -47,15 +47,17 @@ end subroutine jacobi_init
 
 
 !--------------------------------------------------------------------------!
-subroutine jacobi_precondition(pc,A,x,b)                                   !
+subroutine jacobi_precondition(pc,A,x,b,mask)                              !
 !--------------------------------------------------------------------------!
     implicit none
     class(jacobi), intent(inout) :: pc
     class(sparse_matrix), intent(in) :: A
     real(kind(1d0)), intent(inout) :: x(:)
     real(kind(1d0)), intent(in) :: b(:)
+    integer, intent(in) :: mask(:)
 
     x = b/pc%diag
+    x(mask) = 0.d0
 
 end subroutine jacobi_precondition
 
