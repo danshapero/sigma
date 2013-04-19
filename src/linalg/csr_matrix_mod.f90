@@ -129,6 +129,8 @@ real(kind(1d0)) function csr_get_value(A,i,j) result(value)                !
     ! local variables
     integer :: k
 
+    value = 0.d0
+
     do k=A%ia(i),A%ia(i+1)-1
         if ( A%ja(k) == j ) value = A%val(k)
     enddo
