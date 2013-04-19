@@ -86,6 +86,10 @@ program poisson
     call assemble(mesh,B)
     call mass_matrix(mesh,B)
 
+    call assemble_boundary(mesh,R)
+    call robin_matrix(mesh,R)
+    call A%subset_matrix_add(R)
+
 
 
 !--------------------------------------------------------------------------!
@@ -115,21 +119,24 @@ program poisson
 
     endif
 
-    call A%write_to_file("a")
+
 
 !--------------------------------------------------------------------------!
 ! Do some tests n stuff                                                    !
 !--------------------------------------------------------------------------!
 
-    allocate(p(A%nrow),q(A%nrow))
 
-    call greedy_multicolor(A,p,mc)
-
-!    do i=1,A%nrow
-!        q( p(i) ) = i
-!    enddo
-
+    allocate(p(A%nrow))
+    call bfs(A,p)
     call A%permute(p)
-    call A%write_to_file("ap")
+
+    allocate(ilu::pc)
+
+    call pc%init(A,8)
+
+    select type(pc)
+        type is(ilu)
+            call pc%LU%write_to_file("lu")
+    end select
 
 end program poisson

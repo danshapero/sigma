@@ -14,6 +14,7 @@ module linear_algebra_mod
     ! Preconditioner modules
     use nullpc_mod
     use jacobi_mod
+    use ilu_mod
 
     implicit none
 

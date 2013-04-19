@@ -11,7 +11,7 @@ type, extends(sparse_matrix) :: csr_matrix
     real(kind(1d0)), allocatable :: val(:)
 contains
     ! Constructor and accessors/mutators
-    procedure :: init_matrix => csr_init_matrix
+    procedure :: init => csr_init_matrix
     procedure :: get_value => csr_get_value
     procedure :: get_values => csr_get_values
     procedure :: get_neighbors => csr_get_neighbors
@@ -494,22 +494,19 @@ subroutine csr_write_to_file(A,filename)                                   !
     class (csr_matrix), intent(in) :: A
     character(len=*), intent(in) :: filename
     ! local variables
-    integer :: n
+    integer :: i,j
 
-    open(unit=10,file=trim(filename)//"ia.txt")
-    do n=1,A%nrow+1
-        write(10,*) A%ia(n)
+    open(unit=100,file=trim(filename)//".txt")
+    do i=1,A%nrow
+        write(100,10) i
+10      format(' ',I5,':  ')
+        do j=A%ia(i),A%ia(i+1)-1
+            write(100,20) A%ja(j),A%val(j)
+20          format('     ',I5,':    ',g12.6)
+        enddo
     enddo
     close(10)
 
-    open(unit=20,file=trim(filename)//"ja.txt")
-    open(unit=30,file=trim(filename)//"a.txt")
-    do n=1,A%nnz
-        write(20,*) A%ja(n)
-        write(30,*) A%val(n)
-    enddo
-    close(20)
-    close(30)
 
 end subroutine csr_write_to_file
 

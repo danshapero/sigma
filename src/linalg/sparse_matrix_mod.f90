@@ -9,7 +9,7 @@ type, abstract :: sparse_matrix
     logical :: symmetric,pos_def,m_matrix,diag_dominant
 contains
     ! Constructor and accessors/mutators
-    procedure(init_matrix_interface), deferred :: init_matrix
+    procedure(init_matrix_interface), deferred :: init
     procedure(get_value_interface), deferred :: get_value
     procedure(get_values_interface), deferred :: get_values
     procedure(get_neighbors_interface), deferred :: get_neighbors

@@ -155,6 +155,8 @@ program bvp
         allocate(nullpc::pc)
     case("jacobi")
         allocate(jacobi::pc)
+    case("ilu")
+        allocate(ilu::pc)
     end select
 
     call pc%init(A,8)

@@ -42,7 +42,7 @@ subroutine assemble(mesh,A)                                                !
         lastindex = lastindex+2
     enddo
 
-    call A%init_matrix(nn,nn,nn+2*nl,rows,cols)
+    call A%init(nn,nn,nn+2*nl,rows,cols)
 
 end subroutine assemble
 
@@ -225,7 +225,7 @@ subroutine assemble_boundary(mesh,R)                                       !
         endif
     enddo
 
-    call R%init_matrix( mesh%nn, mesh%nn, nnzr, rows, cols )
+    call R%init( mesh%nn, mesh%nn, nnzr, rows, cols )
     deallocate(rows,cols)
     
 

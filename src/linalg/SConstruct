@@ -10,6 +10,7 @@ linalg_sources = Split("""sparse_matrix_mod.f90
                             cg_solver_mod.f90
                             nullpc_mod.f90
                             jacobi_mod.f90
+                            ilu_mod.f90
                             linear_algebra_mod.f90""")
 
 linalgobjs = env.Object(linalg_sources)
