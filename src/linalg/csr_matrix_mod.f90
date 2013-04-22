@@ -1,6 +1,7 @@
 module csr_matrix_mod
 
     use sparse_matrix_mod
+    use omp_lib
 
     implicit none
 
@@ -333,6 +334,7 @@ subroutine csr_subset_matrix_add(A,B)                                      !
     ! local variables
     integer :: i,j,k
 
+    !$omp parallel do private(j,k)
     do i=1,A%nrow
         do j=A%ia(i),A%ia(i+1)-1
             do k=B%ia(i),B%ia(i+1)-1
@@ -340,6 +342,7 @@ subroutine csr_subset_matrix_add(A,B)                                      !
             enddo
         enddo
     enddo
+    !$omp end parallel do
 
     A%symmetric = A%symmetric .and. B%symmetric
     A%pos_def = A%pos_def .and. B%pos_def
@@ -382,6 +385,7 @@ subroutine csr_matvec(A,x,y,rows,cols)                                     !
     if (present(rows)) r = rows
     if (present(cols)) c = cols
 
+    !$omp parallel do private(ind,j,z)
     do i=r(1),r(2)
         z = 0.d0
         do ind=A%ia(i),A%ia(i+1)-1
@@ -390,6 +394,7 @@ subroutine csr_matvec(A,x,y,rows,cols)                                     !
         enddo
         y(i) = z
     enddo
+    !$omp end parallel do
 
 end subroutine csr_matvec
 

@@ -32,6 +32,16 @@ contains
 end type preconditioner
 
 
+! Null preconditioner
+type, extends(preconditioner) :: nopc
+
+contains
+    procedure :: init => nopc_init
+    procedure :: precondition => nopc_precondition
+    procedure :: clear => nopc_clear
+end type nopc
+
+
 
 !--------------------------------------------------------------------------!
 ! Interfaces for all of solver and preconditioner type-bound procedures    !
@@ -92,7 +102,50 @@ end interface
 
 
 contains
-!-----------------
-! Nothing! This module exists solely to define the iterative_solver type
+
+
+
+!--------------------------------------------------------------------------!
+subroutine nopc_init(pc,A,level)                                           !
+!--------------------------------------------------------------------------!
+    implicit none
+    class(nopc), intent(inout) :: pc
+    class(sparse_matrix), intent(in) :: A
+    integer, intent(in) :: level
+
+    pc%nn = A%nrow
+    pc%level = level
+
+end subroutine nopc_init
+
+
+
+!--------------------------------------------------------------------------!
+subroutine nopc_precondition(pc,A,x,b,mask)                                !
+!--------------------------------------------------------------------------!
+    implicit none
+    class(nopc), intent(inout) :: pc
+    class(sparse_matrix), intent(in) :: A
+    real(kind(1d0)), intent(inout) :: x(:)
+    real(kind(1d0)), intent(in) :: b(:)
+    integer, intent(in) :: mask(:)
+
+    x = b
+
+end subroutine nopc_precondition
+
+
+
+!--------------------------------------------------------------------------!
+subroutine nopc_clear(pc)                                                  !
+!--------------------------------------------------------------------------!
+    implicit none
+    class(nopc), intent(inout) :: pc
+
+    ! Do nothing
+
+end subroutine nopc_clear
+
+
 
 end module iterative_solver_mod

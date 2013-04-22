@@ -12,7 +12,6 @@ module linear_algebra_mod
     use cg_solver_mod
 
     ! Preconditioner modules
-    use nullpc_mod
     use jacobi_mod
     use ilu_mod
 
@@ -22,36 +21,60 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine solver_setup(solver,pc,solver_name,tol_name,pc_name,pc_level)   !
+subroutine solver_setup(A,solver,pc,solver_name,pc_name,tolerance,level)   !
 !--------------------------------------------------------------------------!
     implicit none
-    class(iterative_solver), intent(inout), allocatable, optional :: solver
-    class(preconditioner), intent(inout), allocatable, optional :: pc
-    character(len=32), intent(in), optional :: solver_name,tol_name, &
-        & pc_name,pc_level
+    class(sparse_matrix), intent(in) :: A
+    class(iterative_solver), intent(inout), allocatable :: solver
+    class(preconditioner), intent(inout), allocatable :: pc
+    character(len=32), intent(in), optional :: solver_name,pc_name, &
+        & tolerance,level
     ! local variables
-    real(kind(1d0)) :: tolerance
+    integer :: nn,lev
+    real(kind(1d0)) :: tol
 
-    ! Pick which solver to use
-    if (present(solver)) then
+    ! Pick which solver to use.
+    if (present(solver_name)) then
         select case(trim(solver_name))
             case("cg")
-            allocate(cg_solver::solver)
-        case default
-            ! Need to change this when I actually get a new solver, e.g.
-            ! make it default to GMRES or BiCG or something that will
-            ! actually work for general systems.
-            allocate(cg_solver::solver)
+                allocate(cg_solver::solver)
+            case default
+                ! Need to change this when I actually get a new solver, e.g.
+                ! make it default to GMRES or BiCG or something that will
+                ! actually work for general systems.
+                allocate(cg_solver::solver)
         end select
-
-        ! Set the solver tolerance; default is 1E-6
-        if (present(tol_name)) then
-            read (tol_name,*) tolerance
-        else
-            tolerance = 1.d-6
-        endif
+    else
+        allocate(cg_solver::solver)
     endif
 
+    ! Set the solver tolerance; default is 1E-6
+    if (present(tolerance)) then
+        read (tolerance,*) tol
+    else
+        tol = 1.d-8
+    endif
+
+    call solver%init(A%nrow,tol)
+
+    ! Pick which preconditioner to use.
+    select case(trim(pc_name))
+        case("jacobi")
+            allocate(jacobi::pc)
+            lev = 0
+        case("ilu")
+            allocate(ilu::pc)
+            lev = 0
+        case default
+            allocate(nopc::pc)
+            lev = 0
+    end select
+
+    if (present(level)) then
+        read(level,*) lev
+    endif
+
+    call pc%init(A,lev)
     
 end subroutine solver_setup
 

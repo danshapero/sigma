@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 
 Import('masterEnv')
-env = masterEnv.Clone(F90FLAGS='-fbounds-check -g')
+env = masterEnv.Clone(F90FLAGS='-fbounds-check -g -fopenmp')
 
 linalg_sources = Split("""sparse_matrix_mod.f90 
                             csr_matrix_mod.f90
                             permutation_mod.f90
                             iterative_solver_mod.f90
                             cg_solver_mod.f90
-                            nullpc_mod.f90
                             jacobi_mod.f90
                             ilu_mod.f90
                             linear_algebra_mod.f90""")

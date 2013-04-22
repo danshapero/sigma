@@ -147,19 +147,7 @@ program bvp
 !--------------------------------------------------------------------------!
 ! Solve for u using the conjugate gradient method                          !
 !--------------------------------------------------------------------------!
-    allocate(cg_solver::krylov)
-    call krylov%init(mesh%nn,1.0D-8)
-
-    select case(trim(pcname))
-    case("none")
-        allocate(nullpc::pc)
-    case("jacobi")
-        allocate(jacobi::pc)
-    case("ilu")
-        allocate(ilu::pc)
-    end select
-
-    call pc%init(A,8)
+    call solver_setup(A,krylov,pc,pc_name = pcname)
 
     print *, 'Done initializing preconditioner!'
 
