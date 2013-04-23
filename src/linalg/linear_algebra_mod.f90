@@ -13,6 +13,7 @@ module linear_algebra_mod
 
     ! Preconditioner modules
     use jacobi_mod
+    use bjacobi_mod
     use ilu_mod
 
     implicit none
@@ -58,17 +59,24 @@ subroutine solver_setup(A,solver,pc,solver_name,pc_name,tolerance,level)   !
     call solver%init(A%nrow,tol)
 
     ! Pick which preconditioner to use.
-    select case(trim(pc_name))
-        case("jacobi")
-            allocate(jacobi::pc)
-            lev = 0
-        case("ilu")
-            allocate(ilu::pc)
-            lev = 0
-        case default
-            allocate(nopc::pc)
-            lev = 0
-    end select
+    if (present(pc_name)) then
+        select case(trim(pc_name))
+            case("jacobi")
+                allocate(jacobi::pc)
+                lev = 0
+            case("bjacobi")
+                allocate(bjacobi::pc)
+                lev = 16
+            case("ilu")
+                allocate(ilu::pc)
+                lev = 0
+            case default
+                allocate(nopc::pc)
+                lev = 0
+        end select
+    else
+        allocate(nopc::pc)
+    endif
 
     if (present(level)) then
         read(level,*) lev

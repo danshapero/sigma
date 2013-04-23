@@ -63,8 +63,7 @@ subroutine greedy_multicolor(A,p,maxcolor)                                 !
     implicit none
     ! input/output variables
     class(sparse_matrix), intent(in) :: A
-    integer, intent(out) :: p(A%nrow)
-    integer, intent(out) :: maxcolor
+    integer, intent(out) :: maxcolor,p(A%nrow)
     ! local variables
     integer :: i,j,clr,colors(A%nrow),nbrs(A%max_degree), &
         & num_colors(A%max_degree+1)
@@ -111,6 +110,48 @@ subroutine greedy_multicolor(A,p,maxcolor)                                 !
 
 
 end subroutine greedy_multicolor
+
+
+
+!--------------------------------------------------------------------------!
+subroutine block_multicolor(A,p,blocks)                                    !
+!--------------------------------------------------------------------------!
+    implicit none
+    ! input/output variables
+    class(sparse_matrix), intent(in) :: A
+    integer, intent(out) :: p(:),blocks(:)
+    ! local variables
+    integer :: i,j,k,l,m,n,colors(A%nrow),nbrs(A%max_degree), &
+        & num_colors(A%max_degree+1),next(A%nrow),num_nodes_colored, &
+        & head,tail
+
+    nbrs = 0
+    colors = 0
+    maxcolor = 1
+    p = 0
+    next = 0
+    p(1) = 1
+    head = 1
+    tail = 1
+    num_nodes_colored = 0
+
+    do while(num_nodes_colored < A%nrow)
+        nbrs = A%get_neighbors(head)
+        do i=1,A%max_degree
+            n = nbrs(i)
+            if ( n/=0 .and. n/=head ) then
+                if ( next(n)/=0 ) then
+                    next(tail) = n
+                    tail = n
+                endif
+            endif
+        enddo
+        head = next(head)
+        num_nodes_colored = num_nodes_colored+1
+    enddo
+
+
+end subroutine block_multicolor
 
 
 

@@ -1,17 +1,3 @@
-! This module does not work. We need a smarter system for picking out
-! subblocks of the matrix, rather than just taking n x n chunks out in
-! sequence. For example, do a breadth-first search and pick out n x n
-! clusters which are then more likely to be connected.
-
-
-
-
-
-
-
-
-
-
 module bjacobi_mod
 
     use sparse_matrix_mod
@@ -111,7 +97,6 @@ subroutine bjacobi_clear(pc)                                               !
     implicit none
     class(bjacobi), intent(inout) :: pc
 
-    pc%level = 0
     pc%diag = 0.d0
 
 end subroutine bjacobi_clear

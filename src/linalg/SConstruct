@@ -9,6 +9,7 @@ linalg_sources = Split("""sparse_matrix_mod.f90
                             iterative_solver_mod.f90
                             cg_solver_mod.f90
                             jacobi_mod.f90
+                            bjacobi_mod.f90
                             ilu_mod.f90
                             linear_algebra_mod.f90""")
 

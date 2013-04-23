@@ -121,19 +121,20 @@ end subroutine csr_init_matrix
 
 
 !--------------------------------------------------------------------------!
-real(kind(1d0)) function csr_get_value(A,i,j) result(value)                !
+function csr_get_value(A,i,j)                                              !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
     class (csr_matrix), intent(in) :: A
     integer, intent(in) :: i,j
+    real(kind(1d0)) :: csr_get_value
     ! local variables
     integer :: k
 
-    value = 0.d0
+    csr_get_value = 0.d0
 
     do k=A%ia(i),A%ia(i+1)-1
-        if ( A%ja(k) == j ) value = A%val(k)
+        if ( A%ja(k) == j ) csr_get_value = A%val(k)
     enddo
 
 end function csr_get_value
@@ -150,6 +151,8 @@ function csr_get_values(A,rows,cols)                                       !
     real(kind(1d0)) :: csr_get_values(size(rows),size(cols))
     ! local variables
     integer :: i,j,k
+
+    csr_get_values = 0.d0
 
     do j=1,size(cols)
         do i=1,size(rows)
