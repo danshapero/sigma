@@ -2,12 +2,17 @@ module mesh_mod
 
     implicit none
 
-type tri_mesh
+type :: tri_mesh
     integer :: nn,ne,nl
-    real(kind=8), dimension(:,:), allocatable :: x
-    integer, dimension(:,:), allocatable :: elem,edge,neigh
-    integer, dimension(:), allocatable :: bnd,bnd_edge
+    real(kind=8), allocatable :: x(:,:)
+    integer, allocatable :: elem(:,:),edge(:,:),neigh(:,:), &
+        & bnd(:),bnd_edge(:)
 end type tri_mesh
+
+type, extends(tri_mesh) :: tet_mesh
+    integer :: nf
+    integer, allocatable :: face(:,:)
+end type tet_mesh
 
 
 contains
