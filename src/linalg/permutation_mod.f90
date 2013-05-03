@@ -123,7 +123,7 @@ subroutine block_multicolor(A,p,blocks)                                    !
     ! local variables
     integer :: i,j,k,l,m,n,colors(A%nrow),nbrs(A%max_degree), &
         & num_colors(A%max_degree+1),next(A%nrow),num_nodes_colored, &
-        & head,tail
+        & head,tail,maxcolor
 
     nbrs = 0
     colors = 0

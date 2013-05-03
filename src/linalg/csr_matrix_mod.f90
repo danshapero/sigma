@@ -310,13 +310,12 @@ subroutine csr_permute(A,p)                                                !
     ! Sort the array ja so that ja(ia(i)),ja(ia(i)+1)-1 are in order
     do i=1,A%nrow
         do j=A%ia(i)+1,A%ia(i+1)-1
-            k = j-1
             n = A%ja(j)
             Aij = A%val(j)
-            do while( k>=A%ia(i) .and. A%ja(k)>n )
+            do k=j-1,A%ia(i),-1
+                if (A%ja(k)<=n) exit
                 A%ja(k+1) = A%ja(k)
                 A%val(k+1) = A%val(k)
-                k = k-1
             enddo
             A%ja(k+1) = n
             A%val(k+1) = Aij
@@ -507,12 +506,14 @@ subroutine csr_write_to_file(A,filename)                                   !
     integer :: i,j
 
     open(unit=100,file=trim(filename)//".txt")
+    write(100,1) A%nrow,A%nnz
+1   format(' ',I5,'   ',I5)
     do i=1,A%nrow
         write(100,10) i
-10      format(' ',I5,':  ')
+10      format(' ',I5,'  ')
         do j=A%ia(i),A%ia(i+1)-1
             write(100,20) A%ja(j),A%val(j)
-20          format('     ',I5,':    ',g12.6)
+20          format('     ',I5,'     ',g12.6)
         enddo
     enddo
     close(10)

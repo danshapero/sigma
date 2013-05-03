@@ -4,30 +4,37 @@ import numpy as np
 from scipy.sparse import *
 from scipy import *
 
-ia_file = open(sys.argv[1],"r")
-ja_file = open(sys.argv[2],"r")
-a_file = open(sys.argv[3],"r")
+fid = open(sys.argv[1],"r")
 
-ia = array( map(int, ia_file.readlines() ) )
-ja = array( map(int, ja_file.readlines() ) )
-a = array( map(float, a_file.readlines() ) )
+line = fid.readline().split()
+n = int(line[0])
+nnz = int(line[1])
 
-n = len(ia)-1
-nnz = len(ja)
+rows = np.zeros(nnz,int)
+cols = np.zeros(nnz,int)
+a = np.zeros(nnz)
 
-for i in range(n+1):
-    ia[i] = ia[i]-1
+i = 0
+while True:
+    line = fid.readline().split()
+    if not line: break
+    if len(line)==1:
+        k = int(line[0])
+    else:
+        rows[i] = k
+        cols[i] = int(line[0])
+        a[i] = float(line[1])
+        i = i+1
+
+fid.close()
 
 for i in range(nnz):
-    ja[i] = ja[i]-1
+    rows[i] = rows[i]-1
+    cols[i] = cols[i]-1
 
-ia_file.close()
-ja_file.close()
-a_file.close()
-
-A = csr_matrix( (a,ja,ia) )
+A = coo_matrix( (a,(rows,cols)) )
 
 plt.figure()
 plt.spy(A,marker='.',markersize=0.5)
-plt.savefig(sys.argv[4],dpi=100)
+plt.savefig(sys.argv[2],dpi=100)
 plt.clf()
