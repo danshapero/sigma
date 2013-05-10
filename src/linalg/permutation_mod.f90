@@ -63,37 +63,44 @@ subroutine greedy_multicolor(A,p,maxcolor)                                 !
     implicit none
     ! input/output variables
     class(sparse_matrix), intent(in) :: A
-    integer, intent(out) :: maxcolor,p(A%nrow)
+    integer, intent(inout) :: maxcolor,p(A%nrow)
     ! local variables
-    integer :: i,j,clr,colors(A%nrow),nbrs(A%max_degree), &
-        & num_colors(A%max_degree+1)
+    integer :: next,q(A%nrow)
+    integer :: i,j,clr,nbrs(A%max_degree),num_colors(A%max_degree+1)
 
     nbrs = 0
-    colors = 0
     maxcolor = 1
-    p = 0
-    p(1) = 1
+    p = -1
+    q = 0
+    q(1) = 1
+    next = 1
 
     do i=1,A%nrow
         num_colors = 0
-        nbrs = A%get_neighbors(i)
+        nbrs = A%get_neighbors( q(i) )
         do j=1,A%max_degree
             if (nbrs(j)/=0) then
-                clr = colors(nbrs(j))
-                if (clr/=0) then
+                clr = p(nbrs(j))
+                if ( clr==-1 .and. nbrs(j)/=i ) then
+                    next = next+1
+                    q(next) = nbrs(j)
+                    p( nbrs(j) ) = 0
+                elseif ( clr>0 ) then
                     num_colors(clr) = num_colors(clr)+1
                 endif
             endif
         enddo
+
         do clr=A%max_degree+1,1,-1
-            if (num_colors(clr)==0) colors(i) = clr
+            if (num_colors(clr)==0) p(q(i)) = clr
         enddo
     enddo
-    maxcolor = maxval(colors)
+
+    maxcolor = maxval(p)
 
     num_colors = 0
     do i=1,A%nrow
-        clr = colors(i)
+        clr = p(i)
         num_colors(clr) = num_colors(clr)+1
     enddo
 
@@ -103,7 +110,7 @@ subroutine greedy_multicolor(A,p,maxcolor)                                 !
     num_colors(1) = 1
 
     do i=1,A%nrow
-        clr = colors(i)
+        clr = p(i)
         p(i) = num_colors(clr)
         num_colors(clr) = num_colors(clr)+1
     enddo
@@ -121,19 +128,20 @@ subroutine block_multicolor(A,p,blocks)                                    !
     class(sparse_matrix), intent(in) :: A
     integer, intent(out) :: p(:),blocks(:)
     ! local variables
-    integer :: i,j,k,l,m,n,colors(A%nrow),nbrs(A%max_degree), &
-        & num_colors(A%max_degree+1),next(A%nrow),num_nodes_colored, &
+    integer :: i,j,k,l,m,n,next,clr,q(A%nrow),nbrs(A%max_degree), &
+        & num_colors(A%max_degree+1),num_nodes_colored, &
         & head,tail,maxcolor
 
     nbrs = 0
-    colors = 0
     maxcolor = 1
-    p = 0
-    next = 0
-    p(1) = 1
-    head = 1
-    tail = 1
-    num_nodes_colored = 0
+    p = -1
+    q = 0
+    q(1) = 1
+    next = 1
+
+    do i=1,A%nrow
+        num_colors = 0
+        nbrs = A%get_neighbors( q(i) )
 
     do while(num_nodes_colored < A%nrow)
         nbrs = A%get_neighbors(head)
