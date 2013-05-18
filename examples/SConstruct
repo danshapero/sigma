@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 Import('masterEnv')
-env = masterEnv.Clone(F90PATH=['#/include','/usr/local/include'])
+env = masterEnv.Clone(F90PATH=['#/include','/usr/include','/usr/local/include'])
 
 bvp_sources = Split("""bvp.f90""")
 poisson_sources = Split("""poisson.f90""")

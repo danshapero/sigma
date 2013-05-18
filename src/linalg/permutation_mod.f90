@@ -121,42 +121,74 @@ end subroutine greedy_multicolor
 
 
 !--------------------------------------------------------------------------!
-subroutine block_multicolor(A,p,blocks)                                    !
+subroutine block_multicolor(A,blocksize,p)                                 !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
     class(sparse_matrix), intent(in) :: A
-    integer, intent(out) :: p(:),blocks(:)
+    integer, intent(in) :: blocksize
+    integer, intent(out) :: p(:)
     ! local variables
-    integer :: i,j,k,l,m,n,next,clr,q(A%nrow),nbrs(A%max_degree), &
-        & num_colors(A%max_degree+1),num_nodes_colored, &
-        & head,tail,maxcolor
+    integer :: i,j,k,next,nextb,clr,num_nodes_colored,maxcolor
+    integer :: q(A%nrow),qb(blocksize)
+    integer :: nbrs(A%max_degree0,num_colors(A%max_degree+1)
 
     nbrs = 0
-    maxcolor = 1
+    maxcolor = 0
     p = -1
     q = 0
     q(1) = 1
     next = 1
+    i = 1
 
     do i=1,A%nrow
-        num_colors = 0
-        nbrs = A%get_neighbors( q(i) )
+        if (num_nodes_colored>=A%nrow) then
+            exit
+        endif
 
-    do while(num_nodes_colored < A%nrow)
-        nbrs = A%get_neighbors(head)
-        do i=1,A%max_degree
-            n = nbrs(i)
-            if ( n/=0 .and. n/=head ) then
-                if ( next(n)/=0 ) then
-                    next(tail) = n
-                    tail = n
+        ! If the next point in the global queue is still uncolored,
+        if ( p(q(i))<=0 ) then
+            ! initialize a local queue and proceed until the local
+            ! queue has been exhausted
+            qb = 0
+            qb(1) = q(i)
+            nextb = 1
+            maxcolor = maxcolor+1
+            do j=1,blocksize
+                if ( qb(j)/=0 ) then
+                    nbrs = A%get_neighbors( qb(j) )
+                    do k=1,A%max_degree
+                        if (nbrs(k)/=0) then
+                            clr = p(nbrs(k))
+                            if ( clr==-1 .and. nextb<=blocksize) then
+                                nextb = nextb+1
+                                qb(nextb) = nbrs(k)
+                                p(nbrs(k)) = maxcolor
+                                num_nodes_colored = num_nodes_colored+1
+                            endif
+                        endif
+                    enddo
                 endif
-            endif
-        enddo
-        head = next(head)
-        num_nodes_colored = num_nodes_colored+1
+            enddo
+
+           ! Find all the neighbors of the current block; if any of
+           ! them aren't colored yet, add them to the global queue
+           do j=1,blocksize
+               if (qb(j)/=0) then
+                   nbrs = A%get_neighbors( qb(j) )
+                   clr = p(nbrs(j))
+                   if ( clr==-1 ) then
+                       next = next+1
+                       q(next) = nbrs(j)
+                       p(nbrs(j)) = 0
+                   endif
+               endif
+           enddo
+        endif
+
     enddo
+
+
 
 
 end subroutine block_multicolor
