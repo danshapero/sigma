@@ -12,7 +12,8 @@ type, extends(sparse_matrix) :: csr_matrix
     real(kind(1d0)), allocatable :: val(:)
 contains
     ! Constructor and accessors/mutators
-    procedure :: init => csr_init_matrix
+    procedure :: init => csr_init
+    procedure :: build => csr_build
     procedure :: get_value => csr_get_value
     procedure :: get_values => csr_get_values
     procedure :: get_neighbors => csr_get_neighbors
@@ -28,11 +29,14 @@ contains
     ! routines for i/o and validation
     procedure :: convert_to_coo => csr_convert_to_coo
     procedure :: write_to_file => csr_write_to_file
+    ! auxiliary routines
+    procedure :: sort_ja
 end type csr_matrix
 
 
 
 contains
+
 
 
 
@@ -48,17 +52,13 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine csr_init_matrix(A,nrow,ncol,nnz,rows,cols,vals)                 !
+subroutine csr_init(A,nrow,ncol,nnz,rows,cols,vals,params)                 !
 !--------------------------------------------------------------------------!
     implicit none
-    ! input/output variables
-    class (csr_matrix), intent(inout) :: A
+    class(csr_matrix), intent(inout) :: A
     integer, intent(in) :: nrow,ncol,nnz
-    integer, intent(in), optional :: rows(:),cols(:)
+    integer, intent(in), optional :: rows(:),cols(:),params(:)
     real(kind(1d0)), intent(in), optional :: vals(:)
-    ! local variables
-    integer :: i,j,k,n,startptr
-    integer :: work(nrow)
 
     A%nrow = nrow
     A%ncol = ncol
@@ -71,52 +71,62 @@ subroutine csr_init_matrix(A,nrow,ncol,nnz,rows,cols,vals)                 !
     A%val = 0.d0
 
     if (present(rows).and.present(cols)) then
-        ! Ascertain how many non-zero entries are in each row
-        work = 0
-        do i=1,nnz
-            work( rows(i) ) = work( rows(i) )+1
-        enddo
-
-        ! The maximum degree of the matrix is the greatest number of
-        ! entries in any given row. (Strictly speaking not true for a 
-        ! structurally asymmetric matrix, but for a CSR matrix this
-        ! definition will do.)
-        A%max_degree = maxval( work )
-
-        ! Fill in the array ia; ia(i+1)-ia(i) = #of non-zeros in row i
-        A%ia(1) = 1
-        do i=1,nrow
-            A%ia(i+1) = A%ia(i)+work(i)
-        enddo
-
-        ! Fill in the array ja; ja(j) = the column of non-zero entry #j
-        work = 0
-        do i=1,nnz
-            startptr = A%ia( rows(i) )
-            A%ja( startptr+work(rows(i)) ) = cols(i)
-            work( rows(i) ) = work( rows(i) )+1
-        enddo
-
-        ! Sort the array ja so that ja(ia(i)),ja(ia(i)+1)-1 are in order
-        do i=1,nrow
-            do j=A%ia(i)+1,A%ia(i+1)-1
-                k = j-1
-                n = A%ja(j)
-                do while( k>=A%ia(i) .and. A%ja(k)>n )
-                    A%ja(k+1) = A%ja(k)
-                    k = k-1
-                enddo
-                A%ja(k+1) = n
-            enddo
-        enddo
-
-        if (present(vals)) then
-            A%val = vals
-        endif
-
+        call A%build(rows,cols,vals)
     endif
 
-end subroutine csr_init_matrix
+end subroutine csr_init
+
+
+
+!--------------------------------------------------------------------------!
+subroutine csr_build(A,rows,cols,vals)                                     !
+!--------------------------------------------------------------------------!
+    implicit none
+    ! input/output variables
+    class(csr_matrix), intent(inout) :: A
+    integer, intent(in) :: rows(:),cols(:)
+    real(kind(1d0)), intent(in), optional :: vals(:)
+    ! local variables
+    integer :: i,j,k,n,startptr,nrow,ncol,nnz
+    integer :: work(A%nrow)
+    real(kind(1d0)) :: Aij
+
+    nrow = A%nrow
+    ncol = A%ncol
+    nnz = A%nnz
+
+    ! Fill in a work array; work(i) = # of non-zero entries in row i
+    work = 0
+    do i=1,nnz
+        work( rows(i) ) = work( rows(i) )+1
+    enddo
+
+    A%max_degree = maxval(work)
+
+    ! Fill in the array ia; ia(i+1)-ia(i) = # of non-zeros in row i
+    A%ia(1) = 1
+    do i=1,nrow
+        A%ia(i+1) = A%ia(i)+work(i)
+    enddo
+
+    ! Fill in the array ja; ja(j) = the column of non-zero entry #j
+    work = 0
+    do i=1,nnz
+        startptr = A%ia( rows(i) )
+        A%ja( startptr+work(rows(i)) ) = cols(i)
+        work( rows(i) ) = work( rows(i) )+1
+    enddo
+
+    if (present(vals)) then
+        A%val = vals
+    else
+        A%val = 0.d0
+    endif
+
+    ! Sort the array ja: ja(ia(i)),ja(ia(i+1)-1) are in order
+    call A%sort_ja()
+
+end subroutine csr_build
 
 
 
@@ -187,18 +197,18 @@ end function csr_get_neighbors
 
 
 !--------------------------------------------------------------------------!
-subroutine csr_set_value(A,i,j,value)                                      !
+subroutine csr_set_value(A,i,j,val)                                        !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
     class (csr_matrix), intent(inout) :: A
     integer, intent(in) :: i,j
-    real(kind(1d0)), intent(in) :: value
+    real(kind(1d0)), intent(in) :: val
     ! local variables
     integer :: k
 
     do k=A%ia(i),A%ia(i+1)-1
-        if ( A%ja(k) == j ) A%val(k) = value
+        if ( A%ja(k) == j ) A%val(k) = val
     enddo
 
 end subroutine csr_set_value
@@ -206,18 +216,18 @@ end subroutine csr_set_value
 
 
 !--------------------------------------------------------------------------!
-subroutine csr_add_value(A,i,j,value)                                      !
+subroutine csr_add_value(A,i,j,val)                                        !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
     class (csr_matrix), intent(inout) :: A
     integer, intent(in) :: i,j
-    real(kind(1d0)), intent(in) :: value
+    real(kind(1d0)), intent(in) :: val
     ! local variables
     integer :: k
 
     do k=A%ia(i),A%ia(i+1)-1
-        if ( A%ja(k) == j ) A%val(k) = A%val(k)+value
+        if ( A%ja(k) == j ) A%val(k) = A%val(k)+val
     enddo
 
 end subroutine csr_add_value
@@ -225,20 +235,20 @@ end subroutine csr_add_value
 
 
 !--------------------------------------------------------------------------!
-subroutine csr_set_values(A,rows,cols,values)                              !
+subroutine csr_set_values(A,rows,cols,vals)                                !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
-    class (csr_matrix), intent(inout) :: A
+    class(csr_matrix), intent(inout) :: A
     integer, intent(in) :: rows(:),cols(:)
-    real(kind(1d0)), intent(in) :: values(size(rows),size(cols))
+    real(kind(1d0)), intent(in) :: vals(size(rows),size(cols))
     ! local variables
     integer :: i,j,k
 
     do j=1,size(cols)
         do i=1,size(rows)
             do k=A%ia(rows(i)),A%ia(rows(i)+1)-1
-                if ( A%ja(k)==cols(j) ) A%val(k) = values(i,j)
+                if ( A%ja(k)==cols(j) ) A%val(k) = vals(i,j)
             enddo
         enddo
     enddo
@@ -248,20 +258,20 @@ end subroutine csr_set_values
 
 
 !--------------------------------------------------------------------------!
-subroutine csr_add_values(A,rows,cols,values)                              !
+subroutine csr_add_values(A,rows,cols,vals)                                !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
-    class (csr_matrix), intent(inout) :: A
+    class(csr_matrix), intent(inout) :: A
     integer, intent(in) :: rows(:),cols(:)
-    real(kind(1d0)), intent(in) :: values(size(rows),size(cols))
+    real(kind(1d0)), intent(in) :: vals(size(rows),size(cols))
     ! local variables
     integer :: i,j,k
 
     do j=1,size(cols)
         do i=1,size(rows)
             do k=A%ia(rows(i)),A%ia(rows(i)+1)-1
-                if ( A%ja(k)==cols(j) ) A%val(k) = A%val(k)+values(i,j)
+                if ( A%ja(k)==cols(j) ) A%val(k) = A%val(k)+vals(i,j)
             enddo
         enddo
     enddo
@@ -307,20 +317,8 @@ subroutine csr_permute(A,p)                                                !
         enddo
     enddo
 
-    ! Sort the array ja so that ja(ia(i)),ja(ia(i)+1)-1 are in order
-    do i=1,A%nrow
-        do j=A%ia(i)+1,A%ia(i+1)-1
-            n = A%ja(j)
-            Aij = A%val(j)
-            do k=j-1,A%ia(i),-1
-                if (A%ja(k)<=n) exit
-                A%ja(k+1) = A%ja(k)
-                A%val(k+1) = A%val(k)
-            enddo
-            A%ja(k+1) = n
-            A%val(k+1) = Aij
-        enddo
-    enddo
+    ! Sort the array ja so that ja(ia(i)),ja(ia(i+1)-1) are in order
+    call A%sort_ja()
 
 end subroutine csr_permute
 
@@ -331,8 +329,8 @@ subroutine csr_subset_matrix_add(A,B)                                      !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
-    class (csr_matrix), intent(inout) :: A
-    class (csr_matrix), intent(in) :: B
+    class(csr_matrix), intent(inout) :: A
+    class(csr_matrix), intent(in) :: B
     ! local variables
     integer :: i,j,k
 
@@ -374,12 +372,12 @@ subroutine csr_matvec(A,x,y,rows,cols)                                     !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
-    class (csr_matrix), intent(in) :: A
-    real(kind=8), intent(in) :: x(:)
-    real(kind=8), intent(out) :: y(:)
+    class(csr_matrix), intent(in) :: A
+    real(kind(1d0)), intent(in) :: x(:)
+    real(kind(1d0)), intent(out) :: y(:)
     integer, intent(in), optional :: rows(2),cols(2)
     ! local variables
-    real(kind=8) :: z
+    real(kind(1d0)) :: z
     integer :: i,j,ind,r(2),c(2)
 
     r = [1, A%nrow]
@@ -500,7 +498,7 @@ subroutine csr_write_to_file(A,filename)                                   !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
-    class (csr_matrix), intent(in) :: A
+    class(csr_matrix), intent(in) :: A
     character(len=*), intent(in) :: filename
     ! local variables
     integer :: i,j
@@ -516,10 +514,46 @@ subroutine csr_write_to_file(A,filename)                                   !
 20          format('     ',I5,'     ',g12.6)
         enddo
     enddo
-    close(10)
+    close(100)
 
 
 end subroutine csr_write_to_file
+
+
+
+
+
+!==========================================================================!
+!==========================================================================!
+!==== Auxiliary routines                                               ====!
+!==========================================================================!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
+subroutine sort_ja(A)                                                      !
+!--------------------------------------------------------------------------!
+    implicit none
+    ! input/output variables
+    class(csr_matrix), intent(inout) :: A
+    ! local variables
+    integer :: i,j,k,n
+    real(kind(1d0)) :: Aij
+
+    do i=1,A%nrow
+        do j=A%ia(i)+1,A%ia(i+1)-1
+            n = A%ja(j)
+            Aij = A%val(j)
+            do k=j-1,A%ia(i),-1
+                if (A%ja(k)<=n) exit
+                A%ja(k+1) = A%ja(k)
+                A%val(k+1) = A%val(k)
+            enddo
+            A%ja(k+1) = n
+            A%val(k+1) = Aij
+        enddo
+    enddo
+
+end subroutine sort_ja
 
 
 

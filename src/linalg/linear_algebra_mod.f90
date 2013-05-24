@@ -1,8 +1,9 @@
 module linear_algebra_mod
 
     ! Sparse matrix format modules
-    use sparse_matrix_mod
     use csr_matrix_mod
+    use bsr_matrix_mod
+    use sparse_matrix_mod
 
     ! Permutation module
     use permutation_mod
@@ -19,6 +20,7 @@ module linear_algebra_mod
     implicit none
 
 contains
+
 
 
 !--------------------------------------------------------------------------!
@@ -85,6 +87,7 @@ subroutine solver_setup(A,solver,pc,solver_name,pc_name,tolerance,level)   !
     call pc%init(A,lev)
     
 end subroutine solver_setup
+
 
 
 end module linear_algebra_mod

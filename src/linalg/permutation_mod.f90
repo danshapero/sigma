@@ -131,7 +131,7 @@ subroutine block_multicolor(A,blocksize,p)                                 !
     ! local variables
     integer :: i,j,k,next,nextb,clr,num_nodes_colored,maxcolor
     integer :: q(A%nrow),qb(blocksize)
-    integer :: nbrs(A%max_degree0,num_colors(A%max_degree+1)
+    integer :: nbrs(A%max_degree),num_colors(A%max_degree+1)
 
     nbrs = 0
     maxcolor = 0

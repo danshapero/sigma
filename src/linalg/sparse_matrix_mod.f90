@@ -9,7 +9,8 @@ type, abstract :: sparse_matrix
     logical :: symmetric,pos_def,m_matrix,diag_dominant
 contains
     ! Constructor and accessors/mutators
-    procedure(init_matrix_interface), deferred :: init
+	procedure(init_interface), deferred :: init
+    procedure(build_interface), deferred :: build
     procedure(get_value_interface), deferred :: get_value
     procedure(get_values_interface), deferred :: get_values
     procedure(get_neighbors_interface), deferred :: get_neighbors
@@ -30,13 +31,21 @@ end type sparse_matrix
 
 abstract interface
 
-subroutine init_matrix_interface(A,nrow,ncol,nnz,rows,cols,vals)
+subroutine init_interface(A,nrow,ncol,nnz,rows,cols,vals,params)
     import :: sparse_matrix
     class(sparse_matrix), intent(inout) :: A
     integer, intent(in) :: nrow,ncol,nnz
-    integer, intent(in), optional :: rows(:),cols(:)
+    integer, intent(in), optional :: rows(:),cols(:),params(:)
     real(kind(1d0)), intent(in), optional :: vals(:)
-end subroutine init_matrix_interface
+end subroutine init_interface
+
+
+subroutine build_interface(A,rows,cols,vals)
+    import :: sparse_matrix
+    class(sparse_matrix), intent(inout) :: A
+    integer, intent(in) :: rows(:),cols(:)
+    real(kind(1d0)), intent(in), optional :: vals(:)
+end subroutine build_interface
 
 
 real(kind(1d0)) function get_value_interface(A,i,j) result(value)
@@ -62,19 +71,19 @@ function get_neighbors_interface(A,row)
 end function get_neighbors_interface
 
 
-subroutine set_value_interface(A,i,j,value)
+subroutine set_value_interface(A,i,j,val)
     import :: sparse_matrix
     class(sparse_matrix), intent(inout) :: A
     integer, intent(in) :: i,j
-    real(kind(1d0)), intent(in) :: value
+    real(kind(1d0)), intent(in) :: val
 end subroutine set_value_interface
 
 
-subroutine set_values_interface(A,rows,cols,values)
+subroutine set_values_interface(A,rows,cols,vals)
     import :: sparse_matrix
     class(sparse_matrix), intent(inout) :: A
     integer, intent(in) :: rows(:),cols(:)
-    real(kind(1d0)), intent(in) :: values(size(rows),size(cols))
+    real(kind(1d0)), intent(in) :: vals(size(rows),size(cols))
 end subroutine set_values_interface
 
 
@@ -130,8 +139,10 @@ end interface
 
 contains
 
-!-----------
-! Nothing! This module is just for defining the abstract sparse_matrix type
+
+!-----------------------------
+! Nothing! This module exists just to define the sparse matrix type
+
 
 
 end module sparse_matrix_mod
