@@ -11,4 +11,4 @@ masterEnv = Environment(
 
 Export('masterEnv')
 
-masterEnv.SConscript(['src/linalg/SConstruct', 'src/mesh/SConstruct', 'src/fem/SConstruct','examples/SConstruct'])
+masterEnv.SConscript(['src/linalg/SConstruct', 'src/mesh/SConstruct', 'src/fem/SConstruct','examples/SConstruct','test/SConstruct'])

@@ -28,7 +28,7 @@ subroutine read_mesh(filename,mesh)                                        !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
-    character(len=32), intent(in) :: filename
+    character(len=*), intent(in) :: filename
     type (tri_mesh), intent(out) :: mesh
     ! local varaibles
     integer :: dummy,n

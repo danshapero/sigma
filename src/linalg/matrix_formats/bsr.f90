@@ -53,22 +53,21 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine bsr_init(A,nrow,ncol,nnz,rows,cols,vals,params)                 !
+subroutine bsr_init(A,nrow,ncol,nnz,rows,cols,params)                      !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
     class(bsr_matrix), intent(inout) :: A
     integer, intent(in) :: nrow,ncol,nnz
     integer, intent(in), optional :: rows(:),cols(:),params(:)
-    real(kind(1d0)), intent(in), optional :: vals(:)
 
     A%nrow = nrow
     A%ncol = ncol
     A%nnz = nnz
 
     if (present(params)) then
-        A%mrow = params(1)
-        if ( mod(A%mrow,nrow)/=0 .and. A%mrow/=1 ) then
+        A%nbr = params(1)
+        if ( mod(nrow,A%nbr)/=0 .and. A%nbr/=1 ) then
             print *, 'Error in bsr_init:'
             print *, '   The row block size you have specified for a BSR'
             print *, '   matrix does not divide the number of rows of   '
@@ -79,8 +78,8 @@ subroutine bsr_init(A,nrow,ncol,nnz,rows,cols,vals,params)                 !
         endif
 
         if (size(params)>1) then
-            A%mcol = params(2)
-            if ( mod(A%mcol,ncol)/=0 .and. A%mcol/=1 ) then
+            A%nbc = params(2)
+            if ( mod(ncol,A%nbc)/=0 .and. A%nbc/=1 ) then
                 print *, 'Error in bsr_init:'
                 print *, '   The column block size specified for a BSR  '
                 print *, '   matrix does not divide the number of       '
@@ -89,24 +88,24 @@ subroutine bsr_init(A,nrow,ncol,nnz,rows,cols,vals,params)                 !
                 print *, '   BSR format is no more efficient than CSR.  '
             endif
         else
-            A%mcol = A%mrow
+            A%nbc = A%nbr
         endif
     else
-        A%mrow = 1
-        A%mcol = 1
+        A%nbr = 1
+        A%nbc = 1
     endif
 
-    A%nbr = nrow/A%mrow
-    A%nbc = ncol/A%mcol
-    A%nnzb = nnz/(A%mrow * A%mcol)
+    A%mrow = nrow/A%nbr
+    A%mcol = ncol/A%nbc
+    A%nnzb = nnz/(A%nbr * A%nbc)
 
-    allocate( A%ia(A%mrow+1), A%ja(A%nnzb), A%val(A%mrow,A%mcol,A%nnzb) )
+    allocate( A%ia(A%mrow+1), A%ja(A%nnzb), A%val(A%nbr,A%nbc,A%nnzb) )
     A%ia = 0
     A%ia(A%mrow+1) = A%nnzb+1
     A%ja = 0
 
     if (present(rows).and.present(cols)) then
-        call A%build(rows,cols,vals)
+        call A%build(rows,cols)
     endif
 
 end subroutine bsr_init
@@ -114,13 +113,12 @@ end subroutine bsr_init
 
 
 !--------------------------------------------------------------------------!
-subroutine bsr_build(A,rows,cols,vals)                                     !
+subroutine bsr_build(A,rows,cols)                                          !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
     class(bsr_matrix), intent(inout) :: A
     integer, intent(in) :: rows(:),cols(:)
-    real(kind(1d0)), intent(in), optional :: vals(:)
     ! local variables
     integer :: i,j,k,n,startptr
     integer :: work(A%mrow)
@@ -154,10 +152,10 @@ subroutine bsr_build(A,rows,cols,vals)                                     !
     ! Fill in the array ja; ja(j) = the (block)-column of non-zero block #j
     work = 0
     if ( size(cols)==A%nnzb) then
-        do i=1,A%nnz
-            startptr = A%ia( rows(i) )
-            A%ja( startptr+work(rows(i)) ) = cols(i)
-            work( rows(i) ) = work( rows(i) )+1
+        do n=1,A%nnzb
+            startptr = A%ia( rows(n) )
+            A%ja( startptr+work(rows(n)) ) = cols(n)
+            work( rows(n) ) = work( rows(n) )+1
         enddo
     else
 

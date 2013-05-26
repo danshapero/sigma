@@ -44,7 +44,10 @@ subroutine ilu_init(pc,A,level)                                            !
 
     allocate(rows(A%nnz),cols(A%nnz),vals(A%nnz))
     call A%convert_to_coo(rows,cols,vals)
-    call LU%init(A%nrow,A%ncol,A%nnz,rows,cols,vals)
+    call LU%init(A%nrow,A%ncol,A%nnz,rows,cols)
+    do i=1,A%nnz
+        call LU%set_value(rows(i),cols(i),vals(i))
+    enddo
     deallocate(rows,cols,vals)
 
     do i=1,A%nrow

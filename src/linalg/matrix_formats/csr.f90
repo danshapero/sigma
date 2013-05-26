@@ -52,13 +52,12 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine csr_init(A,nrow,ncol,nnz,rows,cols,vals,params)                 !
+subroutine csr_init(A,nrow,ncol,nnz,rows,cols,params)                      !
 !--------------------------------------------------------------------------!
     implicit none
     class(csr_matrix), intent(inout) :: A
     integer, intent(in) :: nrow,ncol,nnz
     integer, intent(in), optional :: rows(:),cols(:),params(:)
-    real(kind(1d0)), intent(in), optional :: vals(:)
 
     A%nrow = nrow
     A%ncol = ncol
@@ -71,7 +70,7 @@ subroutine csr_init(A,nrow,ncol,nnz,rows,cols,vals,params)                 !
     A%val = 0.d0
 
     if (present(rows).and.present(cols)) then
-        call A%build(rows,cols,vals)
+        call A%build(rows,cols)
     endif
 
 end subroutine csr_init
@@ -79,13 +78,12 @@ end subroutine csr_init
 
 
 !--------------------------------------------------------------------------!
-subroutine csr_build(A,rows,cols,vals)                                     !
+subroutine csr_build(A,rows,cols)                                          !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
     class(csr_matrix), intent(inout) :: A
     integer, intent(in) :: rows(:),cols(:)
-    real(kind(1d0)), intent(in), optional :: vals(:)
     ! local variables
     integer :: i,j,k,n,startptr,nrow,ncol,nnz
     integer :: work(A%nrow)
@@ -116,12 +114,6 @@ subroutine csr_build(A,rows,cols,vals)                                     !
         A%ja( startptr+work(rows(i)) ) = cols(i)
         work( rows(i) ) = work( rows(i) )+1
     enddo
-
-    if (present(vals)) then
-        A%val = vals
-    else
-        A%val = 0.d0
-    endif
 
     ! Sort the array ja: ja(ia(i)),ja(ia(i+1)-1) are in order
     call A%sort_ja()

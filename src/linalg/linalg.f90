@@ -1,8 +1,8 @@
 module linalg
 
     ! Sparse matrix format modules
-    use csr
     use bsr
+    use csr
     use matrix
 
     ! Permutation module

@@ -1,0 +1,9 @@
+#!/usr/bin/env python
+
+Import('masterEnv')
+env = masterEnv.Clone()
+
+libs_mesh_tests = 'meshes'
+libpath_mesh_tests = '#/src/mesh'
+
+env.Program('mesh_tests', 'mesh_tests.f90', LIBS=libs_mesh_tests, LIBPATH=libpath_mesh_tests)

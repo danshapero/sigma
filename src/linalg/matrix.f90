@@ -31,20 +31,18 @@ end type sparse_matrix
 
 abstract interface
 
-subroutine init_interface(A,nrow,ncol,nnz,rows,cols,vals,params)
+subroutine init_interface(A,nrow,ncol,nnz,rows,cols,params)
     import :: sparse_matrix
     class(sparse_matrix), intent(inout) :: A
     integer, intent(in) :: nrow,ncol,nnz
     integer, intent(in), optional :: rows(:),cols(:),params(:)
-    real(kind(1d0)), intent(in), optional :: vals(:)
 end subroutine init_interface
 
 
-subroutine build_interface(A,rows,cols,vals)
+subroutine build_interface(A,rows,cols)
     import :: sparse_matrix
     class(sparse_matrix), intent(inout) :: A
     integer, intent(in) :: rows(:),cols(:)
-    real(kind(1d0)), intent(in), optional :: vals(:)
 end subroutine build_interface
 
 
