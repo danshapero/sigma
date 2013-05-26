@@ -1,6 +1,6 @@
-module bsr_matrix_mod
+module bsr
 
-    use sparse_matrix_mod
+    use matrix
     use omp_lib
 
     implicit none
@@ -700,4 +700,4 @@ logical function whole_block(A,rows,cols)                                  !
 end function whole_block
 
 
-end module bsr_matrix_mod
+end module bsr

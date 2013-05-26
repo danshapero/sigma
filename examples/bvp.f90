@@ -7,9 +7,9 @@
 
 program bvp
 
-    use mesh_mod
-    use linear_algebra_mod
-    use fem_mod
+    use meshes
+    use linalg
+    use fem
     use netcdf
 
     implicit none

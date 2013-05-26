@@ -1,4 +1,4 @@
-module sparse_matrix_mod
+module matrix
 
     implicit none
 
@@ -145,4 +145,4 @@ contains
 
 
 
-end module sparse_matrix_mod
+end module matrix

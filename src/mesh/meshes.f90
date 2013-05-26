@@ -1,4 +1,4 @@
-module mesh_mod
+module meshes
 
     implicit none
 
@@ -112,4 +112,4 @@ end subroutine read_mesh
 
 
 
-end module mesh_mod
+end module meshes

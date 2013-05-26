@@ -1,6 +1,6 @@
-module permutation_mod
+module permutation
 
-    use sparse_matrix_mod
+    use matrix
 
     implicit none
 
@@ -196,4 +196,4 @@ end subroutine block_multicolor
 
 
 
-end module permutation_mod
+end module permutation

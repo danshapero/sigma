@@ -1,14 +1,14 @@
-module bjacobi_mod
+module bjacobi
 
-    use sparse_matrix_mod
-    use iterative_solver_mod
+    use matrix
+    use solver
 
     implicit none
 
 
 
 
-type, extends(preconditioner) :: bjacobi
+type, extends(preconditioner) :: bjacobi_preconditioner
     real(kind(1d0)), allocatable, private :: diag(:,:,:)
 !    integer, allocatable, private :: ipiv(:,:)
     integer, private :: num_blocks
@@ -16,7 +16,7 @@ contains
     procedure :: init => bjacobi_init
     procedure :: precondition => bjacobi_precondition
     procedure :: clear => bjacobi_clear
-end type bjacobi
+end type bjacobi_preconditioner
 
 
 
@@ -29,7 +29,7 @@ subroutine bjacobi_init(pc,A,level)                                        !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
-    class(bjacobi), intent(inout) :: pc
+    class(bjacobi_preconditioner), intent(inout) :: pc
     class(sparse_matrix), intent(in) :: A
     integer, intent(in) :: level
     ! local variables
@@ -67,7 +67,7 @@ subroutine bjacobi_precondition(pc,A,x,b,mask)                             !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
-    class(bjacobi), intent(inout) :: pc
+    class(bjacobi_preconditioner), intent(inout) :: pc
     class(sparse_matrix), intent(in) :: A
     real(kind(1d0)), intent(inout) :: x(:)
     real(kind(1d0)), intent(in) :: b(:)
@@ -95,7 +95,7 @@ end subroutine bjacobi_precondition
 subroutine bjacobi_clear(pc)                                               !
 !--------------------------------------------------------------------------!
     implicit none
-    class(bjacobi), intent(inout) :: pc
+    class(bjacobi_preconditioner), intent(inout) :: pc
 
     pc%diag = 0.d0
 
@@ -106,5 +106,5 @@ end subroutine bjacobi_clear
 
 
 
-end module bjacobi_mod
+end module bjacobi
     

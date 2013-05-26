@@ -1,21 +1,21 @@
-module linear_algebra_mod
+module linalg
 
     ! Sparse matrix format modules
-    use csr_matrix_mod
-    use bsr_matrix_mod
-    use sparse_matrix_mod
+    use csr
+    use bsr
+    use matrix
 
     ! Permutation module
-    use permutation_mod
+    use permutation
 
     ! Solver modules
-    use iterative_solver_mod
-    use cg_solver_mod
+    use solver
+    use cg
 
     ! Preconditioner modules
-    use jacobi_mod
-    use bjacobi_mod
-    use ilu_mod
+    use jacobi
+    use bjacobi
+    use ilu
 
     implicit none
 
@@ -64,13 +64,13 @@ subroutine solver_setup(A,solver,pc,solver_name,pc_name,tolerance,level)   !
     if (present(pc_name)) then
         select case(trim(pc_name))
             case("jacobi")
-                allocate(jacobi::pc)
+                allocate(jacobi_preconditioner::pc)
                 lev = 0
             case("bjacobi")
-                allocate(bjacobi::pc)
+                allocate(bjacobi_preconditioner::pc)
                 lev = 16
             case("ilu")
-                allocate(ilu::pc)
+                allocate(ilu_preconditioner::pc)
                 lev = 0
             case default
                 allocate(nopc::pc)
@@ -90,4 +90,4 @@ end subroutine solver_setup
 
 
 
-end module linear_algebra_mod
+end module linalg

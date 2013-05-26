@@ -8,8 +8,8 @@ env = Environment(
     FORTRANMODDIRPREFIX='-J',
     F90PATH='#/include')
 
-mesh_sources = Split("""mesh_mod.f90""")
+mesh_sources = Split("""meshes.f90""")
 
-meshlib = env.Library('mesh',mesh_sources)
+meshlib = env.Library('meshes',mesh_sources)
 #env.Alias('install', env.Install('../../lib',meshlib))
 

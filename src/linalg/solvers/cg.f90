@@ -1,7 +1,7 @@
-module cg_solver_mod
+module cg
 
-    use sparse_matrix_mod
-    use iterative_solver_mod
+    use matrix
+    use solver
 
     implicit none
 
@@ -101,4 +101,4 @@ end subroutine cg_destroy
 
 
 
-end module cg_solver_mod
+end module cg

@@ -1,6 +1,6 @@
-module csr_matrix_mod
+module csr
 
-    use sparse_matrix_mod
+    use matrix
     use omp_lib
 
     implicit none
@@ -557,4 +557,4 @@ end subroutine sort_ja
 
 
 
-end module csr_matrix_mod
+end module csr

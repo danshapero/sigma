@@ -1,10 +1,10 @@
-module ilu_mod
+module ilu
 
-    use sparse_matrix_mod
-    use iterative_solver_mod
-    use csr_matrix_mod
+    use matrix
+    use solver
+    use csr
 
-type, extends(preconditioner) :: ilu
+type, extends(preconditioner) :: ilu_preconditioner
     type(csr_matrix) :: LU
     real(kind(1d0)), allocatable :: D(:),q(:)
     logical :: pos_def
@@ -12,7 +12,7 @@ contains
     procedure :: init => ilu_init
     procedure :: precondition => ilu_precondition
     procedure :: clear => ilu_clear
-end type ilu
+end type ilu_preconditioner
 
 
 
@@ -24,7 +24,7 @@ subroutine ilu_init(pc,A,level)                                            !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
-    class(ilu), intent(inout) :: pc
+    class(ilu_preconditioner), intent(inout) :: pc
     class(sparse_matrix), intent(in) :: A
     integer, intent(in) :: level
     ! local variables
@@ -76,7 +76,7 @@ end subroutine ilu_init
 subroutine ilu_precondition(pc,A,x,b,mask)                                 !
 !--------------------------------------------------------------------------!
     implicit none
-    class(ilu), intent(inout) :: pc
+    class(ilu_preconditioner), intent(inout) :: pc
     class(sparse_matrix), intent(in) :: A
     real(kind(1d0)), intent(inout) :: x(:)
     real(kind(1d0)), intent(in) :: b(:)
@@ -102,7 +102,7 @@ end subroutine ilu_precondition
 subroutine ilu_clear(pc)                                                   !
 !--------------------------------------------------------------------------!
     implicit none
-    class(ilu), intent(inout) :: pc
+    class(ilu_preconditioner), intent(inout) :: pc
 
     pc%D = 0.0
     pc%q = 0.d0
@@ -112,4 +112,4 @@ subroutine ilu_clear(pc)                                                   !
 end subroutine ilu_clear
 
 
-end module ilu_mod
+end module ilu

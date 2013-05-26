@@ -1,6 +1,6 @@
-module iterative_solver_mod
+module solver
 
-    use sparse_matrix_mod
+    use matrix
 
     implicit none
     integer, save :: null_mask(0)
@@ -148,4 +148,4 @@ end subroutine nopc_clear
 
 
 
-end module iterative_solver_mod
+end module solver

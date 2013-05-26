@@ -7,7 +7,7 @@ bvp_sources = Split("""bvp.f90""")
 poisson_sources = Split("""poisson.f90""")
 permutations_sources = Split("""permutations.f90""")
 
-libsforbvp = Split("""linalg mesh fem netcdf netcdff blas lapack gomp""")
+libsforbvp = Split("""linalg meshes fem netcdf netcdff blas lapack gomp""")
 libpathforbvp = Split("""/usr/local/lib #/src/linalg #/src/mesh #/src/fem""")
 
 env.Program('bvp',bvp_sources, LIBS=libsforbvp, LIBPATH=libpathforbvp)

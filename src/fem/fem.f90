@@ -1,8 +1,8 @@
 !--------------------------------------------------------------------------!
-module fem_mod                                                             !
+module fem                                                                 !
 !--------------------------------------------------------------------------!
-    use mesh_mod
-    use sparse_matrix_mod
+    use meshes
+    use matrix
 
     implicit none
 
@@ -312,4 +312,4 @@ end function gradient
 
 
 
-end module fem_mod
+end module fem

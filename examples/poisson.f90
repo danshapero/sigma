@@ -1,8 +1,8 @@
 program poisson
 
-    use mesh_mod
-    use linear_algebra_mod
-    use fem_mod
+    use meshes
+    use linalg
+    use fem
     use netcdf
 
     implicit none
@@ -130,12 +130,12 @@ program poisson
     call bfs(A,p)
     call A%permute(p)
 
-    allocate(ilu::pc)
+    allocate(ilu_preconditioner::pc)
 
     call pc%init(A,8)
 
     select type(pc)
-        type is(ilu)
+        type is(ilu_preconditioner)
             call pc%LU%write_to_file("lu")
     end select
 

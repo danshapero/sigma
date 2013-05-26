@@ -3,7 +3,7 @@
 Import('masterEnv')
 env = masterEnv.Clone()
 
-fem_sources = Split("""fem_mod.f90""")
+fem_sources = Split("""fem.f90""")
 
-femlib = env.Library('fem',fem_sources, LIBS=['mesh','linalg'], LIBPATH=['../mesh','../linalg'])
+femlib = env.Library('fem',fem_sources, LIBS=['meshes','linalg'], LIBPATH=['../mesh','../linalg'])
 #env.Alias('install',env.Install('../../lib',femlib))

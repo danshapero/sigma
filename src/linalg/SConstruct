@@ -3,16 +3,16 @@
 Import('masterEnv')
 env = masterEnv.Clone(F90FLAGS='-fbounds-check -g -fopenmp')
 
-linalg_sources = Split("""sparse_matrix_mod.f90 
-                            csr_matrix_mod.f90
-                            bsr_matrix_mod.f90
-                            permutation_mod.f90
-                            iterative_solver_mod.f90
-                            cg_solver_mod.f90
-                            jacobi_mod.f90
-                            bjacobi_mod.f90
-                            ilu_mod.f90
-                            linear_algebra_mod.f90""")
+linalg_sources = Split("""matrix.f90 
+                          matrix_formats/csr.f90
+                          matrix_formats/bsr.f90
+                          permutation.f90
+                          solver.f90
+                          solvers/cg.f90
+                          preconditioners/jacobi.f90
+                          preconditioners/bjacobi.f90
+                          preconditioners/ilu.f90
+                          linalg.f90""")
 
 libs_for_linalg = Split("""blas lapack gomp""")
 
