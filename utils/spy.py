@@ -7,24 +7,18 @@ from scipy import *
 fid = open(sys.argv[1],"r")
 
 line = fid.readline().split()
-n = int(line[0])
-nnz = int(line[1])
+(nrow,ncol,nnz) = map(int,line)
 
 rows = np.zeros(nnz,int)
 cols = np.zeros(nnz,int)
 a = np.zeros(nnz)
 
-i = 0
-while True:
+for i in range(nnz):
     line = fid.readline().split()
     if not line: break
-    if len(line)==1:
-        k = int(line[0])
-    else:
-        rows[i] = k
-        cols[i] = int(line[0])
-        a[i] = float(line[1])
-        i = i+1
+    rows[i] = int(line[0])
+    cols[i] = int(line[1])
+    a[i] = float(line[2])
 
 fid.close()
 

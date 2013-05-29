@@ -41,7 +41,7 @@ subroutine assemble(mesh,A)                                                !
         lastindex = lastindex+2
     enddo
 
-    call A%init(nn,nn,nn+2*nl,rows,cols)
+    call A%build(rows,cols)
 
 end subroutine assemble
 
@@ -81,6 +81,73 @@ subroutine stiffness_matrix(mesh,A,kappa)                                  !
     A%diag_dominant = .true.
 
 end subroutine stiffness_matrix
+
+
+
+!--------------------------------------------------------------------------!
+subroutine system_stiffness_matrix(A,mesh,kappa,d)                         !
+!--------------------------------------------------------------------------!
+    implicit none
+    ! input/output variables
+    class(sparse_matrix), intent(inout) :: A
+    type(tri_mesh), intent(in) :: mesh
+    real(kind(1d0)), intent(in) :: kappa(:,:,:,:,:)
+    integer, intent(in) :: d
+    ! local variables
+    integer :: i,j,k,l,n,elem(3),rows(d),cols(d)
+    real(kind(1d0)) :: det,area,S(2,2),T(2,2),V(3,2),kap(d,2,d,2), &
+        & AE(d,3,d,3)
+
+    V(1,:) = [ 1.d0,  0.d0 ]
+    V(2,:) = [ 0.d0,  1.d0 ]
+    V(3,:) = [-1.d0, -1.d0 ]
+
+    do n=1,mesh%ne
+        elem = mesh%elem(:,n)
+
+        ! y -> x_3 + T*y maps reference triangle onto physical triangle
+        T(:,1) = mesh%x(:,elem(1))-mesh%x(:,elem(3))
+        T(:,2) = mesh%x(:,elem(2))-mesh%x(:,elem(3))
+        det = T(1,1)*T(2,2)-T(1,2)*T(2,1)
+        area = 0.5*dabs(det)
+
+        ! x -> S*(x-x_3)/det maps physical triangle to reference triangle
+        S(1,1) = T(2,2)
+        S(1,2) = -T(2,1)
+        S(2,1) = -T(1,2)
+        S(2,2) = T(1,1)
+
+        ! Transform the diffusion tensor to the reference triangle
+        do j=1,d
+            do i=1,d
+                kap(i,:,j,:) = matmul( S/det, &
+                     matmul(kappa(i,:,j,:,n),transpose(S)/det) )
+            enddo
+        enddo
+
+        ! Fill in the entries of the element stiffness matrix
+        AE = 0.d0
+        do j=1,d
+            do i=1,d
+                AE(i,:,j,:) = AE(i,:,j,:) &
+                    & +area*matmul( V,matmul(kap(i,:,j,:),transpose(V)) )
+            enddo
+        enddo
+
+        ! Add the element stiffness matrix to the global matrix
+        ! The entries are added one block at a time to better support the
+        ! block sparse row format, for which this operation is fast
+        do j=1,3
+            cols = [ (d*(elem(j)-1)+k,k=1,d) ]
+            do i=1,3
+                rows = [ (d*(elem(i)-1)+k,k=1,d) ]
+                call A%add_values(rows,cols,AE(:,i,:,j))
+            enddo
+        enddo
+
+    enddo
+
+end subroutine system_stiffness_matrix
 
 
 
@@ -140,14 +207,11 @@ function matvec_mass_matrix(mesh,u)                                        !
     implicit none
     ! input/output variables
     type (tri_mesh), intent(in) :: mesh
-    real(kind(1d0)), dimension( mesh%nn ), intent(in) :: u
-    real(kind(1d0)), dimension( mesh%nn ) :: matvec_mass_matrix
+    real(kind(1d0)), intent(in) :: u(:)
+    real(kind(1d0)) :: matvec_mass_matrix(mesh%nn)
     ! local variables
-    integer :: i,n
-    integer, dimension(3) :: elem
-    real(kind(1d0)) :: area
-    real(kind(1d0)), dimension(3) :: y
-    real(kind(1d0)), dimension(3,3) :: BE
+    integer :: i,n,elem(3)
+    real(kind(1d0)) :: area,y(3),BE(3,3)
 
     matvec_mass_matrix = 0.d0
     do n=1,mesh%ne
@@ -156,17 +220,22 @@ function matvec_mass_matrix(mesh,u)                                        !
         elem = mesh%elem(:,n)
         BE(1,1:2) = mesh%x(:,elem(2))-mesh%x(:,elem(3))
         BE(2,1:2) = mesh%x(:,elem(1))-mesh%x(:,elem(3))
-        area = 0.5*dabs( BE(1,1)*BE(2,2)-BE(1,2)*BE(2,1) )
-        BE = area/12
+        area = 0.5d0*dabs( BE(1,1)*BE(2,2)-BE(1,2)*BE(2,1) )
+        BE = area/12.d0
         do i=1,3
-            BE(i,i) = BE(i,i)+area/12
+            BE(i,i) = BE(i,i)+area/12.d0
         enddo
 
         !--------------------------------------------------
         ! Multiply the components of u from the current
         ! element by the element mass matrix and them to y
-        y = matmul( BE,u(elem) )
-        matvec_mass_matrix(elem) = matvec_mass_matrix(elem)+y
+        if ( size(u)==mesh%nn) then
+            y = matmul( BE,u(elem) )
+            matvec_mass_matrix(elem) = matvec_mass_matrix(elem)+y
+        elseif ( size(u)==mesh%ne ) then
+            matvec_mass_matrix(elem) = matvec_mass_matrix(elem) &
+                & +area/3.d0*u(n)
+        endif
     enddo
 
 end function matvec_mass_matrix
@@ -265,50 +334,45 @@ end subroutine robin_matrix
 
 
 !--------------------------------------------------------------------------!
-function gradient(mesh,u,n)                                                !
-!--------------------------------------------------------------------------!
-! Compute the gradient  of a function u defined on the tri_mesh mesh.      !
-! Input: a tri_mesh mesh                                                   !
-!        a vector u                                                        !
-!        an integer n                                                      !
-! Output: a vector gradient(2), giving the gradient of u within element n  !
+subroutine gradient(mesh,u,g)                                              !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
     type (tri_mesh), intent(in) :: mesh
-    real(kind(1d0)), dimension(mesh%nn), intent(in) :: u
-    integer, intent(in) :: n
-    real(kind(1d0)), dimension(2) :: gradient
+    real(kind(1d0)), intent(in) :: u(:)
+    real(kind(1d0)), intent(out) :: g(:,:)
     ! local variables
-    integer, dimension(3) :: elem
+    integer :: n,elem(3)
     real(kind(1d0)) :: dx,det
-    real(kind(1d0)), dimension(2,2) :: S,Q
+    real(kind(1d0)) :: S(2,2),Q(2,2)
 
-    elem = mesh%elem(:,n)
+    do n=1,mesh%ne
+        elem = mesh%elem(:,n)
 
-    ! z -> S*z+x_3 maps the reference triangle to the physical triangle
-    S(:,1) = mesh%x(:,elem(1))-mesh%x(:,elem(3))
-    S(:,2) = mesh%x(:,elem(2))-mesh%x(:,elem(3))
+        ! z -> S*z+x_3 maps the reference triangle to the physical triangle
+        S(:,1) = mesh%x(:,elem(1))-mesh%x(:,elem(3))
+        S(:,2) = mesh%x(:,elem(2))-mesh%x(:,elem(3))
 
-    ! x -> Q*(x-x_3) maps the physical triangle to the reference triangle
-    det = S(1,1)*S(2,2)-S(1,2)*S(2,1)
-    Q(1,1) = S(2,2)/det
-    Q(2,2) = S(1,1)/det
-    Q(2,1) = -S(2,1)/det
-    Q(1,2) = -S(1,2)/det
+        ! x -> Q*(x-x_3) maps physical triangle to the reference triangle
+        det = S(1,1)*S(2,2)-S(1,2)*S(2,1)
+        Q(1,1) = S(2,2)/det
+        Q(2,2) = S(1,1)/det
+        Q(2,1) = -S(2,1)/det
+        Q(1,2) = -S(1,2)/det
 
-    ! Compute the directional derivatives of u along the edges of the
-    ! physical triangle
-    dx = dsqrt( S(1,1)**2 + S(2,1)**2 )
-    gradient(1) = ( u(elem(1))-u(elem(3)) )/dx
-    dx = dsqrt( S(1,2)**2 + S(2,2)**2 )
-    gradient(2) = ( u(elem(2))-u(elem(3)) )/dx
+        ! Compute the directional derivatives of u along the edges of the
+        ! physical triangle
+        dx = dsqrt( S(1,1)**2 + S(2,1)**2 )
+        g(1,n) = u(elem(1))-u(elem(3))
+        dx = dsqrt( S(1,2)**2 + S(2,2)**2 )
+        g(2,n) = u(elem(2))-u(elem(3))
 
-    ! Multiply by Q to find the gradient vector
-    gradient = matmul(gradient,Q)
+        ! Multiply by Q to find the gradient vector
+        g(:,n) = matmul(g(:,n),Q)
+    enddo
     
 
-end function gradient
+end subroutine gradient
 
 
 

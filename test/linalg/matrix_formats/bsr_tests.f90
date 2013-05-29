@@ -33,7 +33,7 @@ program bsr_tests
     allocate(bsr_matrix::A)
     call A%init(100,100,1200,params=[4,4])
 
-    allocate(rows(75),cols(75),vals(1200))
+    allocate(rows(75),cols(75))
     vals = 0.d0
 
     do i=1,25
@@ -216,5 +216,8 @@ program bsr_tests
 !--------------------------------------------------------------------------!
 ! Test converting to coordinate format                                     !
 !--------------------------------------------------------------------------!
+    deallocate(rows,cols)
+    allocate(rows(1200),cols(1200),vals(1200))
+    call A%convert_to_coo(rows,cols,vals)
 
 end program bsr_tests

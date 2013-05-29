@@ -30,7 +30,7 @@ subroutine solver_setup(A,solver,pc,solver_name,pc_name,tolerance,level)   !
     class(sparse_matrix), intent(in) :: A
     class(iterative_solver), intent(inout), allocatable :: solver
     class(preconditioner), intent(inout), allocatable :: pc
-    character(len=32), intent(in), optional :: solver_name,pc_name, &
+    character(len=*), intent(in), optional :: solver_name,pc_name, &
         & tolerance,level
     ! local variables
     integer :: nn,lev

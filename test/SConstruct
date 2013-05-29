@@ -3,4 +3,4 @@
 Import('masterEnv')
 env = masterEnv.Clone()
 
-env.SConscript(['linalg/SConstruct','mesh/SConstruct'])
+env.SConscript(['linalg/SConstruct','mesh/SConstruct','fem/SConstruct'])

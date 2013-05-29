@@ -522,12 +522,12 @@ subroutine bsr_backsolve(A,x)                                              !
 
     do i=mrow,1,-1
         z = x( nbr*(i-1)+1:nbr*i )
-        do j=A%ia(i),A%ia(i+1)-1
-            k = A%ja(j)
-            if (k>i) then
-                z = z-matmul( A%val(:,:,j), x(nbc*(k-1)+1:nbc*k) )
-            elseif (k==i) then
-                Aii = A%val(:,:,j)
+        do k=A%ia(i),A%ia(i+1)-1
+            j = A%ja(k)
+            if (j>i) then
+                z = z-matmul( A%val(:,:,k), x(nbc*(j-1)+1:nbc*j) )
+            elseif (j==i) then
+                Aii = A%val(:,:,k)
             endif
         enddo
         ! Make a call to LAPACK here
@@ -564,12 +564,12 @@ subroutine bsr_forwardsolve(A,x)                                           !
 
     do i=1,mrow
         z = x( nbr*(i-1)+1:nbr*i )
-        do j=A%ia(i),A%ia(i+1)-1
-            k = A%ja(j)
-            if (k>i) then
-                z = z-matmul( A%val(:,:,j), x(nbc*(k-1)+1:nbc*k) )
-            elseif (k==i) then
-                Aii = A%val(:,:,j)
+        do k=A%ia(i),A%ia(i+1)-1
+            j = A%ja(k)
+            if (j>i) then
+                z = z-matmul( A%val(:,:,k), x(nbc*(j-1)+1:nbc*j) )
+            elseif (j==i) then
+                Aii = A%val(:,:,k)
             endif
         enddo
         ! Make a call to LAPACK here
@@ -615,7 +615,30 @@ subroutine bsr_convert_to_coo(A,rows,cols,vals)                            !
     integer, intent(out) :: rows(:),cols(:)
     real(kind(1d0)), intent(out), optional :: vals(:)
     ! local variables
-    integer :: i,j
+    integer :: i,j,k,m,n,row,col,next
+
+    associate( mrow=>A%mrow, mcol=>A%mcol, nrow=>A%nrow, ncol=>A%ncol, &
+        & nbr=>A%nbr, nbc=>A%nbc)
+
+    next = 0
+    do i=1,mrow
+        do k=A%ia(i),A%ia(i+1)-1
+            j = A%ja(k)
+            do n=1,nbc
+                col = nbc*(j-1)+n
+                do m=1,nbr
+                    row = nbr*(i-1)+m
+
+                    next = next+1
+                    rows( next ) = row
+                    cols( next ) = col
+                    if (present(vals)) vals( next ) = A%val(m,n,k)
+                enddo
+            enddo
+        enddo
+    enddo
+
+    end associate
 
 end subroutine bsr_convert_to_coo
 
@@ -628,10 +651,15 @@ subroutine bsr_write_to_file(A,filename)                                   !
     class(bsr_matrix), intent(in) :: A
     character(len=*), intent(in) :: filename
     ! local variables
-    integer :: i,j
+    integer :: i,rows(A%nnz),cols(A%nnz)
+    real(kind(1d0)) :: vals(A%nnz)
 
+    call A%convert_to_coo(rows,cols,vals)
     open(unit=100,file=trim(filename)//".txt")
-
+    write(100,*) A%nrow,A%ncol,A%nnz
+    do i=1,A%nnz
+        write(100,*) rows(i),cols(i),vals(i)
+    enddo
     close(100)
 
 end subroutine bsr_write_to_file
