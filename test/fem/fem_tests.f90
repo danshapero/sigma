@@ -75,27 +75,26 @@ program fem_tests
     enddo
 
     g = 0.d0
-    call gradient(mesh,u,g)
+    g = gradient(mesh,u)
 
-    f(1,:) = matvec_mass_matrix(mesh,g(1,:))
-    f(2,:) = matvec_mass_matrix(mesh,g(2,:))
+    if ( minval(g(1,:))<1.d0-1.d-8 .or. maxval(g(1,:))>1.d0+1.d-8 ) then
+        print *, ' u(x,y) = 1+x+2y '
+        print *, 'du/dx should be = 1'
+        print *, 'Values found: (',minval(g(1,:)),',',maxval(g(1,:)),')'
+    endif
+    if ( minval(g(2,:))<2.d0-1.d-8 .or. maxval(g(2,:))>2.d0+1.d-8 ) then
+        print *, ' u(x,y) = 1+x+2y '
+        print *, 'du/dx should be = 2'
+        print *, 'Values found: (',minval(g(2,:)),',',maxval(g(2,:)),')'
+    endif
 
     call solver_setup(B,krylov,pc,pc_name='jacobi')
     allocate(mask(0))
     z = 0.d0
-    call krylov%solve(B,z(1,:),f(1,:),pc,mask)
-    call krylov%solve(B,z(2,:),f(2,:),pc,mask)
 
-    if ( minval(z(1,:))<1.d0-1.d-8 .or. maxval(z(1,:))>1.d0+1.d-8 ) then
-        print *, ' u(x,y) = 1+x+2y '
-        print *, 'du/dx should be = 1'
-        print *, 'Values found: (',minval(z(1,:)),',',maxval(z(1,:)),')'
-    endif
-    if ( minval(z(2,:))<2.d0-1.d-8 .or. maxval(z(2,:))>2.d0+1.d-8 ) then
-        print *, ' u(x,y) = 1+x+2y '
-        print *, 'du/dx should be = 2'
-        print *, 'Values found: (',minval(z(2,:)),',',maxval(z(2,:)),')'
-    endif
+    z(1,:) = elements_to_nodes(g(1,:),mesh,B,krylov,pc)
+    z(2,:) = elements_to_nodes(g(2,:),mesh,B,krylov,pc)
+
 
 
     end associate

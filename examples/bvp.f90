@@ -98,9 +98,11 @@ program bvp
     allocate(csr_matrix::B)
     allocate(csr_matrix::R)
 
+    call A%init( mesh%nn, mesh%nn, mesh%nn+2*mesh%nl )
     call assemble(mesh,A)
     call stiffness_matrix(mesh,A,1.d0)
 
+    call B%init( mesh%nn, mesh%nn, mesh%nn+2*mesh%nl )
     call assemble(mesh,B)
     call mass_matrix(mesh,B)
 

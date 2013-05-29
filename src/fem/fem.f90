@@ -3,6 +3,7 @@ module fem                                                                 !
 !--------------------------------------------------------------------------!
     use meshes
     use matrix
+    use solver
 
     implicit none
 
@@ -113,8 +114,8 @@ subroutine system_stiffness_matrix(A,mesh,kappa,d)                         !
 
         ! x -> S*(x-x_3)/det maps physical triangle to reference triangle
         S(1,1) = T(2,2)
-        S(1,2) = -T(2,1)
-        S(2,1) = -T(1,2)
+        S(1,2) = -T(1,2)
+        S(2,1) = -T(2,1)
         S(2,2) = T(1,1)
 
         ! Transform the diffusion tensor to the reference triangle
@@ -334,17 +335,16 @@ end subroutine robin_matrix
 
 
 !--------------------------------------------------------------------------!
-subroutine gradient(mesh,u,g)                                              !
+function gradient(mesh,u)                                                  !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
     type (tri_mesh), intent(in) :: mesh
     real(kind(1d0)), intent(in) :: u(:)
-    real(kind(1d0)), intent(out) :: g(:,:)
+    real(kind(1d0)) :: gradient(2,mesh%ne)
     ! local variables
     integer :: n,elem(3)
-    real(kind(1d0)) :: dx,det
-    real(kind(1d0)) :: S(2,2),Q(2,2)
+    real(kind(1d0)) :: det,S(2,2),Q(2,2)
 
     do n=1,mesh%ne
         elem = mesh%elem(:,n)
@@ -362,17 +362,37 @@ subroutine gradient(mesh,u,g)                                              !
 
         ! Compute the directional derivatives of u along the edges of the
         ! physical triangle
-        dx = dsqrt( S(1,1)**2 + S(2,1)**2 )
-        g(1,n) = u(elem(1))-u(elem(3))
-        dx = dsqrt( S(1,2)**2 + S(2,2)**2 )
-        g(2,n) = u(elem(2))-u(elem(3))
+        gradient(1,n) = u(elem(1))-u(elem(3))
+        gradient(2,n) = u(elem(2))-u(elem(3))
 
         ! Multiply by Q to find the gradient vector
-        g(:,n) = matmul(g(:,n),Q)
+        gradient(:,n) = matmul(gradient(:,n),Q)
     enddo
     
 
-end subroutine gradient
+end function gradient
+
+
+
+!--------------------------------------------------------------------------!
+function elements_to_nodes(u,mesh,B,solver,pc)                             !
+!--------------------------------------------------------------------------!
+    implicit none
+    ! input/output variables
+    real(kind(1d0)), intent(in) :: u(:)
+    class(sparse_matrix), intent(in) :: B
+    type(tri_mesh), intent(in) :: mesh
+    class(iterative_solver), intent(inout) :: solver
+    class(preconditioner), intent(inout) :: pc
+    real(kind(1d0)) :: elements_to_nodes(mesh%nn)
+    ! local variables
+    real(kind(1d0)) :: z(mesh%nn)
+    integer :: mask(0)
+
+    z = matvec_mass_matrix(mesh,u)
+    call solver%solve(B,elements_to_nodes,z,pc,mask)
+
+end function elements_to_nodes
 
 
 
