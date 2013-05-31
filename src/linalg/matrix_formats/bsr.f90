@@ -20,6 +20,7 @@ contains
     procedure :: get_neighbors => bsr_get_neighbors
     procedure :: set_value => bsr_set_value, add_value => bsr_add_value
     procedure :: set_values => bsr_set_values, add_values => bsr_add_values
+    procedure :: zero => bsr_zero
     procedure :: permute => bsr_permute
     procedure :: subset_matrix_add => bsr_subset_matrix_add
     ! matrix multiplication routines
@@ -379,6 +380,22 @@ subroutine bsr_add_values(A,rows,cols,vals)                                !
     endif
 
 end subroutine bsr_add_values
+
+
+
+!--------------------------------------------------------------------------!
+subroutine bsr_zero(A)                                                     !
+!--------------------------------------------------------------------------!
+    implicit none
+    class(bsr_matrix), intent(inout) :: A
+
+    A%val = 0.d0
+    A%symmetric = .false.
+    A%pos_def = .false.
+    A%m_matrix = .false.
+    A%diag_dominant = .false.
+
+end subroutine bsr_zero
 
 
 

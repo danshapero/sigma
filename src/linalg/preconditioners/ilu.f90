@@ -1,8 +1,8 @@
 module ilu
 
+    use csr
     use matrix
     use solver
-    use csr
 
 type, extends(preconditioner) :: ilu_preconditioner
     type(csr_matrix) :: LU

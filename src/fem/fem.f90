@@ -60,6 +60,8 @@ subroutine stiffness_matrix(mesh,A,kappa)                                  !
     integer :: n,elem(3)
     real(kind(1d0)) :: area,AE(3,3),D(3,2)
 
+    call A%zero()
+
     do n=1,mesh%ne
         !--------------------------------------
         ! Compute the element stiffness matrix
@@ -98,6 +100,8 @@ subroutine system_stiffness_matrix(A,mesh,kappa,d)                         !
     integer :: i,j,k,l,n,elem(3),rows(d),cols(d)
     real(kind(1d0)) :: det,area,S(2,2),T(2,2),V(3,2),kap(d,2,d,2), &
         & AE(d,3,d,3)
+
+    call A%zero()
 
     V(1,:) = [ 1.d0,  0.d0 ]
     V(2,:) = [ 0.d0,  1.d0 ]
@@ -148,6 +152,10 @@ subroutine system_stiffness_matrix(A,mesh,kappa,d)                         !
 
     enddo
 
+    A%pos_def = .true.
+    A%symmetric = .true.
+    A%diag_dominant = .true.
+
 end subroutine system_stiffness_matrix
 
 
@@ -169,6 +177,8 @@ subroutine mass_matrix(mesh,B)                                             !
     integer, dimension(3) :: elem
     real(kind(1d0)) :: area
     real(kind(1d0)), dimension(3,3) :: BE
+
+    call B%zero()
 
     do n=1,mesh%ne
         !---------------------------------
@@ -311,6 +321,8 @@ subroutine robin_matrix(mesh,R)                                            !
     integer, dimension(2) :: edge
     real(kind(1d0)) :: dx
     real(kind(1d0)), dimension(2,2) :: z,RE
+
+    call R%zero()
 
     do i=1,mesh%nl
         if (mesh%bnd_edge(i) /= 0) then

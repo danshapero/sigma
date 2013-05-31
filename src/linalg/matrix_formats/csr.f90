@@ -19,6 +19,7 @@ contains
     procedure :: get_neighbors => csr_get_neighbors
     procedure :: set_value => csr_set_value, add_value => csr_add_value
     procedure :: set_values => csr_set_values, add_values => csr_add_values
+    procedure :: zero => csr_zero
     procedure :: permute => csr_permute
     procedure :: subset_matrix_add => csr_subset_matrix_add
     ! matrix multiplication routines
@@ -269,6 +270,22 @@ subroutine csr_add_values(A,rows,cols,vals)                                !
     enddo
 
 end subroutine csr_add_values
+
+
+
+!--------------------------------------------------------------------------!
+subroutine csr_zero(A)                                                     !
+!--------------------------------------------------------------------------!
+    implicit none
+    class(csr_matrix), intent(inout) :: A
+
+    A%val = 0.d0
+    A%symmetric = .false.
+    A%pos_def = .false.
+    A%m_matrix = .false.
+    A%diag_dominant = .false.
+
+end subroutine csr_zero
 
 
 

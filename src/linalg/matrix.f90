@@ -16,6 +16,7 @@ contains
     procedure(get_neighbors_interface), deferred :: get_neighbors
     procedure(set_value_interface), deferred :: set_value, add_value
     procedure(set_values_interface), deferred :: set_values, add_values
+    procedure(zero_interface), deferred :: zero
     procedure(permute_interface), deferred :: permute
     procedure(subset_matrix_add_interface), deferred :: subset_matrix_add
     ! matrix multiplication routines
@@ -83,6 +84,12 @@ subroutine set_values_interface(A,rows,cols,vals)
     integer, intent(in) :: rows(:),cols(:)
     real(kind(1d0)), intent(in) :: vals(size(rows),size(cols))
 end subroutine set_values_interface
+
+
+subroutine zero_interface(A)
+    import :: sparse_matrix
+    class(sparse_matrix), intent(inout) :: A
+end subroutine zero_interface
 
 
 subroutine permute_interface(A,p)
