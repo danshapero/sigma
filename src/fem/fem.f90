@@ -117,16 +117,17 @@ subroutine system_stiffness_matrix(A,mesh,kappa,d)                         !
         area = 0.5*dabs(det)
 
         ! x -> S*(x-x_3)/det maps physical triangle to reference triangle
-        S(1,1) = T(2,2)
-        S(1,2) = -T(1,2)
-        S(2,1) = -T(2,1)
-        S(2,2) = T(1,1)
+        S(1,1) = T(2,2)/det
+        S(1,2) = -T(1,2)/det
+        S(2,1) = -T(2,1)/det
+        S(2,2) = T(1,1)/det
 
         ! Transform the diffusion tensor to the reference triangle
+        kap = sum( kappa(:,:,:,:,elem) )/3.d0
+
         do j=1,d
             do i=1,d
-                kap(i,:,j,:) = matmul( S/det, &
-                     matmul(kappa(i,:,j,:,n),transpose(S)/det) )
+                kap(i,:,j,:) = matmul( S,matmul(kap(i,:,j,:),transpose(S)) )
             enddo
         enddo
 

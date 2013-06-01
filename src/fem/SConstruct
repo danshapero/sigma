@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 Import('masterEnv')
-env = masterEnv.Clone()
+env = masterEnv.Clone(F90FLAGS='-g -fbounds-check')
 
 fem_sources = Split("""fem.f90""")
 

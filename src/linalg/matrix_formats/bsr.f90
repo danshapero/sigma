@@ -390,6 +390,7 @@ subroutine bsr_zero(A)                                                     !
     class(bsr_matrix), intent(inout) :: A
 
     A%val = 0.d0
+
     A%symmetric = .false.
     A%pos_def = .false.
     A%m_matrix = .false.
@@ -660,6 +661,7 @@ subroutine bsr_convert_to_coo(A,rows,cols,vals)                            !
 end subroutine bsr_convert_to_coo
 
 
+
 !--------------------------------------------------------------------------!
 subroutine bsr_write_to_file(A,filename)                                   !
 !--------------------------------------------------------------------------!
@@ -672,7 +674,7 @@ subroutine bsr_write_to_file(A,filename)                                   !
     real(kind(1d0)) :: vals(A%nnz)
 
     call A%convert_to_coo(rows,cols,vals)
-    open(unit=100,file=trim(filename)//".txt")
+    open(unit=100,file=trim(filename)//".txt",status='replace')
     write(100,*) A%nrow,A%ncol,A%nnz
     do i=1,A%nnz
         write(100,*) rows(i),cols(i),vals(i)
