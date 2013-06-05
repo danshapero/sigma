@@ -98,8 +98,8 @@ subroutine system_stiffness_matrix(A,mesh,kappa,d)                         !
     integer, intent(in) :: d
     ! local variables
     integer :: i,j,k,l,n,elem(3),rows(d),cols(d)
-    real(kind(1d0)) :: det,area,S(2,2),T(2,2),V(3,2),kap(d,2,d,2), &
-        & AE(d,3,d,3)
+    real(kind(1d0)) :: det,area,S(2,2),T(2,2),V(3,2),grad(3,2), &
+        & kap(d,2,d,2),AE(d,3,d,3)
 
     call A%zero()
 
@@ -122,21 +122,17 @@ subroutine system_stiffness_matrix(A,mesh,kappa,d)                         !
         S(2,1) = -T(2,1)/det
         S(2,2) = T(1,1)/det
 
-        ! Transform the diffusion tensor to the reference triangle
-        kap = sum( kappa(:,:,:,:,elem) )/3.d0
+        grad = matmul(V,S)
 
-        do j=1,d
-            do i=1,d
-                kap(i,:,j,:) = matmul( S,matmul(kap(i,:,j,:),transpose(S)) )
-            enddo
-        enddo
+        ! Transform the diffusion tensor to the reference triangle
+        kap = sum( kappa(:,:,:,:,elem),5 )/3.d0
 
         ! Fill in the entries of the element stiffness matrix
         AE = 0.d0
-        do j=1,d
+        do k=1,d
             do i=1,d
-                AE(i,:,j,:) = AE(i,:,j,:) &
-                    & +area*matmul( V,matmul(kap(i,:,j,:),transpose(V)) )
+                AE(i,:,k,:) = &
+                  &+area*matmul(grad,matmul(kap(i,:,k,:),transpose(grad)))
             enddo
         enddo
 

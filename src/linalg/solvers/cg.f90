@@ -56,7 +56,7 @@ subroutine cg_solve(solver,A,x,b,pc,mask)                                  !
     associate( p=>solver%p, q=>solver%q, r=>solver%r, z=>solver%z )
 
     z = x
-    z(mask) = 0.d0
+!    z(mask) = 0.d0
     call A%matvec(z,q)
     r = b-q
     r(mask) = 0.d0

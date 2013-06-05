@@ -142,6 +142,12 @@ program bvp
             call R%matvec(u,z)
             f = f+z
         endif
+
+        if (trim(modename) == "dirichlet") then
+!            call A%matvec(u,z)
+!            f = f-z
+!            print *, 'Hello!'
+        endif
     endif
 
 
