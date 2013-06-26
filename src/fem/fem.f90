@@ -11,7 +11,7 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine assemble(mesh,A)                                                !
+subroutine assemble(A,mesh)                                                !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
@@ -49,7 +49,7 @@ end subroutine assemble
 
 
 !--------------------------------------------------------------------------!
-subroutine stiffness_matrix(mesh,A,kappa)                                  !
+subroutine stiffness_matrix(A,mesh,kappa)                                  !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
@@ -158,7 +158,7 @@ end subroutine system_stiffness_matrix
 
 
 !--------------------------------------------------------------------------!
-subroutine mass_matrix(mesh,B)                                             !
+subroutine mass_matrix(B,mesh)                                             !
 !--------------------------------------------------------------------------!
 ! Fill in the entries of the sparse matrix B constituting the mass matrix  !
 !   for C0 finite elements on the tri_mesh mesh                            !

@@ -516,15 +516,6 @@ subroutine csr_write_to_file(A,filename)                                   !
     call A%convert_to_coo(rows,cols,vals)
     open(unit=100,file=trim(filename)//".txt")
     write(100,*) A%nrow,A%ncol,A%nnz
-!1   format(' ',I5,'   ',I5)
-!    do i=1,A%nrow
-!        write(100,10) i
-!10      format(' ',I5,'  ')
-!        do j=A%ia(i),A%ia(i+1)-1
-!            write(100,20) A%ja(j),A%val(j)
-!20          format('     ',I5,'     ',g12.6)
-!        enddo
-!    enddo
     do i=1,A%nnz
         write(100,*) rows(i),cols(i),vals(i)
     enddo

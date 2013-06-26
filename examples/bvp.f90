@@ -99,12 +99,12 @@ program bvp
     allocate(csr_matrix::R)
 
     call A%init( mesh%nn, mesh%nn, mesh%nn+2*mesh%nl )
-    call assemble(mesh,A)
-    call stiffness_matrix(mesh,A,1.d0)
+    call assemble(A,mesh)
+    call stiffness_matrix(A,mesh,1.d0)
 
     call B%init( mesh%nn, mesh%nn, mesh%nn+2*mesh%nl )
-    call assemble(mesh,B)
-    call mass_matrix(mesh,B)
+    call assemble(B,mesh)
+    call mass_matrix(B,mesh)
 
     if (trim(modename) == "robin") then
         call assemble_boundary(mesh,R)

@@ -27,8 +27,8 @@ program permutations
 
     allocate(csr_matrix::A)
 
-    call assemble(mesh,A)
-    call stiffness_matrix(mesh,A,1.d0)
+    call assemble(A,mesh)
+    call stiffness_matrix(A,mesh,1.d0)
 
     call A%write_to_file("a")
 

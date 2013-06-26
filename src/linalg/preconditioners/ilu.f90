@@ -8,6 +8,7 @@ type, extends(preconditioner) :: ilu_preconditioner
     type(csr_matrix) :: LU
     real(kind(1d0)), allocatable :: D(:),q(:)
     logical :: pos_def
+    logical :: initialized=.false.
 contains
     procedure :: init => ilu_init
     procedure :: precondition => ilu_precondition
@@ -38,16 +39,22 @@ subroutine ilu_init(pc,A,level)                                            !
 
     pc%pos_def = A%pos_def
 
-    allocate(pc%D(pc%nn),pc%q(pc%nn))
-
-    associate( LU => pc%LU, D => pc%D )
-
     allocate(rows(A%nnz),cols(A%nnz),vals(A%nnz))
     call A%convert_to_coo(rows,cols,vals)
-    call LU%init(A%nrow,A%ncol,A%nnz,rows,cols)
+
+    if (.not.pc%initialized) then
+        allocate(pc%D(pc%nn),pc%q(pc%nn))
+        call pc%LU%init(A%nrow,A%ncol,A%nnz,rows,cols)
+
+        pc%initialized = .true.
+    endif
+
+    associate( LU=>pc%LU, D=>pc%D )
+
     do i=1,A%nnz
         call LU%set_value(rows(i),cols(i),vals(i))
     enddo
+
     deallocate(rows,cols,vals)
 
     do i=1,A%nrow
