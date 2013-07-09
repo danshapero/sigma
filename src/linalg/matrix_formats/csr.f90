@@ -90,9 +90,7 @@ subroutine csr_build(A,rows,cols)                                          !
     integer :: work(A%nrow)
     real(kind(1d0)) :: Aij
 
-    nrow = A%nrow
-    ncol = A%ncol
-    nnz = A%nnz
+    associate( nrow=>A%nrow, ncol=>A%ncol, nnz=>A%nnz )
 
     ! Fill in a work array; work(i) = # of non-zero entries in row i
     work = 0
@@ -118,6 +116,8 @@ subroutine csr_build(A,rows,cols)                                          !
 
     ! Sort the array ja: ja(ia(i)),ja(ia(i+1)-1) are in order
     call A%sort_ja()
+
+    end associate
 
 end subroutine csr_build
 
