@@ -16,7 +16,7 @@ program bvp
 
     ! command line arguments
     character(len=32) :: meshname,solname,rhsname,bndname,modename, &
-        & pcname,arg
+        & solvername,pcname,arg
 
     ! computational mesh
     type (tri_mesh) :: mesh
@@ -46,6 +46,7 @@ program bvp
     rhsname = "none                            "
     bndname = "none                            "
     pcname = "none                            "
+    solvername = "cg                              "
 
     do i=1,iargc()
         call getarg(i,arg)
@@ -61,6 +62,8 @@ program bvp
             call getarg(i+1,modename)
         case('--bnd')
             call getarg(i+1,bndname)
+        case('--solver')
+            call getarg(i+1,solvername)
         case('--pc')
             call getarg(i+1,pcname)
         case('--help')
@@ -155,7 +158,7 @@ program bvp
 !--------------------------------------------------------------------------!
 ! Solve for u using the conjugate gradient method                          !
 !--------------------------------------------------------------------------!
-    call solver_setup(A,krylov,pc,pc_name = pcname)
+    call solver_setup(A,krylov,pc,pc_name=pcname,solver_name=solvername)
 
     print *, 'Done initializing preconditioner!'
 

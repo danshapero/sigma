@@ -9,6 +9,7 @@ linalg_sources = Split("""matrix.f90
                           permutation.f90
                           solver.f90
                           solvers/cg.f90
+                          solvers/cgs.f90
                           preconditioners/jacobi.f90
                           preconditioners/bjacobi.f90
                           preconditioners/ilu.f90

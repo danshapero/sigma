@@ -43,8 +43,8 @@ program fem_tests
 !--------------------------------------------------------------------------!
 ! Test assembly of finite element matrices                                 !
 !--------------------------------------------------------------------------!
-    call assemble(mesh,A)
-    call assemble(mesh,B)
+    call assemble(A,mesh)
+    call assemble(B,mesh)
 
     allocate(nbrs(A%max_degree))
     nbrs = A%get_neighbors(1)
@@ -54,8 +54,8 @@ program fem_tests
 !--------------------------------------------------------------------------!
 ! Test filling of finite element matrices                                  !
 !--------------------------------------------------------------------------!
-    call stiffness_matrix(mesh,A,1.d0)
-    call mass_matrix(mesh,B)
+    call stiffness_matrix(A,mesh,1.d0)
+    call mass_matrix(B,mesh)
 
     v = 1.d0
     call A%matvec(u,v)

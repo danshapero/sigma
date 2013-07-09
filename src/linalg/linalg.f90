@@ -11,6 +11,7 @@ module linalg
     ! Solver modules
     use solver
     use cg
+    use cgs
 
     ! Preconditioner modules
     use jacobi
@@ -41,6 +42,8 @@ subroutine solver_setup(A,solver,pc,solver_name,pc_name,tolerance,level)   !
         select case(trim(solver_name))
             case("cg")
                 allocate(cg_solver::solver)
+            case("cgs")
+                allocate(cgs_solver::solver)
             case default
                 ! Need to change this when I actually get a new solver, e.g.
                 ! make it default to GMRES or BiCG or something that will
