@@ -32,7 +32,6 @@ contains
     procedure :: forwardsolve => ellpack_forwardsolve
     ! routines for i/o and validation
     procedure :: convert_to_coo => ellpack_convert_to_coo
-    procedure :: write_to_vile => csr_write_to_file
     ! auxiliary routines
     procedure :: sort_ja
 end type ellpack_matrix
@@ -345,6 +344,107 @@ subroutine ellpack_matvec(A,x,y,rows,cols)                                 !
             if ( c(1)<=j .and. j<=c(2) ) z = z+A%val(k,i)*x(j)
         enddo
     enddo
+
+end subroutine ellpack_matvec
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ellpack_backsolve(A,x)                                          !
+!--------------------------------------------------------------------------!
+    implicit none
+    ! input/output variables
+    class(ellpack_matrix), intent(in) :: A
+    real(kind(1d0)), intent(inout) :: x(:)
+    ! local variables
+    integer :: i,j,k
+    real(kind(1d0)) :: Aii,z
+
+    do i=A%nrow,1,-1
+        z = x(i)
+        do k=1,A%max_degree
+            j = A%ja(k,i)
+            if (j>i) then
+                z = z-A%val(k,i)*x(j)
+            elseif (j==i) then
+                Aii = A%val(k,i)
+            endif
+        enddo
+        x(i) = z/Aii
+    enddo
+
+end subroutine ellpack_backsolve
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ellpack_forwardsolve(A,x)                                       !
+!--------------------------------------------------------------------------!
+    implicit none
+    ! input/output variables
+    class(ellpack_matrix), intent(in) :: A
+    real(kind(1d0)), intent(inout) :: x(:)
+    ! local variables
+    integer :: i,j,k
+    real(kind(1d0)) :: Aii,z
+
+    do i=1,A%nrow
+        z = x(i)
+        do k=1,A%max_degree
+            j = A%ja(k,i)
+            if (j<i .and. j>0) then
+                z = z-A%val(k,i)*x(j)
+            elseif (j==i) then
+                Aii = A%val(k,i)
+            endif
+        enddo
+        x(i) = z/Aii
+    enddo
+
+end subroutine ellpack_forwardsolve
+
+
+
+
+
+
+
+
+
+!==========================================================================!
+!==========================================================================!
+!======= i/o and validation routines                                   ====!
+!==========================================================================!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
+subroutine ellpack_convert_to_coo(A,rows,cols,vals)                        !
+!--------------------------------------------------------------------------!
+    implicit none
+    ! input/output variables
+    class(ellpack_matrix), intent(in) :: A
+    integer, intent(out) :: rows(:),cols(:)
+    real(kind(1d0)), intent(out), optional :: vals(:)
+    ! local variables
+    integer :: i,j,k,next
+
+    next = 0
+    do i=1,A%nrow
+        do k=1,A%max_degree
+            j = A%ja(k,i)
+            if (j/=0) then
+                next = next+1
+                rows(next) = i
+                cols(next) = j
+                if (present(vals)) vals(next) = A%val(k,i)
+            endif
+        enddo
+    enddo
+
+end subroutine ellpack_convert_to_coo
+
+
+
 
 end module ellpack
 

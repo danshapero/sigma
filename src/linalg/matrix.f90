@@ -25,7 +25,7 @@ contains
     procedure(trisolve_interface), deferred :: backsolve, forwardsolve
     ! routines for i/o and validation
     procedure(convert_to_coo_interface), deferred :: convert_to_coo
-    procedure(write_to_file_interface), deferred :: write_to_file
+    procedure :: write_to_file
 end type sparse_matrix
 
 
@@ -130,12 +130,6 @@ subroutine convert_to_coo_interface(A,rows,cols,vals)
 end subroutine
 
 
-subroutine write_to_file_interface(A,filename)
-    import :: sparse_matrix
-    class(sparse_matrix), intent(in) :: A
-    character(len=*), intent(in) :: filename
-end subroutine write_to_file_interface
-
 
 end interface
 
@@ -145,8 +139,29 @@ end interface
 contains
 
 
-!-----------------------------
-! Nothing! This module exists just to define the sparse matrix type
+
+!--------------------------------------------------------------------------!
+subroutine write_to_file(A,filename)                                       !
+!--------------------------------------------------------------------------!
+    implicit none
+    ! input/output variables
+    class(sparse_matrix), intent(in) :: A
+    character(len=*), intent(in) :: filename
+    ! local variables
+    integer :: i,rows(A%nnz),cols(A%nnz)
+    real(kind(1d0)) :: vals(A%nnz)
+
+    call A%convert_to_coo(rows,cols,vals)
+    open(unit=100,file=trim(filename)//'.txt')
+    write(100,*) A%nrow,A%ncol,A%nnz
+    do i=1,A%nnz
+        write(100,*) rows(i),cols(i),vals(i)
+    enddo
+    close(100)
+
+end subroutine write_to_file
+
+
 
 
 

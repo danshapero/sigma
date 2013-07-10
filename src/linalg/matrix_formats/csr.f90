@@ -29,7 +29,6 @@ contains
     procedure :: forwardsolve => csr_forwardsolve
     ! routines for i/o and validation
     procedure :: convert_to_coo => csr_convert_to_coo
-    procedure :: write_to_file => csr_write_to_file
     ! auxiliary routines
     procedure :: sort_ja
 end type csr_matrix
@@ -387,19 +386,19 @@ subroutine csr_matvec(A,x,y,rows,cols)                                     !
     integer, intent(in), optional :: rows(2),cols(2)
     ! local variables
     real(kind(1d0)) :: z
-    integer :: i,j,ind,r(2),c(2)
+    integer :: i,j,k,r(2),c(2)
 
     r = [1, A%nrow]
     c = [1, A%ncol]
     if (present(rows)) r = rows
     if (present(cols)) c = cols
 
-    !$omp parallel do private(ind,j,z)
+    !$omp parallel do private(k,j,z)
     do i=r(1),r(2)
         z = 0.d0
-        do ind=A%ia(i),A%ia(i+1)-1
-            j = A%ja(ind)
-            if ( c(1)<=j .and. j<=c(2) ) z = z+A%val(ind)*x(j)
+        do k=A%ia(i),A%ia(i+1)-1
+            j = A%ja(k)
+            if ( c(1)<=j .and. j<=c(2) ) z = z+A%val(k)*x(j)
         enddo
         y(i) = z
     enddo
@@ -496,33 +495,6 @@ subroutine csr_convert_to_coo(A,rows,cols,vals)                            !
     if (present(vals)) vals = A%val
 
 end subroutine csr_convert_to_coo
-
-
-
-!--------------------------------------------------------------------------!
-subroutine csr_write_to_file(A,filename)                                   !
-!--------------------------------------------------------------------------!
-! Write out the data for a sparse matrix to a file in order to guarantee   !
-! correctness                                                              !
-!--------------------------------------------------------------------------!
-    implicit none
-    ! input/output variables
-    class(csr_matrix), intent(in) :: A
-    character(len=*), intent(in) :: filename
-    ! local variables
-    integer :: i,rows(A%nnz),cols(A%nnz)
-    real(kind(1d0)) :: vals(A%nnz)
-
-    call A%convert_to_coo(rows,cols,vals)
-    open(unit=100,file=trim(filename)//".txt")
-    write(100,*) A%nrow,A%ncol,A%nnz
-    do i=1,A%nnz
-        write(100,*) rows(i),cols(i),vals(i)
-    enddo
-    close(100)
-
-
-end subroutine csr_write_to_file
 
 
 

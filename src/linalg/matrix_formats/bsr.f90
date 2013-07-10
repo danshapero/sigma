@@ -30,7 +30,6 @@ contains
     procedure :: forwardsolve => bsr_forwardsolve
     ! routines for i/o and validation
     procedure :: convert_to_coo => bsr_convert_to_coo
-    procedure :: write_to_file => bsr_write_to_file
     ! auxiliary routines
     procedure :: sort_ja
     procedure :: whole_block
@@ -661,29 +660,6 @@ subroutine bsr_convert_to_coo(A,rows,cols,vals)                            !
     end associate
 
 end subroutine bsr_convert_to_coo
-
-
-
-!--------------------------------------------------------------------------!
-subroutine bsr_write_to_file(A,filename)                                   !
-!--------------------------------------------------------------------------!
-    implicit none
-    ! input/output variables
-    class(bsr_matrix), intent(in) :: A
-    character(len=*), intent(in) :: filename
-    ! local variables
-    integer :: i,rows(A%nnz),cols(A%nnz)
-    real(kind(1d0)) :: vals(A%nnz)
-
-    call A%convert_to_coo(rows,cols,vals)
-    open(unit=100,file=trim(filename)//".txt",status='replace')
-    write(100,*) A%nrow,A%ncol,A%nnz
-    do i=1,A%nnz
-        write(100,*) rows(i),cols(i),vals(i)
-    enddo
-    close(100)
-
-end subroutine bsr_write_to_file
 
 
 
