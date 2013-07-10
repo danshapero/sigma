@@ -75,7 +75,7 @@ subroutine bsr_init(A,nrow,ncol,nnz,rows,cols,params)                      !
             print *, '   the  matrix.                                   '
             print *, '   Reverting to a row block size of 1, for which  '
             print *, '   the BSR format is no more efficient than CSR.  '
-            A%mrow = 1
+            A%nbr = 1
         endif
 
         if (size(params)>1) then
@@ -501,7 +501,7 @@ subroutine bsr_matvec(A,x,y,rows,cols)                                     !
     integer, intent(in), optional :: rows(2),cols(2)
     ! local variables
     real(kind(1d0)) :: z(A%nbr)
-    integer :: i,j,k,r(2),c(2)
+    integer :: i,j,k,m,r(2),c(2)
 
     r = [1,A%mrow]
     c = [1,A%mcol]
@@ -514,7 +514,9 @@ subroutine bsr_matvec(A,x,y,rows,cols)                                     !
         do k=A%ia(i),A%ia(i+1)-1
             j = A%ja(k)
             if ( c(1)<=j .and. j<=c(2) ) then
-                z = z+matmul(A%val(:,:,k),x(A%nbc*(j-1)+1:A%nbc*j))
+                do m=1,A%nbc
+                    z = z+A%val(:,m,k)*x(A%nbc*(j-1)+m)
+                enddo
             endif
         enddo
         y(A%nbr*(i-1)+1:A%nbr*i) = z
