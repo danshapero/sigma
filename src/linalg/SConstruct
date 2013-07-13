@@ -6,6 +6,7 @@ env = masterEnv.Clone(F90FLAGS='-fbounds-check -g -fopenmp')
 linalg_sources = Split("""matrix.f90 
                           matrix_formats/csr.f90
                           matrix_formats/bsr.f90
+                          matrix_formats/ellpack.f90
                           permutation.f90
                           solver.f90
                           solvers/cg.f90

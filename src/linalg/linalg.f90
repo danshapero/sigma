@@ -4,6 +4,7 @@ module linalg
     use bsr
     use csr
     use matrix
+    use ellpack
 
     ! Permutation module
     use permutation

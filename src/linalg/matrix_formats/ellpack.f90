@@ -55,7 +55,7 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine ellpack_init(A,nrow,ncol,nnz,nrows,cols,params)                 !
+subroutine ellpack_init(A,nrow,ncol,nnz, rows,cols,params)                 !
 !--------------------------------------------------------------------------!
     implicit none
     class(ellpack_matrix), intent(inout) :: A
@@ -67,7 +67,7 @@ subroutine ellpack_init(A,nrow,ncol,nnz,nrows,cols,params)                 !
     A%nnz = nnz
 
     if (present(params)) then
-        A%max_degree = params(0)
+        A%max_degree = params(1)
     else
         A%max_degree = ceiling( float(nnz)/nrow )
     endif
@@ -176,7 +176,7 @@ subroutine ellpack_set_value(A,i,j,val)                                    !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
-    class(ellpack_matrix), intent(in) :: A
+    class(ellpack_matrix), intent(inout) :: A
     integer, intent(in) :: i,j
     real(kind(1d0)), intent(in) :: val
     ! local variables
@@ -195,7 +195,7 @@ subroutine ellpack_add_value(A,i,j,val)                                    !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
-    class(ellpack_matrix), intent(in) :: A
+    class(ellpack_matrix), intent(inout) :: A
     integer, intent(in) :: i,j
     real(kind(1d0)), intent(in) :: val
     ! local variables
@@ -223,7 +223,7 @@ subroutine ellpack_set_values(A,rows,cols,vals)                            !
     do j=1,size(cols)
         do i=1,size(rows)
             do k=1,A%max_degree
-                if (A%ja(k,rows(i))==cols(j)) A%vals(k,rows(i)) = vals(i,j)
+                if (A%ja(k,rows(i))==cols(j)) A%val(k,rows(i)) = vals(i,j)
             enddo
         enddo
     enddo
@@ -247,7 +247,7 @@ subroutine ellpack_add_values(A,rows,cols,vals)                            !
         do i=1,size(rows)
             do k=1,A%max_degree
                 if (A%ja(k,rows(i))==cols(j)) then
-                    A%vals(k,rows(i)) = A%vals(k,rows(i))+vals(i,j)
+                    A%val(k,rows(i)) = A%val(k,rows(i))+vals(i,j)
                 endif
             enddo
         enddo
@@ -269,7 +269,7 @@ subroutine ellpack_zero(A)                                                 !
     A%m_matrix = .false.
     A%diag_dominant = .false.
 
-end subroutine csr_zero
+end subroutine ellpack_zero
 
 
 
@@ -280,9 +280,26 @@ subroutine ellpack_permute(A,p)                                            !
     class(ellpack_matrix), intent(inout) :: A
     integer, intent(in) :: p(:)
     ! local variables
-    integer :: i,j,k
+    type(ellpack_matrix) :: B
+    integer :: i,j,k,q(A%nrow)
+    real(kind(1d0)) :: Aij
 
-    ! to be written
+    allocate( B%ja(A%max_degree,A%nrow), B%val(A%max_degree,A%nrow) )
+    B%ja = A%ja
+    B%val = A%val
+    B%max_degree = A%max_degree
+
+    do i=1,A%nrow
+        A%ja(:,p(i)) = B%ja(:,i)
+        A%val(:,p(i)) = B%val(:,i)
+        do k=1,A%max_degree
+            if (A%ja(k,i)>0) A%ja(k,i) = p( A%ja(k,i) )
+        enddo
+    enddo
+
+    ! Sort the array ja so that ja(:,i) is in order for each i
+    call A%sort_ja()
+   
 
 end subroutine ellpack_permute
 
@@ -296,9 +313,18 @@ subroutine ellpack_subset_matrix_add(A,B)                                  !
     class(ellpack_matrix), intent(inout) :: A
     class(ellpack_matrix), intent(in) :: B
     ! local variables
-    integer :: i,j,k
+    integer :: i,j,k,l
 
-    ! to be written
+    do i=1,A%nrow
+        do k=1,A%max_degree
+            j = A%ja(k,i)
+            if (j>0) then
+                do l=1,B%max_degree
+                    if (B%ja(l,i)==j) A%val(k,i) = A%val(k,i)+B%val(k,i)
+                enddo
+            endif
+        enddo
+    enddo
 
 end subroutine ellpack_subset_matrix_add
 
@@ -443,6 +469,46 @@ subroutine ellpack_convert_to_coo(A,rows,cols,vals)                        !
 
 end subroutine ellpack_convert_to_coo
 
+
+
+
+
+!==========================================================================!
+!==========================================================================!
+!==== Auxiliary routines                                               ====!
+!==========================================================================!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
+subroutine sort_ja(A)                                                      !
+!--------------------------------------------------------------------------!
+    implicit none
+    ! input/output variables
+    class(ellpack_matrix), intent(inout) :: A
+    ! local variables
+    integer :: i,j,k,l,nnz_this_row
+    real(kind(1d0)) :: Aij
+
+    do i=1,A%nrow
+        do k=1,A%max_degree
+            if (A%ja(k,i)==0) then
+                nnz_this_row = k-1
+                exit
+            endif
+        enddo
+
+        do k=2,nnz_this_row
+            j = A%ja(k,i)
+            Aij = A%val(k,i)
+            do l=k-1,1,-1
+                if (A%ja(l,i)<=j) exit
+                A%ja(l+1,i) = A%ja(l,i)
+                A%val(l+1,i) = A%val(l,i)
+            enddo
+        enddo
+    enddo
+
+end subroutine sort_ja
 
 
 
