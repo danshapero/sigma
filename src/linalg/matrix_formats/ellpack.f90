@@ -10,7 +10,6 @@ module ellpack
 type, extends(sparse_matrix) :: ellpack_matrix
     integer, allocatable :: ja(:,:)
     real(kind(1d0)), allocatable :: val(:,:)
-    integer :: nd
 contains
     ! Constructor and accessors/mutators
     procedure :: init => ellpack_init
@@ -55,7 +54,7 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine ellpack_init(A,nrow,ncol,nnz, rows,cols,params)                 !
+subroutine ellpack_init(A,nrow,ncol,nnz,rows,cols,params)                  !
 !--------------------------------------------------------------------------!
     implicit none
     class(ellpack_matrix), intent(inout) :: A
@@ -69,7 +68,7 @@ subroutine ellpack_init(A,nrow,ncol,nnz, rows,cols,params)                 !
     if (present(params)) then
         A%max_degree = params(1)
     else
-        A%max_degree = ceiling( float(nnz)/nrow )
+        A%max_degree = int( ceiling(float(nnz)/nrow) )
     endif
 
     allocate( A%ja(A%max_degree,nrow), A%val(A%max_degree,nrow) )
@@ -94,17 +93,14 @@ subroutine ellpack_build(A,rows,cols)                                      !
     ! local variables
     integer :: i,j
 
-    associate( nrow=>A%nrow, ncol=>A%ncol, nnz=>A%nnz, nd=>A%max_degree )
-
-    do i=1,nnz
-        do j=nd,2,-1
-            if (A%ja(j,rows(i))==0 .and. A%ja(j-1,rows(i))/=0) then
+    do i=1,A%nnz
+        do j=1,A%max_degree
+            if (A%ja(j,rows(i))==0) then
                 A%ja(j,rows(i)) = cols(i)
+                exit
             endif
         enddo
     enddo
-
-    end associate
 
 end subroutine ellpack_build
 
@@ -148,7 +144,9 @@ function ellpack_get_values(A,rows,cols)                                   !
     do j=1,size(cols)
         do i=1,size(rows)
             do k=1,A%max_degree
-                if (A%ja(k,i)==cols(j)) ellpack_get_values(i,j) = A%val(k,i)
+                if (A%ja(k,rows(i))==cols(j)) then
+                    ellpack_get_values(i,j) = A%val(k,i)
+                endif
             enddo
         enddo
     enddo

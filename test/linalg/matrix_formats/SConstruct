@@ -7,3 +7,5 @@ libs_format_tests = Split("""linalg lapack gomp""")
 libpath_format_tests = Split("""#/src/linalg""")
 
 env.Program('bsr_tests', 'bsr_tests.f90', LIBS=libs_format_tests, LIBPATH=libpath_format_tests)
+
+env.Program('ellpack_tests', 'ellpack_tests.f90', LIBS=libs_format_tests, LIBPATH=libpath_format_tests)
