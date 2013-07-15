@@ -112,5 +112,12 @@ program ellpack_tests
 !--------------------------------------------------------------------------!
     allocate(x(100),y(100))
 
+    x = 1.d0
+    call A%matvec(x,y)
+
+    if (maxval(dabs(y))/=0.d0) then
+        print *, 'A*[1.0, ..., 1.0] should be 0.0'
+        print *, 'Values found: ', maxval(dabs(y))
+    endif
 
 end program ellpack_tests

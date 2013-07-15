@@ -85,7 +85,7 @@ subroutine csr_build(A,rows,cols)                                          !
     class(csr_matrix), intent(inout) :: A
     integer, intent(in) :: rows(:),cols(:)
     ! local variables
-    integer :: i,j,k,n,startptr,nrow,ncol,nnz
+    integer :: i,j,k,n,startptr
     integer :: work(A%nrow)
     real(kind(1d0)) :: Aij
 
@@ -198,10 +198,19 @@ subroutine csr_set_value(A,i,j,val)                                        !
     real(kind(1d0)), intent(in) :: val
     ! local variables
     integer :: k
+    logical :: found
 
+    found = .false.
     do k=A%ia(i),A%ia(i+1)-1
-        if ( A%ja(k) == j ) A%val(k) = val
+        if ( A%ja(k) == j ) then
+            A%val(k) = val
+            found = .true.
+        endif
     enddo
+
+    ! if the entry (i,j) has not been preallocated in the matrix, we have
+    ! to rebuild the matrix structure
+    if (.not.found) call csr_set_value_not_preallocated(A,i,j,val)
 
 end subroutine csr_set_value
 
@@ -217,10 +226,17 @@ subroutine csr_add_value(A,i,j,val)                                        !
     real(kind(1d0)), intent(in) :: val
     ! local variables
     integer :: k
+    logical :: found
 
+    found = .false.
     do k=A%ia(i),A%ia(i+1)-1
-        if ( A%ja(k) == j ) A%val(k) = A%val(k)+val
+        if ( A%ja(k) == j ) then
+            A%val(k) = A%val(k)+val
+            found = .true.
+        endif
     enddo
+
+    if (.not.found) call csr_set_value_not_preallocated(A,i,j,val)
 
 end subroutine csr_add_value
 
@@ -531,6 +547,60 @@ subroutine sort_ja(A)                                                      !
     enddo
 
 end subroutine sort_ja
+
+
+
+!--------------------------------------------------------------------------!
+subroutine csr_set_value_not_preallocated(A,row,col,val)                   !
+!--------------------------------------------------------------------------!
+    implicit none
+    ! input/output variables
+    class(csr_matrix), intent(inout) :: A
+    integer, intent(in) :: row,col
+    real(kind(1d0)), intent(in) :: val
+    ! local variables
+    integer :: i,j,k,indx
+    integer :: ja_temp(A%nnz)
+    real(kind(1d0)) :: val_temp(A%nnz)
+
+    ! Find the index indx: ja(indx),val(indx) will hold the column and the
+    ! value of the new entry
+    indx = A%ia(row)
+    do k=A%ia(row),A%ia(row+1)-1
+        if (A%ja(k)<col) then
+            indx = k+1
+        endif
+    enddo
+
+    ! Copy the old structure of A and reallocate the new structure
+    ja_temp = A%ja
+    val_temp = A%val
+
+    deallocate(A%ja,A%val)
+    allocate(A%ja(A%nnz+1),A%val(A%nnz+1))
+
+    ! Build the new structure
+    A%ja(1:indx-1) = ja_temp(1:indx-1)
+    A%ja(indx) = col
+    A%ja(indx+1:A%nnz+1) = ja_temp(indx:A%nnz)
+
+    A%val(1:indx-1) = val_temp(1:indx-1)
+    A%val(indx) = val
+    A%val(indx+1:A%nnz+1) = val_temp(indx:A%nnz)
+
+    ! The number of non-zero entries in the matrix is incremented by 1, and
+    ! the starting index in ja is incremented for all rows after the row
+    ! into which the new entry is to be inserted
+    A%nnz = A%nnz+1
+    do i=row+1,A%nrow+1
+        A%ia(i) = A%ia(i)+1
+    enddo
+
+end subroutine csr_set_value_not_preallocated
+
+
+
+
 
 
 
