@@ -252,12 +252,21 @@ subroutine csr_set_values(A,rows,cols,vals)                                !
     real(kind(1d0)), intent(in) :: vals(size(rows),size(cols))
     ! local variables
     integer :: i,j,k
+    logical :: found
 
     do j=1,size(cols)
         do i=1,size(rows)
+            found = .false.
             do k=A%ia(rows(i)),A%ia(rows(i)+1)-1
-                if ( A%ja(k)==cols(j) ) A%val(k) = vals(i,j)
+                if ( A%ja(k)==cols(j) ) then
+                    A%val(k) = vals(i,j)
+                    found = .true.
+                endif
             enddo
+            if (.not.found) then
+                call csr_set_value_not_preallocated(A,rows(i),cols(j), &
+                    & vals(i,j))
+            endif
         enddo
     enddo
 
@@ -275,12 +284,21 @@ subroutine csr_add_values(A,rows,cols,vals)                                !
     real(kind(1d0)), intent(in) :: vals(size(rows),size(cols))
     ! local variables
     integer :: i,j,k
+    logical :: found
 
     do j=1,size(cols)
         do i=1,size(rows)
+            found = .false.
             do k=A%ia(rows(i)),A%ia(rows(i)+1)-1
-                if ( A%ja(k)==cols(j) ) A%val(k) = A%val(k)+vals(i,j)
+                if ( A%ja(k)==cols(j) ) then
+                    A%val(k) = A%val(k)+vals(i,j)
+                    found = .true.
+                endif
             enddo
+            if (.not.found) then
+                call csr_set_value_not_preallocated(A,rows(i),cols(j), &
+                    & vals(i,j))
+            endif
         enddo
     enddo
 
