@@ -102,6 +102,8 @@ subroutine ellpack_build(A,rows,cols)                                      !
         enddo
     enddo
 
+    call A%sort_ja()
+
 end subroutine ellpack_build
 
 
@@ -291,7 +293,7 @@ subroutine ellpack_permute(A,p)                                            !
         A%ja(:,p(i)) = B%ja(:,i)
         A%val(:,p(i)) = B%val(:,i)
         do k=1,A%max_degree
-            if (A%ja(k,i)>0) A%ja(k,i) = p( A%ja(k,i) )
+            if (A%ja(k,p(i))>0) A%ja(k,p(i)) = p( A%ja(k,p(i)) )
         enddo
     enddo
 
@@ -503,6 +505,8 @@ subroutine sort_ja(A)                                                      !
                 A%ja(l+1,i) = A%ja(l,i)
                 A%val(l+1,i) = A%val(l,i)
             enddo
+            A%ja(l+1,i) = j
+            A%val(l+1,i) = Aij
         enddo
     enddo
 
