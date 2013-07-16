@@ -1,9 +1,0 @@
-#!/usr/bin/env python
-
-Import('masterEnv')
-env = masterEnv.Clone(F90FLAGS='-g -fbounds-check')
-
-fem_sources = Split("""fem.f90""")
-
-femlib = env.Library('fem',fem_sources, LIBS=['meshes','linalg'], LIBPATH=['../mesh','../linalg'])
-#env.Alias('install',env.Install('../../lib',femlib))

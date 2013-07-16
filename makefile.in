@@ -1,0 +1,18 @@
+FC = gfortran
+CC = gcc
+AR = ar
+RANLIB = ranlib
+
+FCFLAGS = -J$(INCLUDE)
+CCFLAGS = -I$(INCLUDE)
+OPTFLAGS = -O2 -fopenmp
+DEBUGFLAGS = -g -fbounds-check -Wall
+
+#.PHONY: clean veryclean
+
+%.o: %.f90
+	$(FC) -o $@ -c $< $(FCFLAGS)
+
+%.o: %.c
+	$(CC) -o $@ -c $< $(CCFLAGS)
+
