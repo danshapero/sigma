@@ -2,9 +2,9 @@ module linalg
 
     ! Sparse matrix format modules
     use bsr
+    use ellpack
     use csr
     use matrix
-    use ellpack
 
     ! Permutation module
     use permutation
