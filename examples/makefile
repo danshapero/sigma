@@ -1,8 +1,10 @@
 examples ?=
-include $(examples)../makefile.in
+root ?= ../
 
-INCLUDE ?= $(examples)../include/
-LIB ?= $(examples)../lib/
+include $(root)makefile.in
+
+INCLUDE ?= $(root)include/
+LIB ?= $(root)lib/
 
 bvp.o: $(examples)bvp.f90
 	$(FC) -o $(examples)bvp.o -c $(examples)bvp.f90 -J$(examples)../include -I/usr/include

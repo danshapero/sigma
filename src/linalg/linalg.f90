@@ -4,13 +4,13 @@ module linalg
     use bsr
     use ellpack
     use csr
-    use matrix
+!    use matrix
 
     ! Permutation module
     use permutation
 
     ! Solver modules
-    use solver
+!    use solver
     use cg
     use cgs
 
