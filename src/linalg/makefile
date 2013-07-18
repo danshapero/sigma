@@ -1,8 +1,10 @@
 linalg ?=
-include $(linalg)../../makefile.in
+root ?= ../../
 
-INCLUDE ?= $(linalg)../../include/
-LIB ?= $(linalg)../../lib/
+include $(root)makefile.in
+
+INCLUDE ?= $(root)include/
+LIB ?= $(root)lib/
 
 dirs += $(linalg)matrix_formats/ $(linalg)solvers/ $(linalg)preconditioners/
 

@@ -6,16 +6,17 @@ include makefile.in
 INCLUDE = include/
 LIB = lib/
 
+root =
 dirs = src/linalg/ src/mesh/ src/fem/
 
-fem = src/fem/
-include $(fem)makefile
+mesh = src/mesh/
+include $(mesh)makefile
 
 linalg = src/linalg/
 include $(linalg)makefile
 
-mesh = src/mesh/
-include $(mesh)makefile
+fem = src/fem/
+include $(fem)makefile
 
 examples = examples/
 include $(examples)makefile
