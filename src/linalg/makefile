@@ -6,8 +6,6 @@ include $(root)makefile.in
 INCLUDE ?= $(root)include/
 LIB ?= $(root)lib/
 
-dirs += $(linalg)matrix_formats/ $(linalg)solvers/ $(linalg)preconditioners/
-
 matrix_formats = $(linalg)matrix_formats/
 include $(matrix_formats)makefile
 
@@ -17,7 +15,12 @@ include $(solvers)makefile
 preconditioners = $(linalg)preconditioners/
 include $(preconditioners)makefile
 
-linalg_targets = $(linalg)matrix.o $(linalg)solver.o $(linalg)permutation.o $(matrix_format_targets) $(solver_targets) $(preconditioner_targets)
+c_wrapper = $(linalg)c_wrapper/
+include $(c_wrapper)makefile
+
+dirs += $(matrix_formats) $(solvers) $(preconditioners) $(c_wrapper)
+
+linalg_targets = $(linalg)matrix.o $(linalg)solver.o $(linalg)permutation.o $(matrix_format_targets) $(solver_targets) $(preconditioner_targets) $(c_wrapper_targets)
 
 linalg.o: $(linalg_targets)
 

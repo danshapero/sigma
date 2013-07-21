@@ -1,10 +1,12 @@
 FC = gfortran
 CC = gcc
+CXX = g++
 AR = ar
 RANLIB = ranlib
 
 FCFLAGS = -J$(INCLUDE)
 CCFLAGS = -I$(INCLUDE)
+CXXFLAGS = -I$(INCLUDE)
 OPTFLAGS = -O2 -fopenmp
 DEBUGFLAGS = -g -fbounds-check -Wall
 
@@ -15,4 +17,7 @@ DEBUGFLAGS = -g -fbounds-check -Wall
 
 %.o: %.c
 	$(CC) -o $@ -c $< $(CCFLAGS)
+
+%.o: %.cpp
+	$(CXX) -o $@ -c $< $(CXXFLAGS)
 
