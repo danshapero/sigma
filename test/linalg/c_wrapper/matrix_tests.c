@@ -2,12 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-
-typedef struct {
-    void *p;
-    int nrow, ncol, mat_type;
-} sparse_matrix_c;
-
+#include <matrix.h>
 
 int main(int argc, char *argv) {
 
@@ -16,6 +11,7 @@ int main(int argc, char *argv) {
     A = (sparse_matrix_c *)malloc( sizeof(sparse_matrix_c) );
     get_sparse_matrix_c(A,0);
     init_c(A,100,100,300);
+
 
     // Build the non-zero structure of the matrix
     int rows[300], cols[300];
@@ -33,16 +29,50 @@ int main(int argc, char *argv) {
 
     build_c(A,rows,cols,300);
 
-    // Check to make sure that entries in the matrix are zero
-    double z;
-    get_value_c(A,0,0,&z);
-    printf("%lf \n",z);
 
-    double w=1;
-    set_value_c(A,0,0,w);
+    // Fill in the matrix entries
+    for (i=0; i<99; i++) {
+        set_value_c(A,i,i,2.0);
+        set_value_c(A,i,i+1,-1.0);
+        set_value_c(A,i+1,i,-1.0);
+    }
+    set_value_c(A,99,99,2.0);
+    set_value_c(A,0,99,-1.0);
+    set_value_c(A,99,0,-1.0);
 
-    get_value_c(A,0,0,&z);
-    printf("%lf \n",z);
+    double z1, z2, z3;
+    get_value_c(A,0,0,&z1);
+    get_value_c(A,0,1,&z2);
+    get_value_c(A,0,2,&z3);
+
+    if ( !(z1==2.0 && z2==-1.0 && z3==0.0) ) {
+        printf("A[0,0:2] should be = [2.0, -1.0, 0.0]\n");
+        printf("Values found:  [ %lf, %lf, %lf ]\n",z1,z2,z3);
+        return 1;
+    }
+
+
+    // Test matrix multiplication
+    double x[100], y[100];
+    for (i=0; i<100; i++) {
+        x[i] = 1.0;
+        y[i] = 1.0;
+    }
+
+    matvec_c(A,x,y,100,100);
+
+    double maxval=0.0;
+    for (i=0; i<100; i++) {
+        if (fabs(y[i])<maxval) {
+            maxval = fabs(y[i]);
+        }
+    }
+
+    if (maxval > 1.0e-14) {
+        printf("A*[1.0,...,1.0] should be = 0.0\n");
+        printf("Value found:  %lf\n",maxval);
+        return 1;
+    }
 
     return 0;
 }

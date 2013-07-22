@@ -65,7 +65,7 @@ end subroutine get_sparse_matrix_c
 subroutine sparse_matrix_f(fmat,cmat)                                      !
 !--------------------------------------------------------------------------!
     implicit none
-    class(sparse_matrix), pointer, intent(inout) :: fmat
+    class(sparse_matrix), pointer, intent(out) :: fmat
     type(sparse_matrix_c), intent(in) :: cmat
     ! local variables
     type(csr_matrix), pointer :: csr_mat
@@ -169,6 +169,43 @@ subroutine set_value_c(cmat,i,j,val) bind(c)                               !
     call A%set_value(i+1,j+1,val)
 
 end subroutine set_value_c
+
+
+
+!--------------------------------------------------------------------------!
+subroutine add_value_c(cmat,i,j,val) bind(c)                               !
+!--------------------------------------------------------------------------!
+    implicit none
+    ! input/output variables
+    type(sparse_matrix_c), intent(in) :: cmat
+    integer(c_int), intent(in), value :: i,j
+    real(c_double), intent(in), value :: val
+    ! local variables
+    class(sparse_matrix), pointer :: A
+
+    call sparse_matrix_f(A,cmat)
+    call A%add_value(i+1,j+1,val)
+
+end subroutine add_value_c
+
+
+
+!--------------------------------------------------------------------------!
+subroutine matvec_c(cmat,x,y,n,m) bind(c)                                  !
+!--------------------------------------------------------------------------!
+    implicit none
+    ! intput/output variables
+    type(sparse_matrix_c), intent(in) :: cmat
+    real(c_double), intent(in) :: x(n)
+    real(c_double), intent(out) :: y(m)
+    integer(c_int), intent(in), value :: m,n
+    ! local variables
+    class(sparse_matrix), pointer :: A
+
+    call sparse_matrix_f(A,cmat)
+    call A%matvec(x,y)
+
+end subroutine matvec_c
 
 
 
