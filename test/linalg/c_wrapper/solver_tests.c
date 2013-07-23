@@ -10,10 +10,10 @@ int main(int argc, char *argv) {
     // Initialize the matrix
     sparse_matrix_c *A;
     A = (sparse_matrix_c *)malloc( sizeof(sparse_matrix_c) );
-    get_sparse_matrix_c(A,0);
+    get_sparse_matrix(A,0);
 
     int n = 99;
-    init_c(A,n,n,3*n);
+    init(A,n,n,3*n);
 
     // Build the non-zero structure of the matrix
     int rows[3*n], cols[3*n], i;
@@ -28,29 +28,29 @@ int main(int argc, char *argv) {
     cols[n] = n-1;
     cols[2*n-1] = 0;
 
-    build_c(A,rows,cols,3*n);
+    build(A,rows,cols,3*n);
 
     // Fill in the matrix entries
     for (i=0; i<n-1; i++) {
-        set_value_c(A,i,i,2.0);
-        set_value_c(A,i,i+1,-1.0);
-        set_value_c(A,i+1,i,-1.0);
+        set_value(A,i,i,2.0);
+        set_value(A,i,i+1,-1.0);
+        set_value(A,i+1,i,-1.0);
     }
-    set_value_c(A,n-1,n-1,2.0);
-    set_value_c(A,0,n-1,0.0);
-    set_value_c(A,n-1,0,0.0);
+    set_value(A,n-1,n-1,2.0);
+    set_value(A,0,n-1,0.0);
+    set_value(A,n-1,0,0.0);
 
 
     // Set up the solver and preconditioner
     iterative_solver_c *solver;
     solver = (iterative_solver_c *)malloc( sizeof(iterative_solver_c) );
-    get_iterative_solver_c(solver,0);
-    solver_init_c(solver,n,1.0e-10);
+    get_iterative_solver(solver,0);
+    solver_init(solver,n,1.0e-10);
 
     preconditioner_c *pc;
     pc = (preconditioner_c *)malloc( sizeof(preconditioner_c) );
-    get_preconditioner_c(pc,0);
-    preconditioner_init_c(pc,A,0);
+    get_preconditioner(pc,0);
+    preconditioner_init(pc,A,0);
 
 
     // Fill in some vectors and solve a system
@@ -61,7 +61,7 @@ int main(int argc, char *argv) {
         f[i] = 2.0*dx*dx;
     }
 
-    solve_c(solver,A,u,f,pc,n);
+    solve(solver,A,u,f,pc,n);
 
 
     double ma = 0.0;

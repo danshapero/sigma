@@ -9,8 +9,8 @@ int main(int argc, char *argv) {
     // Initialize the matrix
     sparse_matrix_c *A;
     A = (sparse_matrix_c *)malloc( sizeof(sparse_matrix_c) );
-    get_sparse_matrix_c(A,0);
-    init_c(A,100,100,300);
+    get_sparse_matrix(A,0);
+    init(A,100,100,300);
 
 
     // Build the non-zero structure of the matrix
@@ -27,23 +27,23 @@ int main(int argc, char *argv) {
     cols[100] = 99;
     cols[299] = 0;
 
-    build_c(A,rows,cols,300);
+    build(A,rows,cols,300);
 
 
     // Fill in the matrix entries
     for (i=0; i<99; i++) {
-        set_value_c(A,i,i,2.0);
-        set_value_c(A,i,i+1,-1.0);
-        set_value_c(A,i+1,i,-1.0);
+        set_value(A,i,i,2.0);
+        set_value(A,i,i+1,-1.0);
+        set_value(A,i+1,i,-1.0);
     }
-    set_value_c(A,99,99,2.0);
-    set_value_c(A,0,99,-1.0);
-    set_value_c(A,99,0,-1.0);
+    set_value(A,99,99,2.0);
+    set_value(A,0,99,-1.0);
+    set_value(A,99,0,-1.0);
 
     double z1, z2, z3;
-    get_value_c(A,0,0,&z1);
-    get_value_c(A,0,1,&z2);
-    get_value_c(A,0,2,&z3);
+    get_value(A,0,0,&z1);
+    get_value(A,0,1,&z2);
+    get_value(A,0,2,&z3);
 
     if ( !(z1==2.0 && z2==-1.0 && z3==0.0) ) {
         printf("A[0,0:2] should be = [2.0, -1.0, 0.0]\n");
@@ -59,7 +59,7 @@ int main(int argc, char *argv) {
         y[i] = 1.0;
     }
 
-    matvec_c(A,x,y,100,100);
+    matvec(A,x,y,100,100);
 
     double maxval=0.0;
     for (i=0; i<100; i++) {

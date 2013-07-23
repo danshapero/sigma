@@ -33,7 +33,8 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine get_sparse_matrix_c(cmat,mat_type) bind(c)                      !
+subroutine get_sparse_matrix_c(cmat,mat_type)   &                          !
+    & bind(c,name='get_sparse_matrix')                                     !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
@@ -102,7 +103,7 @@ end subroutine sparse_matrix_f
 
 
 !--------------------------------------------------------------------------!
-subroutine init_c(cmat,nrow,ncol,nnz) bind(c)                              !
+subroutine init_c(cmat,nrow,ncol,nnz) bind(c,name='init')                  !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
@@ -122,7 +123,7 @@ end subroutine init_c
 
 
 !--------------------------------------------------------------------------!
-subroutine build_c(cmat,rows,cols,nnz) bind(c)                             !
+subroutine build_c(cmat,rows,cols,nnz) bind(c,name='build')                !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
@@ -141,7 +142,7 @@ end subroutine build_c
 
 
 !--------------------------------------------------------------------------!
-subroutine get_value_c(cmat,i,j,val) bind(c)                               !
+subroutine get_value_c(cmat,i,j,val) bind(c,name='get_value')              !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
@@ -159,7 +160,7 @@ end subroutine get_value_c
 
 
 !--------------------------------------------------------------------------!
-subroutine get_neighbors_c(cmat,i,nbrs) bind(c)                            !
+subroutine get_neighbors_c(cmat,i,nbrs) bind(c,name='get_neighbors')       !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
@@ -177,7 +178,7 @@ end subroutine get_neighbors_c
 
 
 !--------------------------------------------------------------------------!
-subroutine set_value_c(cmat,i,j,val) bind(c)                               !
+subroutine set_value_c(cmat,i,j,val) bind(c,name='set_value')              !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
@@ -195,7 +196,7 @@ end subroutine set_value_c
 
 
 !--------------------------------------------------------------------------!
-subroutine add_value_c(cmat,i,j,val) bind(c)                               !
+subroutine add_value_c(cmat,i,j,val) bind(c,name='add_value')              !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
@@ -213,7 +214,7 @@ end subroutine add_value_c
 
 
 !--------------------------------------------------------------------------!
-subroutine matvec_c(cmat,x,y,n,m) bind(c)                                  !
+subroutine matvec_c(cmat,x,y,n,m) bind(c,name='matvec')                    !
 !--------------------------------------------------------------------------!
     implicit none
     ! intput/output variables

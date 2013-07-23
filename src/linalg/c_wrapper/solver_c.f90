@@ -41,7 +41,8 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine get_iterative_solver_c(csolver,solver_type) bind(c)             !
+subroutine get_iterative_solver_c(csolver,solver_type) &                   !
+    & bind(c,name='get_iterative_solver')                                  !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
@@ -91,7 +92,8 @@ end subroutine iterative_solver_f
 
 
 !--------------------------------------------------------------------------!
-subroutine get_preconditioner_c(cpc,pc_type) bind(c)                       !
+subroutine get_preconditioner_c(cpc,pc_type) &                             !
+    & bind(c,name='get_preconditioner')                                    !
 !--------------------------------------------------------------------------!
     implicit none
     type(preconditioner_c), intent(inout) :: cpc
@@ -158,7 +160,7 @@ end subroutine preconditioner_f
 
 
 !--------------------------------------------------------------------------!
-subroutine solver_init_c(csolver,nn,tolerance) bind(c)                     !
+subroutine solver_init_c(csolver,nn,tolerance) bind(c,name='solver_init')  !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
@@ -177,7 +179,7 @@ end subroutine solver_init_c
 
 
 !--------------------------------------------------------------------------!
-subroutine solve_c(csolver,cmat,x,b,cpc,n) bind(c)                         !
+subroutine solve_c(csolver,cmat,x,b,cpc,n) bind(c,name='solve')            !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
@@ -214,7 +216,8 @@ end subroutine solve_c
 
 
 !--------------------------------------------------------------------------!
-subroutine preconditioner_init_c(cpc,cmat,level) bind(c)                   !
+subroutine preconditioner_init_c(cpc,cmat,level) &                        !
+    & bind(c,name='preconditioner_init')                                   !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
@@ -235,7 +238,7 @@ end subroutine preconditioner_init_c
 
 
 !--------------------------------------------------------------------------!
-subroutine precondition_c(cpc,cmat,x,b,n) bind(c)                          !
+subroutine precondition_c(cpc,cmat,x,b,n) bind(c,name='precondition')      !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables

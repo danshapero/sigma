@@ -31,8 +31,8 @@ int main (int argc, char *argv[]) {
     // Initialize some sparse matrices
     sparse_matrix_c *A;
     A = (sparse_matrix_c *)malloc( sizeof(sparse_matrix_c) );
-    get_sparse_matrix_c(A,0);
-    init_c(A,nn,nn,nn+2*nl);
+    get_sparse_matrix(A,0);
+    init(A,nn,nn,nn+2*nl);
 
     int rows[nn+2*nl], cols[nn+2*nl];
     for (i=0; i<nn; i++) {
@@ -45,12 +45,12 @@ int main (int argc, char *argv[]) {
         rows[nn+2*i+1] = msh.edgelist[2*i+1]-1;
         cols[nn+2*i+1] = msh.edgelist[2*i]-1;
     }
-    build_c(A,rows,cols,nn+2*nl);
+    build(A,rows,cols,nn+2*nl);
 
     int degree = A->max_degree;
     printf("Degree of graph : %d \n",degree);
     int nbrs[degree];
-    get_neighbors_c(A,0,nbrs);
+    get_neighbors(A,0,nbrs);
 
 
     ///////////////////////
@@ -61,7 +61,7 @@ int main (int argc, char *argv[]) {
     for (i=0; i<nn; i++) {
         d = degree;
         // Find all neighbors of the current node
-        get_neighbors_c(A,i,nbrs);
+        get_neighbors(A,i,nbrs);
 
         // Compute the degree of the current node
         for (j=degree-1; j>=0; j--) {
@@ -72,21 +72,21 @@ int main (int argc, char *argv[]) {
         for (k=0; k<d; k++) {
             j = nbrs[k];
             if (j==i) {
-                set_value_c(A,i,i,double(d));
+                set_value(A,i,i,double(d));
             } else {
-                set_value_c(A,i,j,-1.0);
+                set_value(A,i,j,-1.0);
             }
         }
     }
 
-    /*get_neighbors_c(A,0,nbrs,degree);
+    /*get_neighbors(A,0,nbrs,degree);
     double a0[degree];
     d = degree;
     for (j=degree-1; j>=0; j--) {
         if (nbrs[j]==-1) {
             d--;
         } else {
-            get_value_c(A,0,nbrs[j],&(a0[j]));
+            get_value(A,0,nbrs[j],&(a0[j]));
         }
     }
     for (j=0; j<d; j++) printf("%lf ",a0[j]);
@@ -97,13 +97,13 @@ int main (int argc, char *argv[]) {
     // Make a solver and preconditioner
     iterative_solver_c *solver;
     solver = (iterative_solver_c *)malloc( sizeof(iterative_solver_c) );
-    get_iterative_solver_c(solver,0);
-    solver_init_c(solver,nn,1.0e-10);
+    get_iterative_solver(solver,0);
+    solver_init(solver,nn,1.0e-10);
 
     preconditioner_c *pc;
     pc = (preconditioner_c *)malloc( sizeof(preconditioner_c) );
-    get_preconditioner_c(pc,0);
-    preconditioner_init_c(pc,A,0);
+    get_preconditioner(pc,0);
+    preconditioner_init(pc,A,0);
 
 
     /////////////////////
@@ -121,7 +121,7 @@ int main (int argc, char *argv[]) {
 
     //////////////////
     // Solve a system
-    solve_c(solver,A,u,f,pc,nn);
+    solve(solver,A,u,f,pc,nn);
 
     return 0;
 }
