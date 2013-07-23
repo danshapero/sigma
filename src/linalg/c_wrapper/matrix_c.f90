@@ -13,7 +13,7 @@ module matrix_c
 !--------------------------------------------------------------------------!
 type, bind(c) :: sparse_matrix_c
     type(c_ptr) :: p
-    integer(c_int) :: nrow,ncol,mat_type
+    integer(c_int) :: nrow,ncol,nnz,max_degree,mat_type
 end type sparse_matrix_c
 
 
@@ -113,6 +113,9 @@ subroutine init_c(cmat,nrow,ncol,nnz) bind(c)                              !
 
     call sparse_matrix_f(A,cmat)
     call A%init(nrow,ncol,nnz)
+    cmat%nrow = nrow
+    cmat%ncol = ncol
+    cmat%nnz = nnz
 
 end subroutine init_c
 
@@ -123,7 +126,7 @@ subroutine build_c(cmat,rows,cols,nnz) bind(c)                             !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
-    type(sparse_matrix_c), intent(in) :: cmat
+    type(sparse_matrix_c), intent(inout) :: cmat
     integer(c_int), intent(in) :: rows(nnz), cols(nnz)
     integer(c_int), intent(in), value :: nnz
     ! local variables
@@ -131,6 +134,7 @@ subroutine build_c(cmat,rows,cols,nnz) bind(c)                             !
 
     call sparse_matrix_f(A,cmat)
     call A%build(rows+1,cols+1)
+    cmat%max_degree = A%max_degree
 
 end subroutine build_c
 
@@ -151,6 +155,24 @@ subroutine get_value_c(cmat,i,j,val) bind(c)                               !
     val = A%get_value(i+1,j+1)
 
 end subroutine get_value_c
+
+
+
+!--------------------------------------------------------------------------!
+subroutine get_neighbors_c(cmat,i,nbrs) bind(c)                            !
+!--------------------------------------------------------------------------!
+    implicit none
+    ! input/output variables
+    type(sparse_matrix_c), intent(in) :: cmat
+    integer(c_int), intent(in), value :: i
+    integer(c_int), intent(out) :: nbrs(cmat%max_degree)
+    ! local variables
+    class(sparse_matrix), pointer :: A
+
+    call sparse_matrix_f(A,cmat)
+    nbrs = A%get_neighbors(i+1)-1
+    
+end subroutine get_neighbors_c
 
 
 
