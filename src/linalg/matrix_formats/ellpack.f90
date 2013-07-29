@@ -91,15 +91,14 @@ subroutine ellpack_build(A,rows,cols)                                      !
     class(ellpack_matrix), intent(inout) :: A
     integer, intent(in) :: rows(:),cols(:)
     ! local variables
-    integer :: i,j
+    integer :: i,n,next(A%nrow)
 
-    do i=1,A%nnz
-        do j=1,A%max_degree
-            if (A%ja(j,rows(i))==0) then
-                A%ja(j,rows(i)) = cols(i)
-                exit
-            endif
-        enddo
+    A%ja = 0
+    next = 1
+    do n=1,A%nnz
+        i = rows(n)
+        A%ja(next(i),i) = cols(n)
+        next(i) = next(i)+1
     enddo
 
     call A%sort_ja()
@@ -158,16 +157,16 @@ end function ellpack_get_values
 
 
 !--------------------------------------------------------------------------!
-function ellpack_get_neighbors(A,row)                                      !
+subroutine ellpack_get_neighbors(A,row,nbrs)                               !
 !--------------------------------------------------------------------------!
     implicit none
     class(ellpack_matrix), intent(in) :: A
     integer, intent(in) :: row
-    integer :: ellpack_get_neighbors( A%max_degree )
+    integer, intent(out) :: nbrs(:)
 
-    ellpack_get_neighbors = A%ja(:,row)
+    nbrs = A%ja(:,row)
 
-end function ellpack_get_neighbors
+end subroutine ellpack_get_neighbors
 
 
 
@@ -490,6 +489,7 @@ subroutine sort_ja(A)                                                      !
     real(kind(1d0)) :: Aij
 
     do i=1,A%nrow
+        nnz_this_row = A%max_degree
         do k=1,A%max_degree
             if (A%ja(k,i)==0) then
                 nnz_this_row = k-1

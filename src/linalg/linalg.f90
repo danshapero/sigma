@@ -1,10 +1,10 @@
 module linalg
 
     ! Sparse matrix format modules
+    use csr
     use bsr
     use ellpack
-    use csr
-!    use matrix
+    use matrix
 
     ! Permutation module
     use permutation

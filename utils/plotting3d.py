@@ -42,4 +42,6 @@ ds = mlab.pipeline.add_dataset(grid)
 iso = mlab.pipeline.iso_surface(ds)
 iso.actor.property.opacity = 0.5
 iso.contour.number_of_contours = 10
+#mlab.savefig(sys.argv[3]+'.png',dpi=100)
 mlab.show()
+mlab.close()

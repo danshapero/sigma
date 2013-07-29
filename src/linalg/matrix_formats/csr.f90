@@ -169,22 +169,22 @@ end function csr_get_values
 
 
 !--------------------------------------------------------------------------!
-function csr_get_neighbors(A,row)                                          !
+subroutine csr_get_neighbors(A,row,nbrs)                                   !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
     class(csr_matrix), intent(in) :: A
     integer, intent(in) :: row
-    integer :: csr_get_neighbors( A%max_degree )
+    integer, intent(out) :: nbrs(:)
     ! local variables
     integer :: start,finish
 
-    csr_get_neighbors = 0
+    nbrs = 0
     start = A%ia(row)
     finish = A%ia(row+1)-1
-    csr_get_neighbors(1:finish-start+1 ) = A%ja( start:finish )
+    nbrs(1:finish-start+1 ) = A%ja( start:finish )
 
-end function csr_get_neighbors
+end subroutine csr_get_neighbors
 
 
 

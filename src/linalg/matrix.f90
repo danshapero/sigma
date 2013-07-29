@@ -62,12 +62,12 @@ function get_values_interface(A,rows,cols)
 end function get_values_interface
 
 
-function get_neighbors_interface(A,row)
+subroutine get_neighbors_interface(A,row,nbrs)
     import :: sparse_matrix
     class(sparse_matrix), intent(in) :: A
     integer, intent(in) :: row
-    integer :: get_neighbors_interface( A%max_degree )
-end function get_neighbors_interface
+    integer, intent(out) :: nbrs(:)
+end subroutine get_neighbors_interface
 
 
 subroutine set_value_interface(A,i,j,val)

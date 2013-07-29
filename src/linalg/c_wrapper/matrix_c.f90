@@ -171,7 +171,8 @@ subroutine get_neighbors_c(cmat,i,nbrs) bind(c,name='get_neighbors')       !
     class(sparse_matrix), pointer :: A
 
     call sparse_matrix_f(A,cmat)
-    nbrs = A%get_neighbors(i+1)-1
+    call A%get_neighbors(i+1,nbrs)
+    nbrs = nbrs-1
     
 end subroutine get_neighbors_c
 

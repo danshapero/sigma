@@ -47,14 +47,23 @@ program ellpack_tests
         cols(i) = i
 
         rows(i+100) = i
-        cols(i+100) = mod(i,100)+1
+        cols(i+100) = i+1
 
         rows(i+200) = i
         cols(i+200) = i-1
     enddo
+    cols(200) = 1
     cols(201) = 100
 
     call A%build(rows,cols)
+
+    select type(A)
+        type is(ellpack_matrix)
+            print *, A%ja(:,1)
+            print *, A%ja(:,2)
+            print *, A%ja(:,3)
+            print *, A%ja(:,4)
+    end select
 
 
 

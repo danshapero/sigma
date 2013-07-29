@@ -237,22 +237,22 @@ end function bsr_get_values
 
 
 !--------------------------------------------------------------------------!
-function bsr_get_neighbors(A,row)                                          !
+subroutine bsr_get_neighbors(A,row,nbrs)                                   !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
     class(bsr_matrix), intent(in) :: A
     integer, intent(in) :: row
-    integer :: bsr_get_neighbors( A%max_degree )
+    integer, intent(out) :: nbrs(:)
     ! local variables
     integer :: start,finish
 
-    bsr_get_neighbors = 0
+    nbrs = 0
     start = A%ia(row)
     finish = A%ia(row+1)-1
-    bsr_get_neighbors(1:finish-start+1) = A%ja(start:finish)
+    nbrs(1:finish-start+1) = A%ja(start:finish)
 
-end function bsr_get_neighbors
+end subroutine bsr_get_neighbors
 
 
 

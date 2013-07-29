@@ -33,7 +33,7 @@ subroutine bfs(A,p)                                                        !
     next = 1
 
     do i=1,A%nrow
-        nbrs = A%get_neighbors( q(i) )
+        call A%get_neighbors(q(i),nbrs)
         do j=1,A%max_degree
             if (nbrs(j)/=0) then
                 if ( p(nbrs(j))==0 .and. nbrs(j)/=i ) then
@@ -77,7 +77,7 @@ subroutine greedy_multicolor(A,p,maxcolor)                                 !
 
     do i=1,A%nrow
         num_colors = 0
-        nbrs = A%get_neighbors( q(i) )
+        call A%get_neighbors(q(i),nbrs)
         do j=1,A%max_degree
             if (nbrs(j)/=0) then
                 clr = p(nbrs(j))
@@ -156,7 +156,7 @@ subroutine block_multicolor(A,blocksize,p)                                 !
             maxcolor = maxcolor+1
             do j=1,blocksize
                 if ( qb(j)/=0 ) then
-                    nbrs = A%get_neighbors( qb(j) )
+                    call A%get_neighbors(qb(j),nbrs)
                     do k=1,A%max_degree
                         if (nbrs(k)/=0) then
                             clr = p(nbrs(k))
@@ -175,7 +175,7 @@ subroutine block_multicolor(A,blocksize,p)                                 !
            ! them aren't colored yet, add them to the global queue
            do j=1,blocksize
                if (qb(j)/=0) then
-                   nbrs = A%get_neighbors( qb(j) )
+                   call A%get_neighbors(qb(j),nbrs)
                    clr = p(nbrs(j))
                    if ( clr==-1 ) then
                        next = next+1

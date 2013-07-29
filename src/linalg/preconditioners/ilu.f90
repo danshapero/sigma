@@ -29,7 +29,7 @@ subroutine ilu_init(pc,A,level)                                            !
     class(sparse_matrix), intent(in) :: A
     integer, intent(in) :: level
     ! local variables
-    integer :: i,j,k,ptr1,ptr2,row,col,nbrs(A%max_degree)
+    integer :: i,j,k,ptr1,ptr2,row,col
     integer, allocatable :: rows(:),cols(:)
     real(kind(1d0)) :: U
     real(kind(1d0)), allocatable :: vals(:)
