@@ -1,4 +1,4 @@
-module graph_types
+module cs_graphs
 
 use graphs
 
@@ -7,19 +7,19 @@ implicit none
 
 
 !--------------------------------------------------------------------------!
-type, extends(graph) :: csr_graph                                          !
+type, extends(graph) :: cs_graph                                           !
 !--------------------------------------------------------------------------!
     integer, allocatable :: ia(:), ja(:)
 contains
-    procedure :: init => csr_init
-    procedure :: neighbors => csr_neighbors
-    procedure :: connected => csr_connected
-    procedure :: find_edge => csr_find_edge
-    procedure :: add_edge  => csr_add_edge
-    procedure :: delete_edge => csr_delete_edge
+    procedure :: init => cs_init
+    procedure :: neighbors => cs_neighbors
+    procedure :: connected => cs_connected
+    procedure :: find_edge => cs_find_edge
+    procedure :: add_edge  => cs_add_edge
+    procedure :: delete_edge => cs_delete_edge
     ! auxiliary routines
     !procedure :: sort_ja
-end type csr_graph
+end type cs_graph
 
 
 
@@ -30,11 +30,11 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine csr_init(g,n,m,edges)                                           !
+subroutine cs_init(g,n,m,edges)                                            !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
-    class(csr_graph), intent(inout) :: g
+    class(cs_graph), intent(inout) :: g
     integer, intent(in) :: n
     integer, intent(in), optional :: m, edges(:,:)
     ! local variables
@@ -65,6 +65,8 @@ subroutine csr_init(g,n,m,edges)                                           !
             work(i) = work(i)+1
         enddo
 
+        g%max_degree = maxval(work)
+
         g%ia(1) = 1
         do k=2,n+1
             g%ia(k) = g%ia(k-1)+work(k-1)
@@ -76,18 +78,20 @@ subroutine csr_init(g,n,m,edges)                                           !
             g%ja( g%ia(i)+work(i) ) = edges(2,k)
             work(i) = work(i)+1
         enddo
+    else
+        g%max_degree = 0
     endif
 
-end subroutine csr_init
+end subroutine cs_init
 
 
 
 !--------------------------------------------------------------------------!
-subroutine csr_neighbors(g,i,nbrs)                                         !
+subroutine cs_neighbors(g,i,nbrs)                                          !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
-    class(csr_graph), intent(in) :: g
+    class(cs_graph), intent(in) :: g
     integer, intent(in) :: i
     integer, intent(out) :: nbrs(:)
     ! local variables
@@ -100,60 +104,60 @@ subroutine csr_neighbors(g,i,nbrs)                                         !
     nbrs = 0
     nbrs(1:degree) = g%ja(start:finish)
 
-end subroutine csr_neighbors
+end subroutine cs_neighbors
 
 
 
 !--------------------------------------------------------------------------!
-function csr_connected(g,i,j)                                              !
+function cs_connected(g,i,j)                                               !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
-    class(csr_graph), intent(in) :: g
+    class(cs_graph), intent(in) :: g
     integer, intent(in) :: i,j
-    logical :: csr_connected
+    logical :: cs_connected
     ! local variables
     integer :: k
 
-    csr_connected = .false.
+    cs_connected = .false.
 
     do k=g%ia(i),g%ia(i+1)-1
-        if (g%ja(k)==j) csr_connected = .true.
+        if (g%ja(k)==j) cs_connected = .true.
     enddo
 
-end function csr_connected
+end function cs_connected
 
 
 
 !--------------------------------------------------------------------------!
-function csr_find_edge(g,i,j)                                              !
+function cs_find_edge(g,i,j)                                               !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
-    class(csr_graph), intent(in) :: g
+    class(cs_graph), intent(in) :: g
     integer, intent(in) :: i,j
-    integer :: csr_find_edge
+    integer :: cs_find_edge
     ! local variables
     integer :: k
 
-    csr_find_edge = g%ia(i)
+    cs_find_edge = g%ia(i)
 
     do k=g%ia(i),g%ia(i+1)-1
         if (g%ja(k)<j) then
-            csr_find_edge = k+1
+            cs_find_edge = k+1
         endif
     enddo
 
-end function csr_find_edge
+end function cs_find_edge
 
 
 
 !--------------------------------------------------------------------------!
-subroutine csr_add_edge(g,i,j)                                             !
+subroutine cs_add_edge(g,i,j)                                              !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
-    class(csr_graph), intent(inout) :: g
+    class(cs_graph), intent(inout) :: g
     integer, intent(in) :: i,j
     ! local variables
     integer :: k,indx,ja_temp(g%ne)
@@ -163,8 +167,10 @@ subroutine csr_add_edge(g,i,j)                                             !
         ! inserted
         indx = g%find_edge(i,j)
 
+        ! Copy the current structure into a temporary one
         ja_temp = g%ja
 
+        ! Deallocate the old structure and make a new one with extra room
         deallocate(g%ja)
         allocate(g%ja(g%ne+1))
 
@@ -180,23 +186,34 @@ subroutine csr_add_edge(g,i,j)                                             !
         do k=i+1,g%n+1
             g%ia(k) = g%ia(k)+1
         enddo
+
+        ! If the degree of node i is now the greatest of all nodes in the
+        ! graph, update the degree accordingly
+        if (g%ia(i+1)-g%ia(i)>g%max_degree) then
+            g%max_degree = g%ia(i+1)-g%ia(i)
+        endif
     endif
 
-end subroutine csr_add_edge
+end subroutine cs_add_edge
 
 
 
 !--------------------------------------------------------------------------!
-subroutine csr_delete_edge(g,i,j)                                          !
+subroutine cs_delete_edge(g,i,j)                                           !
 !--------------------------------------------------------------------------!
     implicit none
     ! input/output variables
-    class(csr_graph), intent(inout) :: g
+    class(cs_graph), intent(inout) :: g
     integer, intent(in) :: i,j
     ! local variables
-    integer :: k,indx,ja_temp(g%ne)
+    integer :: k,indx,degree,ja_temp(g%ne)
 
     if (g%connected(i,j)) then
+        ! Record the degree of the node from which an edge is to be
+        ! removed; we use this later to check whether the maximum degree
+        ! of the graph has decreased
+        degree = g%ia(i+1)-g%ia(i)
+
         ! Find the index in the list of edges of the edge to be removed
         indx = g%find_edge(i,j)
 
@@ -216,12 +233,28 @@ subroutine csr_delete_edge(g,i,j)                                          !
         do k=i+1,g%n
             g%ia(k) = g%ia(k)-1
         enddo
+
+        ! If the degree of node i was the greatest among all nodes in the
+        ! entire graph, check to see if max_degree needs to be decremented
+        if (degree==g%max_degree) then
+            ! Tentatively set the maximum degree of the graph to the (now 
+            ! smaller) degree of the node i from which the edge was removed.
+            g%max_degree = g%ia(i+1)-g%ia(i)
+
+            ! Iterate through all the nodes;
+            do k=1,g%n
+                ! if any node has a degree greater than the tentative
+                ! max_degree, then increment the maximum degree.
+                degree = g%ia(k+1)-g%ia(k)
+                if (degree>g%max_degree) g%max_degree = degree
+            enddo
+        endif
     endif
 
-end subroutine csr_delete_edge
+end subroutine cs_delete_edge
 
 
 
 
 
-end module graph_types
+end module cs_graphs
