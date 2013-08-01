@@ -12,7 +12,7 @@ DEBUGFLAGS = -g -fbounds-check -Wall
 
 #.PHONY: clean veryclean
 
-%.o: %.f90
+%.o: %.f03
 	$(FC) -o $@ -c $< $(FCFLAGS)
 
 %.o: %.c
