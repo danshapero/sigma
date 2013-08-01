@@ -1,4 +1,4 @@
-module utility_algorithms
+module util
 
 implicit none
 
@@ -49,4 +49,4 @@ end function order
 
 
 
-end module utility_algorithms
+end module util

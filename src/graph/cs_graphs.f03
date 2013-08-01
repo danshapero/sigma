@@ -1,7 +1,7 @@
 module cs_graphs
 
 use abstract_graphs
-use utility_algorithms
+use util
 
 implicit none
 

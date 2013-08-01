@@ -8,7 +8,8 @@ include $(root)makefile.in
 INCLUDE ?= $(root)include/
 LIB ?= $(root)lib/
 
-matrix_targets = $(matrix)abstract_sparse_matrices.o
+matrix_dependencies = $(src)util.o $(graph_objects)
+matrix_objects = $(matrix)abstract_sparse_matrices.o
 
-matrix_targets: $(src)utility_algorithms.o $(graph_targets) $(matrix_targets)
+$(matrix_objects): $(matrix_dependencies)
 

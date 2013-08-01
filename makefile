@@ -6,11 +6,14 @@ include makefile.in
 INCLUDE = include/
 LIB = lib/
 
-dirs = $(src)
-
 root =
 src = src/
 include $(src)makefile
+
+test = test/
+include $(test)makefile
+
+dirs = $(src) $(test)
 
 
 clean:
