@@ -8,12 +8,11 @@ LIB = lib/
 
 root =
 src = src/
-include $(src)makefile
-
 test = test/
-include $(test)makefile
-
 dirs = $(src) $(test)
+
+include $(src)makefile
+include $(test)makefile
 
 
 clean:

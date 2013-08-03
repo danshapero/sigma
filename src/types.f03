@@ -17,6 +17,7 @@ type :: linked_list
     type(node), pointer :: head => null()
 contains
     procedure :: append => linked_list_append
+    procedure :: prepend => linked_list_prepend
     procedure :: delete_entry => linked_list_delete_entry
     procedure :: delete_value => linked_list_delete_value
     procedure :: get_entry => linked_list_get_entry
@@ -61,12 +62,35 @@ subroutine linked_list_append(list,i)                                      !
         do while(associated(current%next))
             current => current%next
         enddo
-        ! Check if this should be an = instead of a =>
         current%next => new_node(i)
         list%length = list%length+1
     endif
 
 end subroutine linked_list_append
+
+
+
+!--------------------------------------------------------------------------!
+subroutine linked_list_prepend(list,i)                                     !
+!--------------------------------------------------------------------------!
+    implicit none
+    ! input/output variables
+    class(linked_list), intent(inout) :: list
+    integer, intent(in) :: i
+    ! local variables
+    type(node), pointer :: current
+
+    if (.not.associated(list%head)) then
+        list%head => new_node(i)
+        list%length = 1
+    else
+        current => new_node(i)
+        current%next => list%head
+        list%head => current
+        list%length = list%length+1
+    endif
+
+end subroutine linked_list_prepend
 
 
 
