@@ -15,6 +15,8 @@ type, abstract :: graph                                                    !
     procedure(find_edge), deferred          :: find_edge
     procedure(add_edge_ifc), deferred       :: add_edge
     procedure(delete_edge_ifc), deferred    :: delete_edge
+    procedure(free_ifc), deferred           :: free
+    procedure(dump_edges_ifc), deferred     :: dump_edges
 end type graph
 
 
@@ -60,6 +62,17 @@ abstract interface                                                         !
         class(graph), intent(inout) :: g
         integer, intent(in) :: i,j
     end subroutine delete_edge_ifc
+
+    subroutine free_ifc(g)
+        import :: graph
+        class(graph), intent(inout) :: g
+    end subroutine free_ifc
+
+    subroutine dump_edges_ifc(g,edges)
+        import :: graph
+        class(graph), intent(in) :: g
+        integer, intent(out) :: edges(:,:)
+    end subroutine dump_edges_ifc
 
 end interface
 

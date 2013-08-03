@@ -17,7 +17,8 @@ contains
     procedure :: find_edge => coo_find_edge
     procedure :: add_edge => coo_add_edge
     procedure :: delete_edge => coo_delete_edge
-
+    procedure :: free => coo_free
+    procedure :: dump_edges => coo_dump_edges
 
 end type coo_graph
 
@@ -216,7 +217,31 @@ end subroutine coo_delete_edge
 
 
 
+!--------------------------------------------------------------------------!
+subroutine coo_free(g)                                                     !
+!--------------------------------------------------------------------------!
+    class(coo_graph), intent(inout) :: g
 
+    deallocate(g%edges)
+
+    g%n = 0
+    g%m = 0
+    g%ne = 0
+    g%max_degree = 0
+
+end subroutine coo_free
+
+
+
+!--------------------------------------------------------------------------!
+subroutine coo_dump_edges(g,edges)                                         !
+!--------------------------------------------------------------------------!
+    class(coo_graph), intent(in) :: g
+    integer, intent(out) :: edges(:,:)
+
+    edges = g%edges
+
+end subroutine coo_dump_edges
 
 
 

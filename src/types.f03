@@ -22,6 +22,7 @@ contains
     procedure :: delete_value => linked_list_delete_value
     procedure :: get_entry => linked_list_get_entry
     procedure :: get_value => linked_list_get_value
+    procedure :: free => linked_list_free
 end type linked_list
 
 
@@ -221,6 +222,22 @@ function linked_list_get_value(list,i)                                     !
     linked_list_get_value = current%val
 
 end function linked_list_get_value
+
+
+
+!--------------------------------------------------------------------------!
+subroutine linked_list_free(list)                                          !
+!--------------------------------------------------------------------------!
+    class(linked_list), intent(inout) :: list
+    integer :: k,length
+
+    length = list%length
+
+    do k=1,length
+        call list%delete_entry(1)
+    enddo
+
+end subroutine linked_list_free
 
 
 

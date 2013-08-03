@@ -17,7 +17,8 @@ contains
     procedure :: find_edge => ll_find_edge
     procedure :: add_edge => ll_add_edge
     procedure :: delete_edge => ll_delete_edge
-
+    procedure :: free => ll_free
+    procedure :: dump_edges => ll_dump_edges
 
 end type ll_graph
 
@@ -139,9 +140,12 @@ subroutine ll_add_edge(g,i,j)                                              !
     class(ll_graph), intent(inout) :: g
     integer, intent(in) :: i,j
 
-    call g%lists(i)%prepend(j)
-
-    if (g%lists(i)%length>g%max_degree) g%max_degree = g%lists(i)%length
+    if (.not.g%connected(i,j)) then
+        call g%lists(i)%prepend(j)
+        if (g%lists(i)%length>g%max_degree) then
+            g%max_degree = g%lists(i)%length
+        endif
+    endif
 
 end subroutine ll_add_edge
 
@@ -165,6 +169,49 @@ subroutine ll_delete_edge(g,i,j)                                           !
     endif
 
 end subroutine ll_delete_edge
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ll_free(g)                                                      !
+!--------------------------------------------------------------------------!
+    class(ll_graph), intent(inout) :: g
+    integer :: i
+
+    do i=1,g%n
+        call g%lists(i)%free()
+    enddo
+
+    deallocate(g%lists)
+
+    g%n = 0
+    g%m = 0
+    g%ne = 0
+    g%max_degree = 0
+
+end subroutine ll_free
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ll_dump_edges(g,edges)                                          !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(ll_graph), intent(in) :: g
+    integer, intent(out) :: edges(:,:)
+    ! local variables
+    integer :: i,k,next
+
+    next = 0
+    do i=1,g%n
+        do k=1,g%lists(i)%length
+            next = next+1
+            edges(1,next) = i
+            edges(2,next) = g%lists(i)%get_value(k)
+        enddo
+    enddo
+
+end subroutine ll_dump_edges
 
 
 

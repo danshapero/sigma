@@ -18,6 +18,8 @@ contains
     procedure :: find_edge => cs_find_edge
     procedure :: add_edge  => cs_add_edge
     procedure :: delete_edge => cs_delete_edge
+    procedure :: free => cs_free
+    procedure :: dump_edges => cs_dump_edges
     ! auxiliary routines
     procedure :: sort_ja
 end type cs_graph
@@ -254,6 +256,41 @@ subroutine cs_delete_edge(g,i,j)                                           !
     endif
 
 end subroutine cs_delete_edge
+
+
+
+!--------------------------------------------------------------------------!
+subroutine cs_free(g)                                                      !
+!--------------------------------------------------------------------------!
+    class(cs_graph), intent(inout) :: g
+
+    deallocate(g%ia,g%ja)
+    g%n = 0
+    g%m = 0
+    g%ne = 0
+    g%max_degree = 0
+
+end subroutine cs_free
+
+
+
+!--------------------------------------------------------------------------!
+subroutine cs_dump_edges(g,edges)                                          !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(cs_graph), intent(in) :: g
+    integer, intent(out) :: edges(:,:)
+    ! local variables
+    integer :: i,k
+
+    do i=1,g%n
+        do k=g%ia(i),g%ia(i+1)-1
+            edges(1,k) = i
+            edges(2,k) = g%ja(k)
+        enddo
+    enddo
+
+end subroutine cs_dump_edges
 
 
 
