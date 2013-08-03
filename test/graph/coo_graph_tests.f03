@@ -5,7 +5,7 @@ use coo_graphs
 implicit none
 
     type(coo_graph) :: g
-    integer :: i,j
+    integer :: i
     integer, allocatable :: edges(:,:)
 
     allocate(edges(2,12))

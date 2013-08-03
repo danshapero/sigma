@@ -33,7 +33,6 @@ contains
 !--------------------------------------------------------------------------!
 subroutine cs_init(g,n,m,edges)                                            !
 !--------------------------------------------------------------------------!
-    implicit none
     ! input/output variables
     class(cs_graph), intent(inout) :: g
     integer, intent(in) :: n
@@ -97,7 +96,6 @@ end subroutine cs_init
 !--------------------------------------------------------------------------!
 subroutine cs_neighbors(g,i,nbrs)                                          !
 !--------------------------------------------------------------------------!
-    implicit none
     ! input/output variables
     class(cs_graph), intent(in) :: g
     integer, intent(in) :: i
@@ -119,7 +117,6 @@ end subroutine cs_neighbors
 !--------------------------------------------------------------------------!
 function cs_connected(g,i,j)                                               !
 !--------------------------------------------------------------------------!
-    implicit none
     ! input/output variables
     class(cs_graph), intent(in) :: g
     integer, intent(in) :: i,j
@@ -140,7 +137,6 @@ end function cs_connected
 !--------------------------------------------------------------------------!
 function cs_find_edge(g,i,j)                                               !
 !--------------------------------------------------------------------------!
-    implicit none
     ! input/output variables
     class(cs_graph), intent(in) :: g
     integer, intent(in) :: i,j
@@ -163,7 +159,6 @@ end function cs_find_edge
 !--------------------------------------------------------------------------!
 subroutine cs_add_edge(g,i,j)                                              !
 !--------------------------------------------------------------------------!
-    implicit none
     ! input/output variables
     class(cs_graph), intent(inout) :: g
     integer, intent(in) :: i,j
@@ -209,7 +204,6 @@ end subroutine cs_add_edge
 !--------------------------------------------------------------------------!
 subroutine cs_delete_edge(g,i,j)                                           !
 !--------------------------------------------------------------------------!
-    implicit none
     ! input/output variables
     class(cs_graph), intent(inout) :: g
     integer, intent(in) :: i,j
@@ -266,7 +260,6 @@ end subroutine cs_delete_edge
 !--------------------------------------------------------------------------!
 subroutine sort_ja(g)                                                      !
 !--------------------------------------------------------------------------!
-    implicit none
     ! input/output variables
     class(cs_graph), intent(inout) :: g
     ! local variables

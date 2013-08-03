@@ -32,7 +32,6 @@ contains
 !--------------------------------------------------------------------------!
 function new_node(i)                                                       !
 !--------------------------------------------------------------------------!
-    implicit none
     integer, intent(in) :: i
     type(node), pointer :: new_node
 
@@ -47,7 +46,6 @@ end function new_node
 !--------------------------------------------------------------------------!
 subroutine linked_list_append(list,i)                                      !
 !--------------------------------------------------------------------------!
-    implicit none
     ! input/output variables
     class(linked_list), intent(inout) :: list
     integer, intent(in) :: i
@@ -73,7 +71,6 @@ end subroutine linked_list_append
 !--------------------------------------------------------------------------!
 subroutine linked_list_prepend(list,i)                                     !
 !--------------------------------------------------------------------------!
-    implicit none
     ! input/output variables
     class(linked_list), intent(inout) :: list
     integer, intent(in) :: i
@@ -97,7 +94,6 @@ end subroutine linked_list_prepend
 !--------------------------------------------------------------------------!
 subroutine linked_list_delete_entry(list,i)                                !
 !--------------------------------------------------------------------------!
-    implicit none
     ! input/output variables
     class(linked_list), intent(inout) :: list
     integer, intent(in) :: i
@@ -140,7 +136,6 @@ end subroutine linked_list_delete_entry
 !--------------------------------------------------------------------------!
 subroutine linked_list_delete_value(list,i)                                !
 !--------------------------------------------------------------------------!
-    implicit none
     ! input/output variables
     class(linked_list), intent(inout) :: list
     integer, intent(in) :: i
@@ -180,7 +175,6 @@ end subroutine linked_list_delete_value
 !--------------------------------------------------------------------------!
 function linked_list_get_entry(list,val)                                   !
 !--------------------------------------------------------------------------!
-    implicit none
     ! input/output variables
     class(linked_list), intent(in) :: list
     integer, intent(in) :: val
@@ -207,7 +201,6 @@ end function linked_list_get_entry
 !--------------------------------------------------------------------------!
 function linked_list_get_value(list,i)                                     !
 !--------------------------------------------------------------------------!
-    implicit none
     ! input/output variables
     class(linked_list), intent(in) :: list
     integer, intent(in) :: i

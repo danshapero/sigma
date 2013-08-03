@@ -18,7 +18,6 @@ function order(list)                                                       !
 ! Produce a permutation of a list which puts it in order:                  !
 !       list( order(list) ) = the sorted array list                        !
 !--------------------------------------------------------------------------!
-    implicit none
     ! input/output variables
     integer, intent(in) :: list(:)
     integer :: order(size(list))

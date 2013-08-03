@@ -5,7 +5,7 @@ use ll_graphs
 implicit none
 
     type(ll_graph) :: g
-    integer :: i,j
+    integer :: i
     integer, allocatable :: edges(:,:)
 
     allocate(edges(2,12))

@@ -32,7 +32,6 @@ contains
 !--------------------------------------------------------------------------!
 subroutine coo_init(g,n,m,edges)                                           !
 !--------------------------------------------------------------------------!
-    implicit none
     ! input/output variables
     class(coo_graph), intent(inout) :: g
     integer, intent(in) :: n
@@ -77,7 +76,6 @@ end subroutine coo_init
 !--------------------------------------------------------------------------!
 subroutine coo_neighbors(g,i,nbrs)                                         !
 !--------------------------------------------------------------------------!
-    implicit none
     ! input/output variables
     class(coo_graph), intent(in) :: g
     integer, intent(in) :: i
@@ -101,7 +99,6 @@ end subroutine coo_neighbors
 !--------------------------------------------------------------------------!
 function coo_connected(g,i,j)                                              !
 !--------------------------------------------------------------------------!
-    implicit none
     ! input/output variables
     class(coo_graph), intent(in) :: g
     integer, intent(in) :: i,j
@@ -122,7 +119,6 @@ end function coo_connected
 !--------------------------------------------------------------------------!
 function coo_find_edge(g,i,j)                                              !
 !--------------------------------------------------------------------------!
-    implicit none
     ! input/output variables
     class(coo_graph), intent(in) :: g
     integer, intent(in) :: i,j
@@ -143,7 +139,6 @@ end function coo_find_edge
 !--------------------------------------------------------------------------!
 subroutine coo_add_edge(g,i,j)                                             !
 !--------------------------------------------------------------------------!
-    implicit none
     ! input/output variables
     class(coo_graph), intent(inout) :: g
     integer, intent(in) :: i,j
@@ -183,7 +178,6 @@ end subroutine coo_add_edge
 !--------------------------------------------------------------------------!
 subroutine coo_delete_edge(g,i,j)                                          !
 !--------------------------------------------------------------------------!
-    implicit none
     ! input/output variables
     class(coo_graph), intent(inout) :: g
     integer, intent(in) :: i,j
