@@ -1,4 +1,4 @@
-module abstract_sparse_matrices
+module sparse_matrices
 
 use types
 use abstract_graphs
@@ -12,30 +12,29 @@ type, abstract :: sparse_matrix                                            !
 !--------------------------------------------------------------------------!
     integer :: nrow, ncol, nnz
     logical :: pos_def
-    class(graph), pointer :: g
     logical :: assembled
 contains
-    procedure(init_ifc), deferred       :: init
-    procedure(assemble_ifc), deferred   :: assemble
-    procedure(get_value_ifc), deferred  :: get_value
-    procedure(set_value_ifc), deferred  :: set_value, add_value
+    procedure(init_matrix_ifc), deferred    :: init
+    procedure(assemble_ifc), deferred       :: assemble
+    procedure(get_value_ifc), deferred      :: get_value
+    procedure(set_value_ifc), deferred      :: set_value, add_value
 !    procedure(matrix_add_ifc), deferred :: matrix_add
-    procedure(matvec_ifc), deferred     :: matvec
+    procedure(matvec_ifc), deferred         :: matvec
 end type sparse_matrix
 
 
 abstract interface
-    subroutine init_ifc(A,nrow,ncol)
+    subroutine init_matrix_ifc(A,nrow,ncol)
         import :: sparse_matrix
         class(sparse_matrix), intent(inout) :: A
         integer, intent(in) :: nrow, ncol
-    end subroutine init_ifc
+    end subroutine init_matrix_ifc
 
     subroutine assemble_ifc(A,g)
         import :: sparse_matrix, graph
         class(sparse_matrix), intent(inout) :: A
         class(graph), pointer, intent(in) :: g
-    end subroutine assemble
+    end subroutine assemble_ifc
 
     function get_value_ifc(A,i,j)
         import :: sparse_matrix, dp
@@ -49,7 +48,7 @@ abstract interface
         class(sparse_matrix), intent(inout) :: A
         integer, intent(in) :: i,j
         real(dp), intent(in) :: val
-    subroutine
+    end subroutine set_value_ifc
 
     subroutine matvec_ifc(A,x,y)
         import :: sparse_matrix, dp
@@ -62,4 +61,4 @@ end interface
 
 
 
-end module abstract_sparse_matrices
+end module sparse_matrices

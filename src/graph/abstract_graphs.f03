@@ -9,7 +9,7 @@ type, abstract :: graph                                                    !
 !--------------------------------------------------------------------------!
     integer :: n,m,ne,max_degree
     contains
-    procedure(init_ifc), deferred           :: init
+    procedure(init_graph_ifc), deferred     :: init
     procedure(neighbors_ifc), deferred      :: neighbors
     procedure(connected_ifc), deferred      :: connected
     procedure(find_edge), deferred          :: find_edge
@@ -23,12 +23,12 @@ end type graph
 !--------------------------------------------------------------------------!
 abstract interface                                                         !
 !--------------------------------------------------------------------------!
-    subroutine init_ifc(g,n,m,edges)
+    subroutine init_graph_ifc(g,n,m,edges)
         import :: graph
         class(graph), intent(inout) :: g
         integer, intent(in) :: n
         integer, intent(in), optional :: m, edges(:,:)
-    end subroutine init_ifc
+    end subroutine init_graph_ifc
 
     subroutine neighbors_ifc(g,i,nbrs)
         import :: graph
