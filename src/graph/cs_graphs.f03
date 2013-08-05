@@ -146,12 +146,10 @@ function cs_find_edge(g,i,j)                                               !
     ! local variables
     integer :: k
 
-    cs_find_edge = g%ia(i)
+    cs_find_edge = -1
 
     do k=g%ia(i),g%ia(i+1)-1
-        if (g%ja(k)<j) then
-            cs_find_edge = k+1
-        endif
+        if (g%ja(k)==j) cs_find_edge = k
     enddo
 
 end function cs_find_edge
@@ -170,7 +168,10 @@ subroutine cs_add_edge(g,i,j)                                              !
     if (.not.g%connected(i,j)) then
         ! Find the index in the list of edges where the new edge is to be
         ! inserted
-        indx = g%find_edge(i,j)
+        indx = g%ia(i)
+        do k=g%ia(i),g%ia(i+1)-1
+            if (g%ja(k)<j) indx = indx+1
+        enddo
 
         ! Copy the current structure into a temporary one
         ja_temp = g%ja

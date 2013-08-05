@@ -15,10 +15,12 @@ type, extends(sparse_matrix) :: csr_matrix                                 !
 contains
     procedure :: init => csr_init
     procedure :: assemble => csr_assemble
+    procedure :: neighbors => csr_neighbors
     procedure :: get_value => csr_get_value
     procedure :: set_value => csr_set_value
     procedure :: add_value => csr_add_value
     procedure :: matvec => csr_matvec
+    procedure :: set_value_not_preallocated
 end type csr_matrix
 
 
@@ -38,6 +40,7 @@ subroutine csr_init(A,nrow,ncol)                                           !
 
     A%nrow = nrow
     A%ncol = ncol
+    A%max_degree = 0
 
 end subroutine csr_init
 
@@ -54,10 +57,25 @@ subroutine csr_assemble(A,g)                                               !
     A%nrow = g%n
     A%ncol = g%m
     A%nnz = g%ne
+    A%max_degree = g%max_degree
 
     allocate(A%val(A%nnz))
 
 end subroutine csr_assemble
+
+
+
+!--------------------------------------------------------------------------!
+subroutine csr_neighbors(A,i,nbrs)                                         !
+!--------------------------------------------------------------------------!
+    class(csr_matrix), intent(in) :: A
+    integer, intent(in)  :: i
+    integer, intent(out) :: nbrs(:)
+
+    nbrs = 0
+    call A%g%neighbors(i,nbrs)
+
+end subroutine csr_neighbors
 
 
 
@@ -72,8 +90,8 @@ function csr_get_value(A,i,j)                                              !
     integer :: k
 
     csr_get_value = 0_dp
-    if (A%g%connected(i,j)) then
-        k = A%g%find_edge(i,j)
+    k = A%g%find_edge(i,j)
+    if (k/=-1) then
         csr_get_value = A%val(k)
     endif
 
@@ -91,12 +109,12 @@ subroutine csr_set_value(A,i,j,val)                                        !
     ! local variables
     integer :: k
 
-    if (.not.A%g%connected(i,j)) then
-        call A%g%add_edge(i,j)
-    endif
-
     k = A%g%find_edge(i,j)
-    A%val(k) = val
+    if (k==-1) then
+        call A%set_value_not_preallocated(i,j,val)
+    else
+        A%val(k) = val
+    endif
 
 end subroutine csr_set_value
 
@@ -112,12 +130,12 @@ subroutine csr_add_value(A,i,j,val)                                        !
     ! local variables
     integer :: k
 
-    if (.not.A%g%connected(i,j)) then
-        call A%g%add_edge(i,j)
-    endif
-
     k = A%g%find_edge(i,j)
-    A%val(k) = A%val(k)+val
+    if (k==-1) then
+        call A%set_value_not_preallocated(i,j,val)
+    else
+        A%val(k) = A%val(k)+val
+    endif
 
 end subroutine csr_add_value
 
@@ -146,6 +164,30 @@ subroutine csr_matvec(A,x,y)                                               !
 end subroutine csr_matvec
 
 
+
+!--------------------------------------------------------------------------!
+subroutine set_value_not_preallocated(A,i,j,val)                           !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(csr_matrix), intent(inout) :: A
+    integer, intent(in) :: i,j
+    real(dp), intent(in) :: val
+    ! local variables
+    real(dp) :: val_temp(A%nnz)
+    integer :: k, degree
+
+    call A%g%add_edge(i,j)
+    k = A%g%find_edge(i,j)
+    val_temp = A%val
+    deallocate(A%val)
+    allocate(A%val(A%nnz+1))
+    A%val(1:k-1) = val_temp(1:k-1)
+    A%val(k) = val
+    A%val(k+1:A%nnz+1) = val_temp(k:A%nnz)
+    A%nnz = A%nnz+1
+    A%max_degree = A%g%max_degree
+
+end subroutine set_value_not_preallocated
 
 
 

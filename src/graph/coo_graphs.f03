@@ -127,7 +127,7 @@ function coo_find_edge(g,i,j)                                              !
     ! local variables
     integer :: k
 
-    coo_find_edge = g%ne+1
+    coo_find_edge = -1
 
     do k=1,g%ne
         if (g%edges(1,k)==i .and. g%edges(2,k)==j) coo_find_edge = k
