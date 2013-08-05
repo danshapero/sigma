@@ -300,14 +300,15 @@ subroutine sort_ja(g)                                                      !
     ! input/output variables
     class(cs_graph), intent(inout) :: g
     ! local variables
-    integer :: k,start,finish,num,p(g%max_degree)
+    integer :: k,start,finish,num,p(g%max_degree),ja(g%max_degree)
 
     do k=1,g%n
         start  = g%ia(k)
         finish = g%ia(k+1)-1
         num = finish-start+1
-        p(1:num) = order(g%ja(start:finish))
-        g%ja(start:finish) = g%ja( p(1:num) )
+        ja(1:num) = g%ja(start:finish)
+        p(1:num) = order(ja(1:num))
+        g%ja(start:finish) = ja(p(1:num))
     enddo
 
 end subroutine sort_ja

@@ -145,6 +145,7 @@ subroutine ll_add_edge(g,i,j)                                              !
         if (g%lists(i)%length>g%max_degree) then
             g%max_degree = g%lists(i)%length
         endif
+        g%ne = g%ne+1
     endif
 
 end subroutine ll_add_edge
@@ -160,6 +161,9 @@ subroutine ll_delete_edge(g,i,j)                                           !
 
     degree = g%lists(i)%length
     call g%lists(i)%delete_value(j)
+    if (g%lists(i)%length<degree) then
+        g%ne = g%ne-1
+    endif
 
     if (degree==g%max_degree) then
         g%max_degree = 0
