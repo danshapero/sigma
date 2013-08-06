@@ -1,4 +1,4 @@
-module abstract_graphs
+module graphs
 
 implicit none
 
@@ -80,4 +80,4 @@ end interface
 
 
 
-end module abstract_graphs
+end module graphs

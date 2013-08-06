@@ -1,6 +1,6 @@
 module coo_graphs
 
-use abstract_graphs
+use graphs
 
 implicit none
 

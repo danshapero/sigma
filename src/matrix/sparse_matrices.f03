@@ -1,7 +1,7 @@
 module sparse_matrices
 
 use types
-use abstract_graphs
+use graphs
 
 implicit none
 

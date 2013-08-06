@@ -14,8 +14,8 @@ dirs += $(graph) $(matrix)
 include $(graph)makefile
 include $(matrix)/makefile
 
-src_dependencies = $(graph_objects)
-src_objects = $(src)graphs.o
+src_dependencies = $(graph_objects) $(matrix_objects)
+src_objects = $(src)fempack.o
 
 $(src_objects): $(src_dependencies)
 

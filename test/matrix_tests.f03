@@ -1,8 +1,6 @@
 program matrix_tests
 
-use csr_matrices
-use sparse_matrices
-use graphs
+use fempack
 
 implicit none
 
@@ -60,6 +58,9 @@ implicit none
     y = 1.0_dp
     call A%matvec(x,y)
 
-    print *, minval(y),maxval(y)
+    if ( maxval(dabs(y))>1.0e-14 ) then
+        print *, 'A*[1,...,1] should be = 0;'
+        print *, 'max(abs(y)) = ',maxval(dabs(y))
+    endif
 
 end program matrix_tests

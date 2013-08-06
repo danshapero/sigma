@@ -1,6 +1,6 @@
 module ll_graphs
 
-use abstract_graphs
+use graphs
 use types
 
 implicit none
