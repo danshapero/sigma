@@ -30,6 +30,12 @@ end type sparse_matrix
 
 
 
+type :: mat_pointer
+    class(sparse_matrix), pointer :: ptr
+end type mat_pointer
+
+
+
 abstract interface
 
 subroutine init_interface(A,nrow,ncol,nnz,rows,cols,params)

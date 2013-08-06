@@ -11,7 +11,14 @@ module matrix_c
 !--------------------------------------------------------------------------!
 ! C wrapper to Fortran matrix data types                                   !
 !--------------------------------------------------------------------------!
+!type, bind(c) :: sparse_matrix_c
+!    type(c_ptr) :: p
+!    integer(c_int) :: nrow,ncol,nnz,max_degree,mat_type
+!end type sparse_matrix_c
+
 type, bind(c) :: sparse_matrix_c
+    ! The c_ptr points to a mat_pointer type, which in turn points to a
+    ! polymorphic sparse matrix pointer
     type(c_ptr) :: p
     integer(c_int) :: nrow,ncol,nnz,max_degree,mat_type
 end type sparse_matrix_c
@@ -41,22 +48,36 @@ subroutine get_sparse_matrix_c(cmat,mat_type)   &                          !
     type(sparse_matrix_c), intent(inout) :: cmat
     integer(c_int), intent(in), value :: mat_type
     ! local variables
-    type(csr_matrix), pointer :: csr_mat
-    type(bsr_matrix), pointer :: bsr_mat
-    type(ellpack_matrix), pointer :: ellpack_mat
+    type(mat_pointer), pointer :: mptr
+    !type(csr_matrix), pointer :: csr_mat
+    !type(bsr_matrix), pointer :: bsr_mat
+    !type(ellpack_matrix), pointer :: ellpack_mat
 
     cmat%mat_type = mat_type
+
     select case(mat_type)
         case(0)
-            allocate(csr_mat)
-            cmat%p = c_loc(csr_mat)
+            allocate(csr_matrix::mptr%ptr)
         case(1)
-            allocate(bsr_mat)
-            cmat%p = c_loc(bsr_mat)
+            allocate(bsr_matrix::mptr%ptr)
         case(2)
-            allocate(ellpack_mat)
-            cmat%p = c_loc(ellpack_mat)
+            allocate(ellpack_matrix::mptr%ptr)
     end select
+
+    cmat%p = c_loc(mptr)
+
+!    cmat%mat_type = mat_type
+!    select case(mat_type)
+!        case(0)
+!            allocate(csr_mat)
+!            cmat%p = c_loc(csr_mat)
+!        case(1)
+!            allocate(bsr_mat)
+!            cmat%p = c_loc(bsr_mat)
+!        case(2)
+!            allocate(ellpack_mat)
+!            cmat%p = c_loc(ellpack_mat)
+!    end select
 
 end subroutine get_sparse_matrix_c
 
@@ -69,24 +90,29 @@ subroutine sparse_matrix_f(fmat,cmat)                                      !
     class(sparse_matrix), pointer, intent(out) :: fmat
     type(sparse_matrix_c), intent(in) :: cmat
     ! local variables
-    type(csr_matrix), pointer :: csr_mat
-    type(bsr_matrix), pointer :: bsr_mat
-    type(ellpack_matrix), pointer :: ellpack_mat
+    type(mat_pointer), pointer :: mptr
+!    type(csr_matrix), pointer :: csr_mat
+!    type(bsr_matrix), pointer :: bsr_mat
+!    type(ellpack_matrix), pointer :: ellpack_mat
 
-    select case(cmat%mat_type)
-        case(0)
-            allocate(csr_mat)
-            call c_f_pointer(cmat%p,csr_mat)
-            fmat => csr_mat
-        case(1)
-            allocate(bsr_mat)
-            call c_f_pointer(cmat%p,bsr_mat)
-            fmat => bsr_mat
-        case(2)
-            allocate(ellpack_mat)
-            call c_f_pointer(cmat%p,ellpack_mat)
-            fmat => ellpack_mat
-    end select
+    allocate(mptr)
+    call c_f_pointer(cmat%p,mptr)
+    fmat => mptr%ptr
+
+!    select case(cmat%mat_type)
+!        case(0)
+!            allocate(csr_mat)
+!            call c_f_pointer(cmat%p,csr_mat)
+!            fmat => csr_mat
+!        case(1)
+!            allocate(bsr_mat)
+!            call c_f_pointer(cmat%p,bsr_mat)
+!            fmat => bsr_mat
+!        case(2)
+!            allocate(ellpack_mat)
+!            call c_f_pointer(cmat%p,ellpack_mat)
+!            fmat => ellpack_mat
+!    end select
 
 end subroutine sparse_matrix_f
 
