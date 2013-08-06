@@ -10,6 +10,7 @@ implicit none
     class(sparse_matrix), allocatable :: A
     integer :: i,j,k,degree
     integer, allocatable :: edges(:,:), nbrs(:)
+    real(dp), allocatable :: x(:), y(:)
 
     allocate(edges(2,24))
 
@@ -42,7 +43,6 @@ implicit none
     ! Fill A to be the graph Laplacian
     do i=1,7
         call A%neighbors(i,nbrs)
-        print *, nbrs
         degree = 0
         do k=1,A%max_degree
             if (nbrs(k)/=0 .and. nbrs(k)/=i) degree = degree+1
@@ -53,5 +53,13 @@ implicit none
         enddo
         call A%set_value(i,i,1.0_dp*degree)
     enddo
+
+    allocate(x(7),y(7))
+
+    x = 1.0_dp
+    y = 1.0_dp
+    call A%matvec(x,y)
+
+    print *, minval(y),maxval(y)
 
 end program matrix_tests
