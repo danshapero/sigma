@@ -45,18 +45,18 @@ end subroutine get_graph
 
 
 !--------------------------------------------------------------------------!
-subroutine cgraph_to_fgraph(cgp,g)                                         !
+function cgraph_to_fgraph(cgp) result(g)                                   !
 !--------------------------------------------------------------------------!
     ! input/output variables
     type(c_ptr), intent(in) :: cgp
-    class(graph), pointer, intent(out) :: g
+    class(graph), pointer :: g
     ! local variables
     type(graph_pointer), pointer :: gp
 
     call c_f_pointer(cgp,gp)
     g => gp%g
 
-end subroutine
+end function cgraph_to_fgraph
 
 
 
@@ -80,7 +80,7 @@ subroutine graph_init_c(cgp,n,m) bind(c,name='graph_init')                 !
     ! local variables
     class(graph), pointer :: g
 
-    call cgraph_to_fgraph(cgp,g)
+    g => cgraph_to_fgraph(cgp)
     call g%init(n,m)
 
 end subroutine graph_init_c
@@ -97,7 +97,7 @@ subroutine connected_c(cgp,i,j,con) bind(c,name='connected')               !
     ! local variables
     class(graph), pointer :: g
 
-    call cgraph_to_fgraph(cgp,g)
+    g => cgraph_to_fgraph(cgp)
     if (g%connected(i,j)) then
         con = 1
     else
@@ -117,7 +117,7 @@ subroutine add_edge_c(cgp,i,j) bind(c,name='add_edge')                     !
     ! local variables
     class(graph), pointer :: g
 
-    call cgraph_to_fgraph(cgp,g)
+    g => cgraph_to_fgraph(cgp)
     call g%add_edge(i,j)
 
 end subroutine add_edge_c
@@ -133,7 +133,7 @@ subroutine delete_edge_c(cgp,i,j) bind(c,name='delete_edge')               !
     ! local variables
     class(graph), pointer :: g
 
-    call cgraph_to_fgraph(cgp,g)
+    g => cgraph_to_fgraph(cgp)
     call g%delete_edge(i,j)
 
 end subroutine delete_edge_c
