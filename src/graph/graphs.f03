@@ -12,7 +12,8 @@ type, abstract :: graph                                                    !
     procedure(init_graph_ifc), deferred     :: init
     procedure(neighbors_ifc), deferred      :: neighbors
     procedure(connected_ifc), deferred      :: connected
-    procedure(find_edge), deferred          :: find_edge
+    procedure(find_edge_ifc), deferred      :: find_edge
+    procedure(find_edges_ifc), deferred     :: find_edges
     procedure(add_edge_ifc), deferred       :: add_edge
     procedure(delete_edge_ifc), deferred    :: delete_edge
     procedure(free_ifc), deferred           :: free
@@ -44,12 +45,19 @@ abstract interface                                                         !
         logical :: connected_ifc
     end function connected_ifc
 
-    function find_edge(g,i,j)
+    function find_edge_ifc(g,i,j)
         import :: graph
         class(graph), intent(in) :: g
         integer, intent(in) :: i,j
-        integer :: find_edge
-    end function find_edge
+        integer :: find_edge_ifc
+    end function find_edge_ifc
+
+    function find_edges_ifc(g,is,js)
+        import :: graph
+        class(graph), intent(in) :: g
+        integer, intent(in)  :: is(:),js(:)
+        integer :: find_edges_ifc(size(is),size(js))
+    end function find_edges_ifc
 
     subroutine add_edge_ifc(g,i,j)
         import :: graph

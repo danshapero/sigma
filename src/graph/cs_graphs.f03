@@ -16,6 +16,7 @@ contains
     procedure :: neighbors => cs_neighbors
     procedure :: connected => cs_connected
     procedure :: find_edge => cs_find_edge
+    procedure :: find_edges => cs_find_edges
     procedure :: add_edge  => cs_add_edge
     procedure :: delete_edge => cs_delete_edge
     procedure :: free => cs_free
@@ -153,6 +154,29 @@ function cs_find_edge(g,i,j)                                               !
     enddo
 
 end function cs_find_edge
+
+
+
+!--------------------------------------------------------------------------!
+function cs_find_edges(g,is,js)                                            !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(cs_graph), intent(in) :: g
+    integer, intent(in) :: is(:), js(:)
+    integer :: cs_find_edges(size(is),size(js))
+    ! local variables
+    integer :: i,j,k
+
+    cs_find_edges = -1
+    do i=1,size(is)
+        do k=g%ia(is(i)),g%ia(is(i)+1)-1
+            do j=1,size(js)
+                if (g%ja(k)==js(j)) cs_find_edges(i,j) = k
+            enddo
+        enddo
+    enddo
+
+end function cs_find_edges
 
 
 

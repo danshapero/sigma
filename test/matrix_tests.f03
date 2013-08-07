@@ -7,6 +7,7 @@ implicit none
     class(graph), allocatable :: g
     class(sparse_matrix), allocatable :: A
     integer :: i,j,k,degree
+    real(dp) :: z
     integer, allocatable :: edges(:,:), nbrs(:)
     real(dp), allocatable :: x(:), y(:)
 
@@ -47,10 +48,18 @@ implicit none
         enddo
         do k=1,A%max_degree
             j = nbrs(k)
-            if (j/=0) call A%set_value(i,j,-1.0_dp)
+            if (j/=0) then
+                call A%set_value(i,j,-1.0_dp)
+                call A%add_value(i,i,1.0_dp)
+            endif
         enddo
-        call A%set_value(i,i,1.0_dp*degree)
     enddo
+
+    z = A%get_value(1,1)
+    if (z/=6.0_dp) then
+        print *, 'A(1,1) should be = 6.0 for A the graph Laplacian; '
+        print *, 'value found: ',z
+    endif
 
     allocate(x(7),y(7))
 
