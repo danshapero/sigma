@@ -55,6 +55,9 @@ subroutine get_sparse_matrix_c(cmat,mat_type)   &                          !
 
     cmat%mat_type = mat_type
 
+    allocate(mptr)
+    cmat%p = c_loc(mptr)
+
     select case(mat_type)
         case(0)
             allocate(csr_matrix::mptr%ptr)
@@ -63,8 +66,6 @@ subroutine get_sparse_matrix_c(cmat,mat_type)   &                          !
         case(2)
             allocate(ellpack_matrix::mptr%ptr)
     end select
-
-    cmat%p = c_loc(mptr)
 
 !    cmat%mat_type = mat_type
 !    select case(mat_type)

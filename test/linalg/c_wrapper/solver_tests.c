@@ -17,7 +17,7 @@ int main(int argc, char *argv) {
 
     // Build the non-zero structure of the matrix
     int rows[3*n], cols[3*n], i;
-    /*for (i=0; i<n; i++) {
+    for (i=0; i<n; i++) {
         rows[i] = i;
         rows[i+n] = i;
         rows[i+2*n] = i;
@@ -72,7 +72,7 @@ int main(int argc, char *argv) {
     if (fabs(ma-0.25)>1.0e-10) {
         printf("-d^2u = 1 should have a maximum of 0.25\n");
         printf("Value found:  %lf\n",ma);
-    }*/
+    }
 
     return 0;
 }
