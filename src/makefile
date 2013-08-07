@@ -15,7 +15,8 @@ include $(graph)makefile
 include $(matrix)/makefile
 
 src_dependencies = $(graph_objects) $(matrix_objects)
-src_objects = $(src)fempack.o
+src_objects = $(src)wrapper.o $(src)fempack.o
 
-$(src_objects): $(src_dependencies)
-
+libs: $(src)util.o $(src)types.o $(src_dependencies) $(src_objects)
+	$(AR) rc $(LIB)libfempack.a $(src)util.o $(src)types.o $(graph_objects) $(matrix_objects) $(src)wrapper.o $(src)fempack.o
+	$(RANLIB) $(LIB)libfempack.a
