@@ -12,6 +12,12 @@ contains
 
 
 
+!==========================================================================!
+!==========================================================================!
+!==== Routines for C <-> F2K pointer translation                       ====!
+!==========================================================================!
+!==========================================================================!
+
 !--------------------------------------------------------------------------!
 subroutine get_graph(cgp,storage_format) bind(c)                           !
 !--------------------------------------------------------------------------!
@@ -39,18 +45,42 @@ end subroutine get_graph
 
 
 !--------------------------------------------------------------------------!
+subroutine cgraph_to_fgraph(cgp,g)                                         !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    type(c_ptr), intent(in) :: cgp
+    class(graph), pointer, intent(out) :: g
+    ! local variables
+    type(graph_pointer), pointer :: gp
+
+    call c_f_pointer(cgp,gp)
+    g => gp%g
+
+end subroutine
+
+
+
+
+
+
+
+
+!==========================================================================!
+!==========================================================================!
+!==== C-compatible wrappers to Fortran graph operations                ====!
+!==========================================================================!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
 subroutine graph_init_c(cgp,n,m) bind(c,name='graph_init')                 !
 !--------------------------------------------------------------------------!
     ! input/output variables
     type(c_ptr), intent(in) :: cgp
     integer(c_int), intent(in), value :: n,m
     ! local variables
-    type(graph_pointer), pointer :: gp
     class(graph), pointer :: g
 
-    call c_f_pointer(cgp,gp)
-    g => gp%g
-    print *, associated(g)
+    call cgraph_to_fgraph(cgp,g)
     call g%init(n,m)
 
 end subroutine graph_init_c
@@ -58,19 +88,57 @@ end subroutine graph_init_c
 
 
 !--------------------------------------------------------------------------!
-subroutine yea_bitches(cgp) bind(c)                                      !
+subroutine connected_c(cgp,i,j,con) bind(c,name='connected')               !
 !--------------------------------------------------------------------------!
+    ! input/output variables
     type(c_ptr), intent(in) :: cgp
-    type(graph_pointer), pointer :: gp
+    integer(c_int), intent(in), value  :: i,j
+    integer(c_int), intent(out) :: con
+    ! local variables
     class(graph), pointer :: g
 
+    call cgraph_to_fgraph(cgp,g)
+    if (g%connected(i,j)) then
+        con = 1
+    else
+        con = 0
+    endif
 
-    call c_f_pointer(cgp,gp)
-    print *, associated(g)
-    g => gp%g
-    print *, g%n, g%m
+end subroutine connected_c
 
-end subroutine yea_bitches
+
+
+!--------------------------------------------------------------------------!
+subroutine add_edge_c(cgp,i,j) bind(c,name='add_edge')                     !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    type(c_ptr), intent(in) :: cgp
+    integer(c_int), intent(in), value :: i,j
+    ! local variables
+    class(graph), pointer :: g
+
+    call cgraph_to_fgraph(cgp,g)
+    call g%add_edge(i,j)
+
+end subroutine add_edge_c
+
+
+
+!--------------------------------------------------------------------------!
+subroutine delete_edge_c(cgp,i,j) bind(c,name='delete_edge')               !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    type(c_ptr), intent(in) :: cgp
+    integer(c_int), intent(in), value :: i,j
+    ! local variables
+    class(graph), pointer :: g
+
+    call cgraph_to_fgraph(cgp,g)
+    call g%delete_edge(i,j)
+
+end subroutine delete_edge_c
+
+
 
 
 
