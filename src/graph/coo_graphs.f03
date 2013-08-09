@@ -18,6 +18,8 @@ contains
     procedure :: find_edges => coo_find_edges
     procedure :: add_edge => coo_add_edge
     procedure :: delete_edge => coo_delete_edge
+    procedure :: left_permute => coo_graph_left_permute, &
+                & right_permute => coo_graph_right_permute
     procedure :: free => coo_free
     procedure :: dump_edges => coo_dump_edges
 
@@ -240,6 +242,40 @@ subroutine coo_delete_edge(g,i,j)                                          !
     endif
 
 end subroutine coo_delete_edge
+
+
+
+!--------------------------------------------------------------------------!
+subroutine coo_graph_left_permute(g,p)                                     !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(coo_graph), intent(inout) :: g
+    integer, intent(in) :: p(:)
+    ! local variables
+    integer :: k
+
+    do k=1,g%ne
+        g%edges(1,k) = p(g%edges(1,k))
+    enddo
+
+end subroutine coo_graph_left_permute
+
+
+
+!--------------------------------------------------------------------------!
+subroutine coo_graph_right_permute(g,p)                                    !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(coo_graph), intent(inout) :: g
+    integer, intent(in) :: p(:)
+    ! local variables
+    integer :: k
+
+    do k=1,g%ne
+        g%edges(2,k) = p(g%edges(2,k))
+    enddo
+
+end subroutine coo_graph_right_permute
 
 
 

@@ -18,6 +18,7 @@ type :: linked_list
 contains
     procedure :: append => linked_list_append
     procedure :: prepend => linked_list_prepend
+    procedure :: set_value => linked_list_set_value
     procedure :: delete_entry => linked_list_delete_entry
     procedure :: delete_value => linked_list_delete_value
     procedure :: get_entry => linked_list_get_entry
@@ -89,6 +90,34 @@ subroutine linked_list_prepend(list,i)                                     !
     endif
 
 end subroutine linked_list_prepend
+
+
+
+!--------------------------------------------------------------------------!
+subroutine linked_list_set_value(list,i,val)                               !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(linked_list), intent(inout) :: list
+    integer, intent(in) :: i, val
+    ! local variables
+    integer :: k
+    type(node), pointer :: current
+
+    if (.not.associated(list%head)) then
+        print *, 'Linked list is empty'
+        call exit(1)
+    endif
+    current => list%head
+    do k=1,i-1
+        if (.not.associated(current%next)) then
+            print *, 'Linked list index ',i,' out of bounds'
+            call exit(1)
+        endif
+        current => current%next
+    enddo
+    current%val = val
+
+end subroutine linked_list_set_value
 
 
 
@@ -210,11 +239,15 @@ function linked_list_get_value(list,i)                                     !
     integer :: k
     type(node), pointer :: current
 
+    if (.not.associated(list%head)) then
+        print *, 'Linked list is empty'
+        call exit(1)
+    endif
     current => list%head
     do k=1,i-1
         if (.not.associated(current%next)) then
             print *, 'Linked list index ',i,'out of bounds'
-            exit
+            call exit(1)
         endif
         current => current%next
     enddo

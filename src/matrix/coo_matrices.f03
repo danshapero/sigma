@@ -167,7 +167,6 @@ subroutine coo_set_value_not_preallocated(A,i,j,val)                       !
     real(dp), intent(in) :: val
     ! local variables
     real(dp) :: val_temp(A%nnz)
-    integer :: k
 
     call A%g%add_edge(i,j)
     val_temp = A%val

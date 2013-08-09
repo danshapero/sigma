@@ -19,6 +19,8 @@ contains
     procedure :: find_edges => cs_find_edges
     procedure :: add_edge  => cs_add_edge
     procedure :: delete_edge => cs_delete_edge
+    procedure :: left_permute => cs_graph_left_permute, &
+                & right_permute => cs_graph_right_permute
     procedure :: free => cs_free
     procedure :: dump_edges => cs_dump_edges
     ! auxiliary routines
@@ -281,6 +283,54 @@ subroutine cs_delete_edge(g,i,j)                                           !
     endif
 
 end subroutine cs_delete_edge
+
+
+
+!--------------------------------------------------------------------------!
+subroutine cs_graph_left_permute(g,p)                                      !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(cs_graph), intent(inout) :: g
+    integer, intent(in) :: p(:)
+    ! local variables
+    integer :: i,k,ia(g%n+1),ja(g%ne)
+
+    do i=1,g%n
+        ia(p(i)+1) = g%ia(i+1)-g%ia(i)
+    enddo
+
+    ia(1) = 1
+    do i=1,g%n
+        ia(i+1) = ia(i+1)+ia(i)
+    enddo
+
+    do i=1,g%n
+        do k=0,g%ia(i+1)-g%ia(i)-1
+            ja( ia(p(i))+k ) = g%ja( g%ia(i)+k )
+        enddo
+    enddo
+
+    g%ia = ia
+    g%ja = ja
+
+end subroutine cs_graph_left_permute
+
+
+
+!--------------------------------------------------------------------------!
+subroutine cs_graph_right_permute(g,p)                                     !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(cs_graph), intent(inout) :: g
+    integer, intent(in) :: p(:)
+    ! local variables
+    integer :: k
+
+    do k=1,g%ne
+        g%ja(k) = p( g%ja(k) )
+    enddo
+
+end subroutine cs_graph_right_permute
 
 
 

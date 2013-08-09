@@ -172,7 +172,7 @@ subroutine csr_set_value_not_preallocated(A,i,j,val)                       !
     real(dp), intent(in) :: val
     ! local variables
     real(dp) :: val_temp(A%nnz)
-    integer :: k, degree
+    integer :: k
 
     call A%g%add_edge(i,j)
     k = A%g%find_edge(i,j)

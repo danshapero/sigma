@@ -8,7 +8,7 @@ implicit none
 
     class(graph), allocatable :: g
     integer :: i,j,test
-    integer, allocatable :: edges(:,:), nbrs(:)
+    integer, allocatable :: edges(:,:), nbrs(:), p(:)
     logical :: correct
 
     allocate(edges(2,12))
@@ -35,10 +35,13 @@ implicit none
         select case(test)
             case(1)
                 allocate(ll_graph::g)
+                print *, 'Testing linked-list graph'
             case(2)
                 allocate(coo_graph::g)
+                print *, 'Testing coordinate graph'
             case(3)
                 allocate(cs_graph::g)
+                print *, 'Testing compressed sparse graph'
         end select
 
         call g%init(7,7,edges)
@@ -77,12 +80,20 @@ implicit none
         allocate(nbrs(g%max_degree))
 
         call g%neighbors(1,nbrs)
-
         correct = .true.
         do i=1,g%max_degree
             if (nbrs(i)/=i+1) correct = .false.
         enddo
         if (.not.correct) print *, 'Node 1 should neighbor all other nodes'
+
+        allocate(p(7))
+        do i=1,7
+            p(i) = i-1
+        enddo
+        p(1) = 7
+        call g%right_permute(p)
+        call g%left_permute(p)
+        deallocate(p)
 
         call g%free()
 

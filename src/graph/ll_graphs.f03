@@ -18,6 +18,8 @@ contains
     procedure :: find_edges => ll_find_edges
     procedure :: add_edge => ll_add_edge
     procedure :: delete_edge => ll_delete_edge
+    procedure :: left_permute => ll_graph_left_permute, &
+                & right_permute => ll_graph_right_permute
     procedure :: free => ll_free
     procedure :: dump_edges => ll_dump_edges
 
@@ -143,7 +145,7 @@ function ll_find_edges(g,is,js)                                            !
     integer, intent(in) :: is(:), js(:)
     integer :: ll_find_edges(size(is),size(js))
     ! local variables
-    integer :: i,j,k
+    integer :: i,j
 
     ll_find_edges = -1
     do j=1,size(js)
@@ -195,6 +197,56 @@ subroutine ll_delete_edge(g,i,j)                                           !
     endif
 
 end subroutine ll_delete_edge
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ll_graph_left_permute(g,p)                                      !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(ll_graph), intent(inout) :: g
+    integer, intent(in) :: p(:)
+    ! local variables
+    integer :: i,j,k
+    type(linked_list) :: lists(g%n)
+
+    do i=1,g%n
+        do k=1,g%lists(i)%length
+            j = g%lists(i)%get_value(k)
+            call lists(i)%append(j)
+        enddo
+        call g%lists(i)%free()
+    enddo
+
+    do i=1,g%n
+        do k=1,lists(i)%length
+            j = lists(i)%get_value(k)
+            call g%lists(p(i))%append(j)
+        enddo
+        call lists(i)%free()
+    enddo
+
+end subroutine ll_graph_left_permute
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ll_graph_right_permute(g,p)                                     !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(ll_graph), intent(inout) :: g
+    integer, intent(in) :: p(:)
+    ! local variables
+    integer :: i,j,k
+
+    do i=1,g%n
+        do k=1,g%lists(i)%length
+            j = g%lists(i)%get_value(k)
+            call g%lists(i)%set_value(k,p(j))
+        enddo
+    enddo
+
+end subroutine ll_graph_right_permute
 
 
 

@@ -16,6 +16,7 @@ type, abstract :: graph                                                    !
     procedure(find_edges_ifc), deferred     :: find_edges
     procedure(add_edge_ifc), deferred       :: add_edge
     procedure(delete_edge_ifc), deferred    :: delete_edge
+    procedure(permute_graph_ifc), deferred  :: left_permute, right_permute
     procedure(free_ifc), deferred           :: free
     procedure(dump_edges_ifc), deferred     :: dump_edges
 end type graph
@@ -70,6 +71,12 @@ abstract interface                                                         !
         class(graph), intent(inout) :: g
         integer, intent(in) :: i,j
     end subroutine delete_edge_ifc
+
+    subroutine permute_graph_ifc(g,p)
+        import :: graph
+        class(graph), intent(inout) :: g
+        integer, intent(in) :: p(:)
+    end subroutine permute_graph_ifc
 
     subroutine free_ifc(g)
         import :: graph
