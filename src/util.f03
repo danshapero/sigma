@@ -1,5 +1,7 @@
 module util
 
+use types
+
 implicit none
 
 contains
@@ -40,6 +42,29 @@ function order(list)                                                       !
 
 end function order
 
+
+
+
+!--------------------------------------------------------------------------!
+function determinant(A)                                                    !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    real(dp), intent(in) :: A(:,:)
+    real(dp) :: determinant
+    ! local variables
+    integer :: i, ierr, ipiv(size(A,1))
+    real(dp) :: B(size(A,1),size(A,2))
+
+    B = A
+    call dgetrf(size(A,1),size(A,2),B,size(A,1),ipiv,ierr)
+
+    determinant = 1.0_dp
+    do i=1,size(A,2)
+        determinant = determinant*B(i,i)
+        determinant = determinant*(-1)**(i+ipiv(i))
+    enddo
+
+end function determinant
 
 
 

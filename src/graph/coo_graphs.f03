@@ -15,7 +15,6 @@ contains
     procedure :: neighbors => coo_neighbors
     procedure :: connected => coo_connected
     procedure :: find_edge => coo_find_edge
-    procedure :: find_edges => coo_find_edges
     procedure :: add_edge => coo_add_edge
     procedure :: delete_edge => coo_delete_edge
     procedure :: left_permute => coo_graph_left_permute, &
@@ -137,31 +136,6 @@ function coo_find_edge(g,i,j)                                              !
     enddo
 
 end function coo_find_edge
-
-
-
-!--------------------------------------------------------------------------!
-function coo_find_edges(g,is,js)                                           !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(coo_graph), intent(in) :: g
-    integer, intent(in) :: is(:), js(:)
-    integer :: coo_find_edges(size(is),size(js))
-    ! local variables
-    integer :: i,j,k
-
-    coo_find_edges = -1
-    do k=1,g%ne
-        do j=1,size(js)
-            if (js(j)==g%edges(2,k)) then
-                do i=1,size(is)
-                    if (is(i)==g%edges(1,k)) coo_find_edges(i,j) = k
-                enddo
-            endif
-        enddo
-    enddo
-
-end function coo_find_edges
 
 
 

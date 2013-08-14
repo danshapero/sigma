@@ -15,13 +15,29 @@ type, extends(sparse_matrix) :: csr_matrix                                 !
 contains
     procedure :: init => csr_init
     procedure :: assemble => csr_assemble
-    procedure :: neighbors => csr_neighbors
+    procedure :: neighbors => csr_matrix_neighbors
     procedure :: get_value => csr_get_value
-    procedure :: set_value => csr_set_value
-    procedure :: add_value => csr_add_value
-    procedure :: matvec => csr_matvec
+    procedure :: set_value => csr_set_value, add_value => csr_add_value
+    procedure :: matvec => csr_matvec, matvec_t => csr_matvec_t
     procedure, private :: csr_set_value_not_preallocated
 end type csr_matrix
+
+
+
+!!--------------------------------------------------------------------------!
+!type, extends(sparse_matrix) :: csc_matrix                                 !
+!!--------------------------------------------------------------------------!
+!    real(dp), allocatable :: val(:)
+!    class(cs_graph), pointer :: g
+!contains
+!    procedure :: init => csr_init
+!    procedure :: assemble => csc_assemble
+!    procedure :: neighbors => csr_matrix_neighbors
+!    procedure :: get_value => csc_get_value
+!    procedure :: set_value => csc_set_value, add_value => csc_add_value
+!    procedure :: matvec => csr_matvec_t, matvec_t => csr_matvec
+!    procedure, private :: csc_set_value_not_preallocated
+!end type csc_matrix
 
 
 
@@ -66,7 +82,7 @@ end subroutine csr_assemble
 
 
 !--------------------------------------------------------------------------!
-subroutine csr_neighbors(A,i,nbrs)                                         !
+subroutine csr_matrix_neighbors(A,i,nbrs)                                  !
 !--------------------------------------------------------------------------!
     class(csr_matrix), intent(in) :: A
     integer, intent(in)  :: i
@@ -75,7 +91,7 @@ subroutine csr_neighbors(A,i,nbrs)                                         !
     nbrs = 0
     call A%g%neighbors(i,nbrs)
 
-end subroutine csr_neighbors
+end subroutine csr_matrix_neighbors
 
 
 
@@ -150,7 +166,7 @@ subroutine csr_matvec(A,x,y)                                               !
     integer :: i,j,k
     real(dp) :: z
 
-    do i=1,A%nrow
+    do i=1,A%g%n
         z = 0_dp
         do k=A%g%ia(i),A%g%ia(i+1)-1
             j = A%g%ja(k)
@@ -160,6 +176,29 @@ subroutine csr_matvec(A,x,y)                                               !
     enddo
 
 end subroutine csr_matvec
+
+
+
+!--------------------------------------------------------------------------!
+subroutine csr_matvec_t(A,x,y)                                             !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(csr_matrix), intent(in) :: A
+    real(dp), intent(in)  :: x(:)
+    real(dp), intent(out) :: y(:)
+    ! local variables
+    integer :: i,j,k
+    real(dp) :: z
+
+    do i=1,A%g%n
+        z = x(i)
+        do k=A%g%ia(i),A%g%ia(i+1)-1
+            j = A%g%ja(k)
+            y(j) = y(j)+A%val(k)*z
+        enddo
+    enddo
+
+end subroutine csr_matvec_t
 
 
 

@@ -10,16 +10,17 @@ include $(src)makefile
 INCLUDE ?= $(root)include/
 LIB ?= $(root)lib/
 
-test_targets = $(test)type_tests $(test)util_tests $(test)graph_tests $(test)matrix_tests $(test)wrapper_tests
+test_targets = $(test)type_tests $(test)util_tests $(test)graph_tests $(test)matrix_tests $(test)wrapper_tests $(test)mesh_tests
 
 %_tests: libs %_tests.o
-	$(FC) -o $@ $*_tests.o -lfempack -L$(LIB)
+	$(FC) -o $@ $*_tests.o -lfempack -llapack -L$(LIB)
 $(test)wrapper_tests: libs $(test)wrapper_tests.o
-	$(CC) -o $(test)wrapper_tests $(test)wrapper_tests.o -lfempack -L$(LIB) -lgfortran
+	$(CC) -o $(test)wrapper_tests $(test)wrapper_tests.o -lfempack -llapack -L$(LIB) -lgfortran
 test: $(test_targets)
 	$(test)./type_tests
 	$(test)./util_tests
 	$(test)./graph_tests
 	$(test)./matrix_tests
 	$(test)./wrapper_tests
+	$(test)./mesh_tests
 

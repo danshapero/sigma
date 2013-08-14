@@ -33,7 +33,7 @@ contains
 subroutine read_triangle_mesh(g,x,bnd,ele,filename)                        !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(graph), intent(inout), allocatable :: g
+    class(graph), intent(inout), pointer :: g
     real(dp), intent(inout), allocatable :: x(:,:)
     integer, intent(inout), allocatable :: bnd(:), ele(:,:)
     character(len=*), intent(in) :: filename
@@ -65,8 +65,8 @@ subroutine read_triangle_mesh(g,x,bnd,ele,filename)                        !
 
     do n=1,n_ele
         do k=1,d+1
-            i = ele(n,k)
-            j = ele(n,mod(k,d+1)+1)
+            i = ele(k,n)
+            j = ele(mod(k,d+1)+1,n)
             call g%add_edge(i,j)
             call g%add_edge(j,i)
         enddo

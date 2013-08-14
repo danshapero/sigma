@@ -15,7 +15,6 @@ contains
     procedure :: neighbors => ll_neighbors
     procedure :: connected => ll_connected
     procedure :: find_edge => ll_find_edge
-    procedure :: find_edges => ll_find_edges
     procedure :: add_edge => ll_add_edge
     procedure :: delete_edge => ll_delete_edge
     procedure :: left_permute => ll_graph_left_permute, &
@@ -134,27 +133,6 @@ function ll_find_edge(g,i,j)                                               !
     enddo
 
 end function ll_find_edge
-
-
-
-!--------------------------------------------------------------------------!
-function ll_find_edges(g,is,js)                                            !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(ll_graph), intent(in) :: g
-    integer, intent(in) :: is(:), js(:)
-    integer :: ll_find_edges(size(is),size(js))
-    ! local variables
-    integer :: i,j
-
-    ll_find_edges = -1
-    do j=1,size(js)
-        do i=1,size(is)
-            ll_find_edges(i,j) = ll_find_edge(g,is(i),js(j))
-        enddo
-    enddo
-
-end function ll_find_edges
 
 
 
