@@ -1,11 +1,17 @@
 module wrapper
 
 use iso_c_binding
+
 use graphs
 use ll_graphs
 use coo_graphs
 use cs_graphs
 
+use sparse_matrices
+use coo_matrices
+use csr_matrices
+
+use conversions
 
 
 contains
@@ -26,7 +32,6 @@ subroutine get_graph(cgp,storage_format) bind(c)                           !
     integer(c_int), intent(in), value :: storage_format
     ! local variables
     type(graph_pointer), pointer :: gp
-    !class(graph), pointer :: g
 
     allocate(gp)
     cgp = c_loc(gp)
@@ -60,6 +65,45 @@ end function cgraph_to_fgraph
 
 
 
+!--------------------------------------------------------------------------!
+subroutine get_matrix(cmp,storage_format) bind(c)                          !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    type(c_ptr), intent(inout) :: cmp
+    integer(c_int), intent(in), value :: storage_format
+    ! local variables
+    type(sparse_matrix_pointer), pointer :: mp
+
+    allocate(mp)
+    cmp = c_loc(mp)
+
+    select case(storage_format)
+        case(0)
+            allocate(coo_matrix::mp%A)
+        case(1)
+            allocate(csr_matrix::mp%A)
+    end select
+
+end subroutine get_matrix
+
+
+
+!--------------------------------------------------------------------------!
+function cmatrix_to_fmatrix(cmp) result(A)                                 !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    type(c_ptr), intent(in) :: cmp
+    class(sparse_matrix), pointer :: A
+    ! local variables
+    type(sparse_matrix_pointer), pointer :: mp
+
+    call c_f_pointer(cmp,mp)
+    A => mp%A
+
+end function cmatrix_to_fmatrix
+
+
+
 
 
 
@@ -88,6 +132,24 @@ end subroutine graph_init_c
 
 
 !--------------------------------------------------------------------------!
+subroutine graph_neighbors_c(cgp,i,nbrs,d) bind(c,name='graph_neighbors')  !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    type(c_ptr), intent(in) :: cgp
+    integer(c_int), intent(in), value :: i,d
+    integer(c_int), intent(out) :: nbrs(d)
+    ! local variables
+    class(graph), pointer :: g
+
+    g => cgraph_to_fgraph(cgp)
+    call g%neighbors(i+1,nbrs)
+    nbrs = nbrs-1
+
+end subroutine graph_neighbors_c
+
+
+
+!--------------------------------------------------------------------------!
 subroutine connected_c(cgp,i,j,con) bind(c,name='connected')               !
 !--------------------------------------------------------------------------!
     ! input/output variables
@@ -98,7 +160,7 @@ subroutine connected_c(cgp,i,j,con) bind(c,name='connected')               !
     class(graph), pointer :: g
 
     g => cgraph_to_fgraph(cgp)
-    if (g%connected(i,j)) then
+    if (g%connected(i+1,j+1)) then
         con = 1
     else
         con = 0
@@ -118,7 +180,7 @@ subroutine add_edge_c(cgp,i,j) bind(c,name='add_edge')                     !
     class(graph), pointer :: g
 
     g => cgraph_to_fgraph(cgp)
-    call g%add_edge(i,j)
+    call g%add_edge(i+1,j+1)
 
 end subroutine add_edge_c
 
@@ -134,12 +196,61 @@ subroutine delete_edge_c(cgp,i,j) bind(c,name='delete_edge')               !
     class(graph), pointer :: g
 
     g => cgraph_to_fgraph(cgp)
-    call g%delete_edge(i,j)
+    call g%delete_edge(i+1,j+1)
 
 end subroutine delete_edge_c
 
 
 
+!--------------------------------------------------------------------------!
+subroutine convert_c(cgp,storage_format) bind(c,name='convert')            !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    type(c_ptr), intent(in) :: cgp
+    integer(c_int), intent(in), value :: storage_format
+    ! local variables
+    type(graph_pointer), pointer :: gp
+    class(graph), pointer :: g
+    character(len=3) :: str_fmt
+
+    select case(storage_format)
+        case(0)
+            str_fmt = 'll '
+        case(1)
+            str_fmt = 'coo'
+        case(2)
+            str_fmt = 'cs '
+    end select
+
+    call c_f_pointer(cgp,gp)
+    call convert(gp%g,str_fmt)
+
+end subroutine convert_c
+
+
+
+
+
+
+!==========================================================================!
+!==========================================================================!
+!==== C-compatible wrappers to Fortran matrix routines                 ====!
+!==========================================================================!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
+subroutine sparse_matrix_init_c(cmp,n,m) bind(c,name='sparse_matrix_init') !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    type(c_ptr), intent(in) :: cmp
+    integer(c_int), intent(in), value :: n,m
+    ! local variables
+    class(sparse_matrix), pointer :: A
+
+    A => cmatrix_to_fmatrix(cmp)
+    call A%init(n,m)
+
+end subroutine sparse_matrix_init_c
 
 
 

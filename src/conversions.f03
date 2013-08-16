@@ -46,6 +46,20 @@ subroutine convert(g,storage_format)                                       !
     call gc%free()
     deallocate(gc)
 
+!    call g%dump_edges(edges)
+!    select case(trim(str_fmt))
+!        case('ll')
+!            allocate(ll_graph::gc)
+!        case('cs')
+!            allocate(cs_graph::gc)
+!        case('coo')
+!            allocate(coo_graph::gc)
+!    end select
+
+!    call gc%init(g%n,g%m,edges)
+
+!    g => gc
+
 end subroutine convert
 
 

@@ -26,7 +26,9 @@ contains
 end type sparse_matrix
 
 
-abstract interface
+!--------------------------------------------------------------------------!
+abstract interface                                                         !
+!--------------------------------------------------------------------------!
     subroutine init_matrix_ifc(A,nrow,ncol)
         import :: sparse_matrix
         class(sparse_matrix), intent(inout) :: A
@@ -67,6 +69,15 @@ abstract interface
         real(dp), intent(out) :: y(:)
     end subroutine matvec_ifc
 end interface
+
+
+
+!--------------------------------------------------------------------------!
+type :: sparse_matrix_pointer                                              !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), pointer :: A
+
+end type sparse_matrix_pointer
 
 
 
