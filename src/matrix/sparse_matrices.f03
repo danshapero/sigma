@@ -21,6 +21,8 @@ contains
     procedure(set_value_ifc), deferred      :: set_value, add_value
 !    procedure(matrix_add_ifc), deferred :: matrix_add
     procedure(matvec_ifc), deferred         :: matvec, matvec_t
+    generic :: matmul => matvec
+    generic :: matmul_t => matvec_t
 end type sparse_matrix
 
 

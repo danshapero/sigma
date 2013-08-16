@@ -6,7 +6,7 @@ implicit none
 
     class(graph), allocatable :: g
     class(sparse_matrix), allocatable :: A
-    integer :: i,j,k,degree
+    integer :: i,j,k,degree,test
     real(dp) :: z
     integer, allocatable :: edges(:,:), nbrs(:)
     real(dp), allocatable :: x(:), y(:)
@@ -31,45 +31,56 @@ implicit none
         edges(2,i+12) = edges(1,i)
     enddo
 
-    allocate(cs_graph::g)
-    call g%init(7,7,edges)
-
-    allocate(csr_matrix::A)
-    call A%assemble(g)
-
-    allocate(nbrs(7))
-
-    ! Fill A to be the graph Laplacian
-    do i=1,7
-        call A%neighbors(i,nbrs)
-        degree = 0
-        do k=1,A%max_degree
-            if (nbrs(k)/=0 .and. nbrs(k)/=i) degree = degree+1
-        enddo
-        do k=1,A%max_degree
-            j = nbrs(k)
-            if (j/=0) then
-                call A%set_value(i,j,-1.0_dp)
-                call A%add_value(i,i,1.0_dp)
-            endif
-        enddo
-    enddo
-
-    z = A%get_value(1,1)
-    if (z/=6.0_dp) then
-        print *, 'A(1,1) should be = 6.0 for A the graph Laplacian; '
-        print *, 'value found: ',z
-    endif
-
+    allocate(nbrs(8))
     allocate(x(7),y(7))
 
-    x = 1.0_dp
-    y = 1.0_dp
-    call A%matvec(x,y)
+    do test=1,2
 
-    if ( maxval(dabs(y))>1.0e-14 ) then
-        print *, 'A*[1,...,1] should be = 0;'
-        print *, 'max(abs(y)) = ',maxval(dabs(y))
-    endif
+        ! Allocate the graph & matrix
+        select case(test)
+            case(1)
+                allocate(cs_graph::g)
+                allocate(csr_matrix::A)
+            case(2)
+                allocate(coo_graph::g)
+                allocate(coo_matrix::A)
+        end select
+
+        call g%init(7,7,edges)
+        call A%assemble(g)
+
+        ! Fill A to be the graph Laplacian
+        do i=1,7
+            call A%neighbors(i,nbrs)
+            degree = 0
+            do k=1,A%max_degree
+                if (nbrs(k)/=0 .and. nbrs(k)/=i) degree = degree+1
+            enddo
+            do k=1,A%max_degree
+                j = nbrs(k)
+                if (j/=0) then
+                    call A%set_value(i,j,-1.0_dp)
+                    call A%add_value(i,i,1.0_dp)
+                endif
+            enddo
+        enddo
+
+        z = A%get_value(1,1)
+        if (z/=6.0_dp) then
+            print *, 'A(1,1) should be = 6.0 for A the graph Laplacian; '
+            print *, 'value found: ',z
+        endif
+
+        x = 1.0_dp
+        y = 1.0_dp
+        call A%matvec(x,y)
+
+        if ( maxval(dabs(y))>1.0e-14 ) then
+            print *, 'A*[1,...,1] should be = 0;'
+            print *, 'max(abs(y)) = ',maxval(dabs(y))
+        endif
+
+        deallocate(g,A)
+    enddo
 
 end program matrix_tests

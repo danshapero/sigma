@@ -147,6 +147,7 @@ subroutine coo_matvec(A,x,y)                                               !
     ! local variables
     integer :: i,j,k
 
+    y = 0.0_dp
     do k=1,A%nnz
         i = A%g%edges(1,k)
         j = A%g%edges(2,k)
