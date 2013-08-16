@@ -83,4 +83,6 @@ implicit none
         deallocate(g,A)
     enddo
 
+    deallocate(x,y,edges,nbrs)
+
 end program matrix_tests

@@ -76,6 +76,7 @@ subroutine csr_assemble(A,g)                                               !
     A%max_degree = g%max_degree
 
     allocate(A%val(A%nnz))
+    A%val = 0.0_dp
 
 end subroutine csr_assemble
 

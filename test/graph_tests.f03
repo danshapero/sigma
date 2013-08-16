@@ -35,13 +35,10 @@ implicit none
         select case(test)
             case(1)
                 allocate(ll_graph::g)
-                print *, 'Testing linked-list graph'
             case(2)
                 allocate(coo_graph::g)
-                print *, 'Testing coordinate graph'
             case(3)
                 allocate(cs_graph::g)
-                print *, 'Testing compressed sparse graph'
         end select
 
         call g%init(7,7,edges)

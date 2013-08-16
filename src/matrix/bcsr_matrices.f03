@@ -41,8 +41,8 @@ subroutine bcsr_init(A,nrow,ncol)                                          !
     class(bcsr_matrix), intent(inout) :: A
     integer, intent(in) :: nrow, ncol
 
-    A%nr = nrow
-    A%nc = ncol
+    A%nrow = nrow
+    A%ncol = ncol
     A%max_degree = 0
 
 end subroutine bcsr_init
@@ -57,10 +57,13 @@ subroutine bcsr_assemble(A,g)                                              !
 
     A%g => g
 
-    A%nrow = g%n
-    A%ncol = g%m
+    A%nr = A%nrow/g%n
+    A%nc = A%ncol/g%m
     A%nnz = g%ne
     A%max_degree = g%max_degree
+
+    allocate(A%val(A%nr,A%nc,A%nnz))
+    A%val = 0.0_dp
 
 end subroutine bcsr_assemble
 

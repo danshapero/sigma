@@ -11,6 +11,10 @@ use sparse_matrices
 use csr_matrices
 use coo_matrices
 
+! Use all the block matrix modules
+use block_sparse_matrices
+use bcsr_matrices
+
 ! Use the C wrapper module
 use wrapper
 
