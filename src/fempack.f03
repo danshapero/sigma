@@ -15,6 +15,11 @@ use coo_matrices
 use block_sparse_matrices
 use bcsr_matrices
 
+! Use the solver and preconditioner modules
+use iterative_solvers
+use cg_solvers
+use jacobi_preconditioners
+
 ! Use the C wrapper module
 use wrapper
 

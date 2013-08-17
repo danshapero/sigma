@@ -4,6 +4,7 @@ src ?= ../
 root ?= ../../
 
 include $(root)makefile.in
+include $(graph)makefile
 
 INCLUDE ?= $(root)include/
 LIB ?= $(root)lib/
