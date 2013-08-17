@@ -7,6 +7,7 @@ implicit none
     class(graph), allocatable :: g
     class(sparse_matrix), allocatable :: A
     class(iterative_solver), allocatable :: solver
+    class(preconditioner), allocatable :: pc
     integer :: i,j,k
     real(dp) :: z
     integer, allocatable :: edges(:,:)
@@ -39,9 +40,15 @@ implicit none
     allocate(cg_solver::solver)
     call solver%init(99)
 
-    call solver%solve(A,x,b)
+    allocate(jacobi_preconditioner::pc)
+    call pc%init(A,0)
 
-    print *, minval(dabs(x)), maxval(dabs(x))
+    call solver%solve(A,x,b,pc)
+
+    if ( abs( maxval(x)-0.25_dp )>1.0e-14 ) then
+        print *, 'Max value of x should be 1/4;'
+        print *, 'Value found:', maxval(x)
+    endif
 
 
 end program solver_tests

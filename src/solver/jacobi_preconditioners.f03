@@ -29,12 +29,12 @@ subroutine jacobi_init(pc,A,level)                                         !
     ! input/output variables
     class(jacobi_preconditioner), intent(inout) :: pc
     class(sparse_matrix), intent(in)            :: A
-    integer, intent(in)                         :: level
+    integer, intent(in), optional               :: level
     ! local variables
     integer :: i
 
-    pc%level = level
     pc%nn = A%nrow
+    if (present(level)) pc%level = level
 
     allocate(pc%diag(pc%nn))
 

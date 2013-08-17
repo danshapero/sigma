@@ -70,7 +70,7 @@ abstract interface                                                         !
         import :: preconditioner, sparse_matrix
         class(preconditioner), intent(inout)    :: pc
         class(sparse_matrix), intent(in)        :: A
-        integer, intent(in)                     :: level
+        integer, intent(in), optional           :: level
     end subroutine init_preconditioner_ifc
 
     subroutine precondition_ifc(pc,A,x,b)
