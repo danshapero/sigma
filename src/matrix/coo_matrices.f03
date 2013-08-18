@@ -18,6 +18,7 @@ contains
     procedure :: neighbors => coo_matrix_neighbors
     procedure :: get_value => coo_get_value
     procedure :: set_value => coo_set_value, add_value => coo_add_value
+    procedure :: sub_matrix_add => coo_sub_matrix_add
     procedure :: matvec => coo_matvec, matvec_t => coo_matvec_t
     procedure, private :: coo_set_value_not_preallocated
 end type coo_matrix
@@ -135,6 +136,26 @@ subroutine coo_add_value(A,i,j,val)                                        !
     endif
 
 end subroutine coo_add_value
+
+
+
+!--------------------------------------------------------------------------!
+subroutine coo_sub_matrix_add(A,B)                                         !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(coo_matrix), intent(inout) :: A
+    class(coo_matrix), intent(in)    :: B
+    ! local variables
+    integer :: i,j,k,indx
+
+    do k=1,B%nnz
+        i = B%g%edges(1,k)
+        j = B%g%edges(2,k)
+        indx = A%g%find_edge(i,j)
+        A%val(indx) = A%val(indx)+B%val(k)
+    enddo
+
+end subroutine coo_sub_matrix_add
 
 
 

@@ -20,6 +20,7 @@ contains
     procedure :: set_value => bcsr_set_value, add_value => bcsr_add_value
     procedure :: get_block => bcsr_get_block
     procedure :: set_block => bcsr_set_block, add_block => bcsr_add_block
+    procedure :: sub_matrix_add => bcsr_sub_matrix_add
     procedure :: matvec => bcsr_matvec, matvec_t => bcsr_matvec_t
     procedure :: block_matvec => bcsr_block_matvec, &
                 & block_matvec_t => bcsr_block_matvec_t
@@ -206,6 +207,27 @@ subroutine bcsr_add_block(A,i,j,vals)                                      !
     A%val(:,:,k) = A%val(:,:,k)+vals
 
 end subroutine bcsr_add_block
+
+
+
+!--------------------------------------------------------------------------!
+subroutine bcsr_sub_matrix_add(A,B)                                        !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(bcsr_matrix), intent(inout)   :: A
+    class(bcsr_matrix), intent(in)      :: B
+    ! local variables
+    integer :: i,j,k,indx
+
+    do i=1,B%nrow
+        do k=B%g%ia(i),B%g%ia(i+1)-1
+            j = B%g%ja(k)
+            indx = A%g%find_edge(i,j)
+            A%val(:,:,indx) = A%val(:,:,indx)+B%val(:,:,k)
+        enddo
+    enddo
+
+end subroutine bcsr_sub_matrix_add
 
 
 

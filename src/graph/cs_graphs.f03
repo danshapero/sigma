@@ -91,6 +91,7 @@ subroutine cs_init(g,n,m,edges)                                            !
         call g%sort_ja()
     else
         g%max_degree = 0
+        g%ia = 1
     endif
 
 end subroutine cs_init

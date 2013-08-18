@@ -9,7 +9,8 @@ LIB = lib/
 root =
 src = src/
 test = test/
-dirs = $(src) $(test)
+examples = examples/
+dirs = $(src) $(test) $(examples)
 
 #include $(src)makefile
 include $(test)makefile

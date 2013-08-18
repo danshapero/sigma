@@ -4,8 +4,8 @@ use fempack
 
 implicit none
 
-    class(graph), allocatable :: g
-    class(sparse_matrix), allocatable :: A
+    class(graph), allocatable :: g, h
+    class(sparse_matrix), allocatable :: A, B
     integer :: i,j,k,degree,test
     real(dp) :: z
     integer, allocatable :: edges(:,:), nbrs(:)
@@ -41,13 +41,22 @@ implicit none
             case(1)
                 allocate(cs_graph::g)
                 allocate(csr_matrix::A)
+
+                allocate(cs_graph::h)
+                allocate(csr_matrix::B)
             case(2)
                 allocate(coo_graph::g)
                 allocate(coo_matrix::A)
+
+                allocate(coo_graph::h)
+                allocate(coo_matrix::B)
         end select
 
         call g%init(7,7,edges)
         call A%assemble(g)
+
+        call h%init(7,7)
+        call B%assemble(h)
 
         ! Fill A to be the graph Laplacian
         do i=1,7
@@ -63,6 +72,7 @@ implicit none
                     call A%add_value(i,i,1.0_dp)
                 endif
             enddo
+            call B%set_value(i,i,1.0_dp)
         enddo
 
         z = A%get_value(1,1)
@@ -80,7 +90,15 @@ implicit none
             print *, 'max(abs(y)) = ',maxval(dabs(y))
         endif
 
-        deallocate(g,A)
+        call A%sub_matrix_add(B)
+        y = 0.0_dp
+        call A%matvec(x,y)
+        if ( maxval(dabs(y)-1.0)>1.0e-14 ) then
+            print *, '(A+I)*[1,...,1] should be = 0;'
+            print *, 'max(y) = ',maxval(y),'min(y) = ',minval(y)
+        endif 
+
+        deallocate(g,A,h,B)
     enddo
 
     deallocate(x,y,edges,nbrs)

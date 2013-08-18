@@ -19,7 +19,7 @@ contains
     procedure(mat_neighbors_ifc), deferred  :: neighbors
     procedure(get_value_ifc), deferred      :: get_value
     procedure(set_value_ifc), deferred      :: set_value, add_value
-!    procedure(matrix_add_ifc), deferred :: matrix_add
+    procedure(sub_matrix_add_ifc), deferred :: sub_matrix_add
     procedure(matvec_ifc), deferred         :: matvec, matvec_t
     generic :: matmul => matvec
     generic :: matmul_t => matvec_t
@@ -61,6 +61,12 @@ abstract interface                                                         !
         integer, intent(in) :: i,j
         real(dp), intent(in) :: val
     end subroutine set_value_ifc
+
+    subroutine sub_matrix_add_ifc(A,B)
+        import :: sparse_matrix
+        class(sparse_matrix), intent(inout) :: A
+        class(sparse_matrix), intent(in)    :: B
+    end subroutine sub_matrix_add_ifc
 
     subroutine matvec_ifc(A,x,y)
         import :: sparse_matrix, dp

@@ -54,13 +54,15 @@ implicit none
     call laplacian2d(A,x,ele)
     call mass2d(B,x,ele)
 
+    call A%sub_matrix_add(B)
+
     do n=1,size(mask)
         call A%add_value(mask(n),mask(n),1.0d8)
     enddo
 
 
 !--------------------------------------------------------------------------!
-! Allocate vectors for the RHS, solution and CG iteration                  !
+! Allocate vectors for the RHS & solution                                  !
 !--------------------------------------------------------------------------!
     allocate(u(nn),f(nn),z(nn),r(nn),p(nn))
 
@@ -68,8 +70,12 @@ implicit none
     u = 0.0_dp
     call B%matvec(f,u)
     f = u
-    !u = 0.0_dp
+    u = 0.0_dp
 
+
+!--------------------------------------------------------------------------!
+! Solve the linear system                                                  !
+!--------------------------------------------------------------------------!
     allocate(cg_solver::solver)
     allocate(jacobi_preconditioner::pc)
 

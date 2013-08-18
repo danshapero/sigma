@@ -18,6 +18,7 @@ contains
     procedure :: neighbors => csr_matrix_neighbors
     procedure :: get_value => csr_get_value
     procedure :: set_value => csr_set_value, add_value => csr_add_value
+    procedure :: sub_matrix_add => csr_sub_matrix_add
     procedure :: matvec => csr_matvec, matvec_t => csr_matvec_t
     procedure, private :: csr_set_value_not_preallocated
 end type csr_matrix
@@ -153,6 +154,27 @@ subroutine csr_add_value(A,i,j,val)                                        !
     endif
 
 end subroutine csr_add_value
+
+
+
+!--------------------------------------------------------------------------!
+subroutine csr_sub_matrix_add(A,B)                                         !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(csr_matrix), intent(inout) :: A
+    class(csr_matrix), intent(in)    :: B
+    ! local variables
+    integer :: i,j,k,indx,nbrs(B%max_degree)
+
+    do i=1,B%nrow
+        do k=B%g%ia(i),B%g%ia(i+1)-1
+            j = B%g%ja(k)
+            indx = A%g%find_edge(i,j)
+            A%val(indx) = A%val(indx)+B%val(k)
+        enddo
+    enddo
+
+end subroutine csr_sub_matrix_add
 
 
 
