@@ -8,7 +8,8 @@ implicit none
     class(sparse_matrix), allocatable :: A, B
     integer :: i,j,k,degree,test
     real(dp) :: z
-    integer, allocatable :: edges(:,:), nbrs(:)
+    logical :: correct
+    integer, allocatable :: edges(:,:), nbrs(:), p(:)
     real(dp), allocatable :: x(:), y(:)
 
     allocate(edges(2,24))
@@ -31,11 +32,15 @@ implicit none
         edges(2,i+12) = edges(1,i)
     enddo
 
-    allocate(nbrs(8))
+    allocate(nbrs(8),p(7))
     allocate(x(7),y(7))
 
-    do test=1,2
+    do i=1,7
+        p(i) = i-1
+    enddo
+    p(1) = 7
 
+    do test=1,2
         ! Allocate the graph & matrix
         select case(test)
             case(1)
@@ -52,6 +57,7 @@ implicit none
                 allocate(coo_matrix::B)
         end select
 
+        ! Initialize and assemble the graphs
         call g%init(7,7,edges)
         call A%assemble(g)
 
@@ -75,6 +81,7 @@ implicit none
             call B%set_value(i,i,1.0_dp)
         enddo
 
+        ! Test matrix multiplications
         z = A%get_value(1,1)
         if (z/=6.0_dp) then
             print *, 'A(1,1) should be = 6.0 for A the graph Laplacian; '
@@ -90,14 +97,29 @@ implicit none
             print *, 'max(abs(y)) = ',maxval(dabs(y))
         endif
 
+        ! Test adding two matrices
         call A%sub_matrix_add(B)
         y = 0.0_dp
         call A%matvec(x,y)
         if ( maxval(dabs(y)-1.0)>1.0e-14 ) then
             print *, '(A+I)*[1,...,1] should be = 0;'
             print *, 'max(y) = ',maxval(y),'min(y) = ',minval(y)
-        endif 
+        endif
 
+        ! Test permuting the matrices
+        call A%right_permute(p)
+        call A%left_permute(p)
+        call A%neighbors(7,nbrs)
+        nbrs(1:7) = nbrs(order(nbrs(1:7)))
+        correct = .true.
+        do i=1,7
+            if (nbrs(i)/=i) correct = .false.
+        enddo
+        if (.not.correct) then
+            print *, 'Permutation failed'
+        endif
+
+        ! Free up the graphs and matrices for the next test
         deallocate(g,A,h,B)
     enddo
 

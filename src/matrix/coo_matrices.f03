@@ -19,6 +19,8 @@ contains
     procedure :: get_value => coo_get_value
     procedure :: set_value => coo_set_value, add_value => coo_add_value
     procedure :: sub_matrix_add => coo_sub_matrix_add
+    procedure :: left_permute => coo_left_permute, &
+                & right_permute => coo_right_permute
     procedure :: matvec => coo_matvec, matvec_t => coo_matvec_t
     procedure, private :: coo_set_value_not_preallocated
 end type coo_matrix
@@ -156,6 +158,30 @@ subroutine coo_sub_matrix_add(A,B)                                         !
     enddo
 
 end subroutine coo_sub_matrix_add
+
+
+
+!--------------------------------------------------------------------------!
+subroutine coo_left_permute(A,p)                                           !
+!--------------------------------------------------------------------------!
+    class(coo_matrix), intent(inout) :: A
+    integer, intent(in) :: p(:)
+
+    call A%g%left_permute(p)
+
+end subroutine coo_left_permute
+
+
+
+!--------------------------------------------------------------------------!
+subroutine coo_right_permute(A,p)                                          !
+!--------------------------------------------------------------------------!
+    class(coo_matrix), intent(inout) :: A
+    integer, intent(in) :: p(:)
+
+    call A%g%right_permute(p)
+
+end subroutine coo_right_permute
 
 
 

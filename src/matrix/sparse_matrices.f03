@@ -20,6 +20,7 @@ contains
     procedure(get_value_ifc), deferred      :: get_value
     procedure(set_value_ifc), deferred      :: set_value, add_value
     procedure(sub_matrix_add_ifc), deferred :: sub_matrix_add
+    procedure(permute_matrix_ifc), deferred :: left_permute, right_permute
     procedure(matvec_ifc), deferred         :: matvec, matvec_t
     generic :: matmul => matvec
     generic :: matmul_t => matvec_t
@@ -67,6 +68,12 @@ abstract interface                                                         !
         class(sparse_matrix), intent(inout) :: A
         class(sparse_matrix), intent(in)    :: B
     end subroutine sub_matrix_add_ifc
+
+    subroutine permute_matrix_ifc(A,p)
+        import :: sparse_matrix
+        class(sparse_matrix), intent(inout) :: A
+        integer, intent(in) :: p(:)
+    end subroutine permute_matrix_ifc
 
     subroutine matvec_ifc(A,x,y)
         import :: sparse_matrix, dp

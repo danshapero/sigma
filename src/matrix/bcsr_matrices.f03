@@ -21,6 +21,8 @@ contains
     procedure :: get_block => bcsr_get_block
     procedure :: set_block => bcsr_set_block, add_block => bcsr_add_block
     procedure :: sub_matrix_add => bcsr_sub_matrix_add
+    procedure :: left_permute => bcsr_left_permute, &
+                & right_permute => bcsr_right_permute
     procedure :: matvec => bcsr_matvec, matvec_t => bcsr_matvec_t
     procedure :: block_matvec => bcsr_block_matvec, &
                 & block_matvec_t => bcsr_block_matvec_t
@@ -228,6 +230,51 @@ subroutine bcsr_sub_matrix_add(A,B)                                        !
     enddo
 
 end subroutine bcsr_sub_matrix_add
+
+
+
+!--------------------------------------------------------------------------!
+subroutine bcsr_left_permute(A,p)                                          !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(bcsr_matrix), intent(inout) :: A
+    integer, intent(in) :: p(:)
+    ! local variables
+    integer :: i,k,ia(A%g%n+1)
+    real(dp) :: val(A%nnz,A%nr,A%nc)
+
+    do i=1,A%g%n
+        ia(p(i)+1) = A%g%ia(i+1)-A%g%ia(i)
+    enddo
+
+    ia(1) = 1
+    do i=1,A%g%n
+        ia(i+1) = ia(i+1)+ia(i)
+    enddo
+
+    do i=1,A%g%n
+        do k=0,A%g%ia(i+1)-A%g%ia(i)-1
+            val(ia(p(i))+k,:,:) = A%val(A%g%ia(i)+k,:,:)
+        enddo
+    enddo
+
+    A%val = val
+
+    call A%g%left_permute(p)
+
+end subroutine bcsr_left_permute
+
+
+
+!--------------------------------------------------------------------------!
+subroutine bcsr_right_permute(A,p)                                         !
+!--------------------------------------------------------------------------!
+    class(bcsr_matrix), intent(inout) :: A
+    integer, intent(in) :: p(:)
+
+    call A%g%right_permute(p)
+
+end subroutine bcsr_right_permute
 
 
 
