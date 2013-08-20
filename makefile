@@ -1,38 +1,31 @@
 include makefile.in
 
 .SECONDARY:
-.PHONY: clean veryclean
+.PHONY: clean, veryclean
 
 INCLUDE = include/
 LIB = lib/
 
 root =
-dirs = src/linalg/ src/mesh/ src/fem/
-
-mesh = src/mesh/
-include $(mesh)makefile
-
-linalg = src/linalg/
-include $(linalg)makefile
-
-fem = src/fem/
-include $(fem)makefile
-
+src = src/
+test = test/
 examples = examples/
-include $(examples)makefile
+dirs = $(src) $(test) $(examples)
 
-libs: liblinalg.a libmesh.a libfem.a
+#include $(src)makefile
+include $(test)makefile
 
 clean:
 	@for dir in $(dirs); \
 	do \
 		rm -f $$dir$ *.o ; \
-	done
+	done; \
+	rm -f $(INCLUDE)*.mod
 
 veryclean:
 	@for dir in $(dirs); \
 	do \
 		rm -f $$dir$ *.o ; \
 	done; \
-	rm -f $(LIB)*.a $(INCLUDE)*.mod
+	rm -f $(INCLUDE)*.mod $(LIB)*.a $(test)*_tests
 
