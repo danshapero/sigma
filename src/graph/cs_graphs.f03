@@ -10,7 +10,7 @@ implicit none
 !--------------------------------------------------------------------------!
 type, extends(graph) :: cs_graph                                           !
 !--------------------------------------------------------------------------!
-    integer, allocatable :: ia(:), ja(:)
+    integer, allocatable :: ptr(:), node(:)
 contains
     procedure :: init => cs_init
     procedure :: neighbors => cs_neighbors
@@ -23,7 +23,7 @@ contains
     procedure :: free => cs_free
     procedure :: dump_edges => cs_dump_edges
     ! auxiliary routines
-    procedure :: sort_ja
+    procedure :: sort_node
 end type cs_graph
 
 
@@ -45,9 +45,9 @@ subroutine cs_init(g,n,m,edges)                                            !
     integer :: i,k,work(n),ne
 
     ! Set the number of (left-)nodes in the graph and allocate the node
-    ! pointer array ia
+    ! pointer array ptr
     g%n = n
-    allocate( g%ia(n+1) )
+    allocate( g%ptr(n+1) )
 
     ! If the graph is not square, set the number of right-nodes
     if (present(m)) then
@@ -57,7 +57,7 @@ subroutine cs_init(g,n,m,edges)                                            !
     endif
 
     ! If the graph is being initialized with a set of edges, set the number
-    ! of edges and allocate space in the node array ja
+    ! of edges and allocate space in the node array node
     if (present(edges)) then
         ne = size(edges,2)
         g%ne = ne
@@ -65,7 +65,7 @@ subroutine cs_init(g,n,m,edges)                                            !
         ne = 0
         g%ne = ne
     endif
-    allocate( g%ja(ne) )
+    allocate( g%node(ne) )
 
     if (present(edges)) then
         work = 0
@@ -76,22 +76,22 @@ subroutine cs_init(g,n,m,edges)                                            !
 
         g%max_degree = maxval(work)
 
-        g%ia(1) = 1
+        g%ptr(1) = 1
         do k=2,n+1
-            g%ia(k) = g%ia(k-1)+work(k-1)
+            g%ptr(k) = g%ptr(k-1)+work(k-1)
         enddo
 
         work = 0
         do k=1,ne
             i = edges(1,k)
-            g%ja( g%ia(i)+work(i) ) = edges(2,k)
+            g%node( g%ptr(i)+work(i) ) = edges(2,k)
             work(i) = work(i)+1
         enddo
 
-        call g%sort_ja()
+        call g%sort_node()
     else
         g%max_degree = 0
-        g%ia = 1
+        g%ptr = 1
     endif
 
 end subroutine cs_init
@@ -108,12 +108,12 @@ subroutine cs_neighbors(g,i,nbrs)                                          !
     ! local variables
     integer :: start,finish,degree
 
-    degree = g%ia(i+1)-g%ia(i)
-    start = g%ia(i)
-    finish = g%ia(i+1)-1
+    degree = g%ptr(i+1)-g%ptr(i)
+    start = g%ptr(i)
+    finish = g%ptr(i+1)-1
 
     nbrs = 0
-    nbrs(1:degree) = g%ja(start:finish)
+    nbrs(1:degree) = g%node(start:finish)
 
 end subroutine cs_neighbors
 
@@ -131,8 +131,8 @@ function cs_connected(g,i,j)                                               !
 
     cs_connected = .false.
 
-    do k=g%ia(i),g%ia(i+1)-1
-        if (g%ja(k)==j) cs_connected = .true.
+    do k=g%ptr(i),g%ptr(i+1)-1
+        if (g%node(k)==j) cs_connected = .true.
     enddo
 
 end function cs_connected
@@ -151,8 +151,8 @@ function cs_find_edge(g,i,j)                                               !
 
     cs_find_edge = -1
 
-    do k=g%ia(i),g%ia(i+1)-1
-        if (g%ja(k)==j) cs_find_edge = k
+    do k=g%ptr(i),g%ptr(i+1)-1
+        if (g%node(k)==j) cs_find_edge = k
     enddo
 
 end function cs_find_edge
@@ -166,40 +166,40 @@ subroutine cs_add_edge(g,i,j)                                              !
     class(cs_graph), intent(inout) :: g
     integer, intent(in) :: i,j
     ! local variables
-    integer :: k,indx,ja_temp(g%ne)
+    integer :: k,indx,node_temp(g%ne)
 
     if (.not.g%connected(i,j)) then
         ! Find the index in the list of edges where the new edge is to be
         ! inserted
-        indx = g%ia(i)
-        do k=g%ia(i),g%ia(i+1)-1
-            if (g%ja(k)<j) indx = indx+1
+        indx = g%ptr(i)
+        do k=g%ptr(i),g%ptr(i+1)-1
+            if (g%node(k)<j) indx = indx+1
         enddo
 
         ! Copy the current structure into a temporary one
-        ja_temp = g%ja
+        node_temp = g%node
 
         ! Deallocate the old structure and make a new one with extra room
-        deallocate(g%ja)
-        allocate(g%ja(g%ne+1))
+        deallocate(g%node)
+        allocate(g%node(g%ne+1))
 
-        ! Build the new array ja
-        g%ja(1:indx-1) = ja_temp(1:indx-1)
-        g%ja(indx) = j
-        g%ja(indx+1:g%ne+1) = ja_temp(indx:g%ne)
+        ! Build the new array node
+        g%node(1:indx-1) = node_temp(1:indx-1)
+        g%node(indx) = j
+        g%node(indx+1:g%ne+1) = node_temp(indx:g%ne)
 
         ! The number of edges in the graph is incremented by 1, and the
-        ! starting index in ja is incremented for all nodes after the node
+        ! starting index in node is incremented for all nodes after the node
         ! into which the new edge is to be inserted
         g%ne = g%ne+1
         do k=i+1,g%n+1
-            g%ia(k) = g%ia(k)+1
+            g%ptr(k) = g%ptr(k)+1
         enddo
 
         ! If the degree of node i is now the greatest of all nodes in the
         ! graph, update the degree accordingly
-        if (g%ia(i+1)-g%ia(i)>g%max_degree) then
-            g%max_degree = g%ia(i+1)-g%ia(i)
+        if (g%ptr(i+1)-g%ptr(i)>g%max_degree) then
+            g%max_degree = g%ptr(i+1)-g%ptr(i)
         endif
     endif
 
@@ -214,32 +214,32 @@ subroutine cs_delete_edge(g,i,j)                                           !
     class(cs_graph), intent(inout) :: g
     integer, intent(in) :: i,j
     ! local variables
-    integer :: k,indx,degree,ja_temp(g%ne)
+    integer :: k,indx,degree,node_temp(g%ne)
 
     if (g%connected(i,j)) then
         ! Record the degree of the node from which an edge is to be
         ! removed; we use this later to check whether the maximum degree
         ! of the graph has decreased
-        degree = g%ia(i+1)-g%ia(i)
+        degree = g%ptr(i+1)-g%ptr(i)
 
         ! Find the index in the list of edges of the edge to be removed
         indx = g%find_edge(i,j)
 
-        ja_temp = g%ja
+        node_temp = g%node
 
-        deallocate(g%ja)
-        allocate(g%ja(g%ne-1))
+        deallocate(g%node)
+        allocate(g%node(g%ne-1))
 
-        ! Build the new array ja
-        g%ja(1:indx-1) = ja_temp(1:indx-1)
-        g%ja(indx:g%ne-1) = ja_temp(indx+1:g%ne)
+        ! Build the new array node
+        g%node(1:indx-1) = node_temp(1:indx-1)
+        g%node(indx:g%ne-1) = node_temp(indx+1:g%ne)
 
         ! The number of edges in the graph is decremented by 1, and the
-        ! starting index in ja is decremented for all nodes after the node
+        ! starting index in node is decremented for all nodes after the node
         ! from which the edge was removed
         g%ne = g%ne-1
         do k=i+1,g%n
-            g%ia(k) = g%ia(k)-1
+            g%ptr(k) = g%ptr(k)-1
         enddo
 
         ! If the degree of node i was the greatest among all nodes in the
@@ -247,13 +247,13 @@ subroutine cs_delete_edge(g,i,j)                                           !
         if (degree==g%max_degree) then
             ! Tentatively set the maximum degree of the graph to the (now 
             ! smaller) degree of the node i from which the edge was removed.
-            g%max_degree = g%ia(i+1)-g%ia(i)
+            g%max_degree = g%ptr(i+1)-g%ptr(i)
 
             ! Iterate through all the nodes;
             do k=1,g%n
                 ! if any node has a degree greater than the tentative
                 ! max_degree, then increment the maximum degree.
-                degree = g%ia(k+1)-g%ia(k)
+                degree = g%ptr(k+1)-g%ptr(k)
                 if (degree>g%max_degree) g%max_degree = degree
             enddo
         endif
@@ -270,25 +270,25 @@ subroutine cs_graph_left_permute(g,p)                                      !
     class(cs_graph), intent(inout) :: g
     integer, intent(in) :: p(:)
     ! local variables
-    integer :: i,k,ia(g%n+1),ja(g%ne)
+    integer :: i,k,ptr(g%n+1),node(g%ne)
 
     do i=1,g%n
-        ia(p(i)+1) = g%ia(i+1)-g%ia(i)
+        ptr(p(i)+1) = g%ptr(i+1)-g%ptr(i)
     enddo
 
-    ia(1) = 1
+    ptr(1) = 1
     do i=1,g%n
-        ia(i+1) = ia(i+1)+ia(i)
+        ptr(i+1) = ptr(i+1)+ptr(i)
     enddo
 
     do i=1,g%n
-        do k=0,g%ia(i+1)-g%ia(i)-1
-            ja( ia(p(i))+k ) = g%ja( g%ia(i)+k )
+        do k=0,g%ptr(i+1)-g%ptr(i)-1
+            node( ptr(p(i))+k ) = g%node( g%ptr(i)+k )
         enddo
     enddo
 
-    g%ia = ia
-    g%ja = ja
+    g%ptr = ptr
+    g%node = node
 
 end subroutine cs_graph_left_permute
 
@@ -304,7 +304,7 @@ subroutine cs_graph_right_permute(g,p)                                     !
     integer :: k
 
     do k=1,g%ne
-        g%ja(k) = p( g%ja(k) )
+        g%node(k) = p( g%node(k) )
     enddo
 
 end subroutine cs_graph_right_permute
@@ -316,7 +316,7 @@ subroutine cs_free(g)                                                      !
 !--------------------------------------------------------------------------!
     class(cs_graph), intent(inout) :: g
 
-    deallocate(g%ia,g%ja)
+    deallocate(g%ptr,g%node)
     g%n = 0
     g%m = 0
     g%ne = 0
@@ -336,9 +336,9 @@ subroutine cs_dump_edges(g,edges)                                          !
     integer :: i,k
 
     do i=1,g%n
-        do k=g%ia(i),g%ia(i+1)-1
+        do k=g%ptr(i),g%ptr(i+1)-1
             edges(1,k) = i
-            edges(2,k) = g%ja(k)
+            edges(2,k) = g%node(k)
         enddo
     enddo
 
@@ -347,23 +347,23 @@ end subroutine cs_dump_edges
 
 
 !--------------------------------------------------------------------------!
-subroutine sort_ja(g)                                                      !
+subroutine sort_node(g)                                                    !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_graph), intent(inout) :: g
     ! local variables
-    integer :: k,start,finish,num,p(g%max_degree),ja(g%max_degree)
+    integer :: k,start,finish,num,p(g%max_degree),node(g%max_degree)
 
     do k=1,g%n
-        start  = g%ia(k)
-        finish = g%ia(k+1)-1
+        start  = g%ptr(k)
+        finish = g%ptr(k+1)-1
         num = finish-start+1
-        ja(1:num) = g%ja(start:finish)
-        p(1:num) = order(ja(1:num))
-        g%ja(start:finish) = ja(p(1:num))
+        node(1:num) = g%node(start:finish)
+        p(1:num) = order(node(1:num))
+        g%node(start:finish) = node(p(1:num))
     enddo
 
-end subroutine sort_ja
+end subroutine sort_node
 
 
 

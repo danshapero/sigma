@@ -222,8 +222,8 @@ subroutine bcsr_sub_matrix_add(A,B)                                        !
     integer :: i,j,k,indx
 
     do i=1,B%nrow
-        do k=B%g%ia(i),B%g%ia(i+1)-1
-            j = B%g%ja(k)
+        do k=B%g%ptr(i),B%g%ptr(i+1)-1
+            j = B%g%node(k)
             indx = A%g%find_edge(i,j)
             A%val(:,:,indx) = A%val(:,:,indx)+B%val(:,:,k)
         enddo
@@ -240,21 +240,21 @@ subroutine bcsr_left_permute(A,p)                                          !
     class(bcsr_matrix), intent(inout) :: A
     integer, intent(in) :: p(:)
     ! local variables
-    integer :: i,k,ia(A%g%n+1)
+    integer :: i,k,ptr(A%g%n+1)
     real(dp) :: val(A%nnz,A%nr,A%nc)
 
     do i=1,A%g%n
-        ia(p(i)+1) = A%g%ia(i+1)-A%g%ia(i)
+        ptr(p(i)+1) = A%g%ptr(i+1)-A%g%ptr(i)
     enddo
 
-    ia(1) = 1
+    ptr(1) = 1
     do i=1,A%g%n
-        ia(i+1) = ia(i+1)+ia(i)
+        ptr(i+1) = ptr(i+1)+ptr(i)
     enddo
 
     do i=1,A%g%n
-        do k=0,A%g%ia(i+1)-A%g%ia(i)-1
-            val(ia(p(i))+k,:,:) = A%val(A%g%ia(i)+k,:,:)
+        do k=0,A%g%ptr(i+1)-A%g%ptr(i)-1
+            val(ptr(p(i))+k,:,:) = A%val(A%g%ptr(i)+k,:,:)
         enddo
     enddo
 
@@ -291,8 +291,8 @@ subroutine bcsr_matvec(A,x,y)                                              !
 
     do i=1,A%g%n
         z = 0.0_dp
-        do k=A%g%ia(i),A%g%ia(i+1)-1
-            j = A%g%ja(k)
+        do k=A%g%ptr(i),A%g%ptr(i+1)-1
+            j = A%g%node(k)
             do l=1,A%nc
                 z = z+A%val(:,l,k)*x(A%nc*(j-1)+1)
             enddo
@@ -317,8 +317,8 @@ subroutine bcsr_matvec_t(A,x,y)                                            !
 
     do i=1,A%g%n
         z = x(A%nr*(i-1)+1:A%nr*i)
-        do k=A%g%ia(i),A%g%ia(i+1)-1
-            j = A%g%ja(k)
+        do k=A%g%ptr(i),A%g%ptr(i+1)-1
+            j = A%g%node(k)
             do l=1,A%nc
                 y(A%nc*(j-1)+l) = y(A%nc*(j-1)+1) &
                     & +dot_product(A%val(:,k,l),z)
@@ -343,8 +343,8 @@ subroutine bcsr_block_matvec(A,x,y)                                        !
 
     do i=1,A%g%n
         z = 0.0_dp
-        do k=A%g%ia(i),A%g%ia(i+1)-1
-            j = A%g%ja(k)
+        do k=A%g%ptr(i),A%g%ptr(i+1)-1
+            j = A%g%node(k)
             do l=1,A%nc
                 z = z+A%val(:,l,k)*x(l,j)
             enddo
@@ -369,8 +369,8 @@ subroutine bcsr_block_matvec_t(A,x,y)                                      !
 
     do i=1,A%g%n
         z = x(:,i)
-        do k=A%g%ia(i),A%g%ia(i+1)-1
-            j = A%g%ja(k)
+        do k=A%g%ptr(i),A%g%ptr(i+1)-1
+            j = A%g%node(k)
             do l=1,A%nc
                 y(l,j) = y(l,j)+dot_product(A%val(:,l,k),z)
             enddo
@@ -394,8 +394,8 @@ subroutine bcsr_l_block_matvec(A,x,y)                                      !
 
     do i=1,A%g%n
         z = 0.0_dp
-        do k=A%g%ia(i),A%g%ia(i+1)-1
-            j = A%g%ja(k)
+        do k=A%g%ptr(i),A%g%ptr(i+1)-1
+            j = A%g%node(k)
             do l=1,A%nc
                 z = z+A%val(:,l,k)*x(A%nc*(j-1)+l)
             enddo
@@ -420,8 +420,8 @@ subroutine bcsr_l_block_matvec_t(A,x,y)                                    !
 
     do i=1,A%g%n
         z = x(A%nr*(i-1)+1:A%nr*i)
-        do k=A%g%ia(i),A%g%ia(i+1)-1
-            j = A%g%ja(k)
+        do k=A%g%ptr(i),A%g%ptr(i+1)-1
+            j = A%g%node(k)
             do l=1,A%nc
                 y(l,j) = y(l,j)+dot_product(A%val(:,l,k),z)
             enddo
@@ -445,8 +445,8 @@ subroutine bcsr_r_block_matvec(A,x,y)                                      !
 
     do i=1,A%g%n
         z = 0.0_dp
-        do k=A%g%ia(i),A%g%ia(i+1)-1
-            j = A%g%ja(k)
+        do k=A%g%ptr(i),A%g%ptr(i+1)-1
+            j = A%g%node(k)
             do l=1,A%nc
                 z = z+A%val(:,l,k)*x(l,j)
             enddo
@@ -471,8 +471,8 @@ subroutine bcsr_r_block_matvec_t(A,x,y)                                    !
 
     do i=1,A%g%n
         z = x(:,i)
-        do k=A%g%ia(i),A%g%ia(i+1)-1
-            j = A%g%ja(k)
+        do k=A%g%ptr(i),A%g%ptr(i+1)-1
+            j = A%g%node(k)
             do l=1,A%nc
                 y(A%nc*(j-1)+l) = y(A%nc*(j-1)+l) &
                     & +dot_product(A%val(:,l,k),z)
