@@ -8,7 +8,7 @@ use cs_graphs
 
 ! Use all the matrix modules
 use sparse_matrices
-use csr_matrices
+use cs_matrices
 use coo_matrices
 
 ! Use all the block matrix modules
