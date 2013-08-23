@@ -40,29 +40,28 @@ implicit none
     enddo
     p(1) = 7
 
-    do test=1,2
+    do test=1,3
         ! Allocate the graph & matrix
         select case(test)
             case(1)
-                allocate(cs_graph::g)
-                allocate(csr_matrix::A)
+                call new_graph(g,'cs',7,7,edges)
+                call new_sparse_matrix(A,'csr',7,7,g)
 
-                allocate(cs_graph::h)
-                allocate(csr_matrix::B)
+                call new_graph(h,'cs',7,7)
+                call new_sparse_matrix(B,'csr',7,7,h)
             case(2)
-                allocate(coo_graph::g)
-                allocate(coo_matrix::A)
+                call new_graph(g,'cs',7,7,edges)
+                call new_sparse_matrix(A,'csc',7,7,g)
 
-                allocate(coo_graph::h)
-                allocate(coo_matrix::B)
+                call new_graph(h,'cs',7,7)
+                call new_sparse_matrix(B,'csc',7,7,h)
+            case(3)
+                call new_graph(g,'coo',7,7,edges)
+                call new_sparse_matrix(A,'coo',7,7,g)
+
+                call new_graph(h,'coo',7,7)
+                call new_sparse_matrix(B,'coo',7,7,h)
         end select
-
-        ! Initialize and assemble the graphs
-        call g%init(7,7,edges)
-        call A%assemble(g)
-
-        call h%init(7,7)
-        call B%assemble(h)
 
         ! Fill A to be the graph Laplacian
         do i=1,7
@@ -94,7 +93,7 @@ implicit none
 
         if ( maxval(dabs(y))>1.0e-14 ) then
             print *, 'A*[1,...,1] should be = 0;'
-            print *, 'max(abs(y)) = ',maxval(dabs(y))
+            print *, 'range(y) = ',minval(y),maxval(y)
         endif
 
         ! Test adding two matrices
@@ -102,8 +101,8 @@ implicit none
         y = 0.0_dp
         call A%matvec(x,y)
         if ( maxval(dabs(y)-1.0)>1.0e-14 ) then
-            print *, '(A+I)*[1,...,1] should be = 0;'
-            print *, 'max(y) = ',maxval(y),'min(y) = ',minval(y)
+            print *, '(A+I)*[1,...,1] should be = 1;'
+            print *, 'range(y) = ',minval(y),maxval(y)
         endif
 
         ! Test permuting the matrices

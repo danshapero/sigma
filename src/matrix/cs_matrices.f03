@@ -12,9 +12,10 @@ type, extends(sparse_matrix) :: cs_matrix                                  !
 !--------------------------------------------------------------------------!
     real(dp), allocatable :: val(:)
     class(cs_graph), pointer :: g
-    character(len=1) :: orientation
     ! procedure pointers to implementations of matrix operations
     procedure(cs_find_entry_ifc), pointer :: find_entry
+    procedure(cs_permute_ifc), pointer :: left_permute_impl, &
+                                        & right_permute_impl
     procedure(cs_matvec_ifc), pointer :: matvec_impl, matvec_t_impl
 contains
     ! front-ends to matrix operations
@@ -29,6 +30,7 @@ contains
     procedure :: matvec => cs_matvec, matvec_t => cs_matvec_t
     procedure, private :: cs_set_value_not_preallocated
 end type cs_matrix
+
 
 
 
@@ -48,6 +50,13 @@ abstract interface                                                         !
         real(dp), intent(in)  :: x(:)
         real(dp), intent(out) :: y(:)
     end subroutine
+
+    subroutine cs_permute_ifc(A,p)
+        import :: cs_matrix
+        class(cs_matrix), intent(inout) :: A
+        integer, intent(in) :: p(:)
+    end subroutine cs_permute_ifc
+
 end interface
 
 
@@ -73,8 +82,6 @@ subroutine cs_matrix_init(A,nrow,ncol)                                     !
     A%nrow = nrow
     A%ncol = ncol
     A%max_degree = 0
-    ! Set a default orientation if the user does not
-    A%orientation = 'r'
 
 end subroutine cs_matrix_init
 
@@ -103,20 +110,28 @@ subroutine cs_assemble(A,g)                                                !
     ! We exploit this property by having
     !       csr_matvec_t => csc_matvec,     csc_matvec_t => csr_matvec.
     ! This saves us from writing excess code.
-    if (A%orientation=='c') then
+    if (A%orientation=='col') then
         A%ncol = g%n
         A%nrow = g%m
 
         A%find_entry => csc_find_entry
+
         A%matvec_impl => csc_matvec
         A%matvec_t_impl => csr_matvec
+
+        A%left_permute_impl => cs_matrix_permute_vals
+        A%right_permute_impl => cs_matrix_permute_ptrs
     else
         A%nrow = g%n
         A%ncol = g%m
 
         A%find_entry => csr_find_entry
+
         A%matvec_impl => csr_matvec
         A%matvec_t_impl => csc_matvec
+
+        A%left_permute_impl => cs_matrix_permute_ptrs
+        A%right_permute_impl => cs_matrix_permute_vals
     endif
     A%nnz = g%ne
     A%max_degree = g%max_degree
@@ -212,7 +227,7 @@ subroutine cs_sub_matrix_add(A,B)                                          !
     integer :: i,j,k,indx,nbrs(B%max_degree)
 
     ! Jesus, really need to fix this thing
-    do i=1,B%nrow
+    do i=1,B%g%n
         do k=B%g%ptr(i),B%g%ptr(i+1)-1
             j = B%g%node(k)
             indx = A%g%find_edge(i,j)
@@ -227,31 +242,10 @@ end subroutine cs_sub_matrix_add
 !--------------------------------------------------------------------------!
 subroutine cs_left_permute(A,p)                                            !
 !--------------------------------------------------------------------------!
-    ! input/output variables
     class(cs_matrix), intent(inout) :: A
     integer, intent(in) :: p(:)
-    ! local variables
-    integer :: i,k,ptr(A%g%n+1)
-    real(dp) :: val(A%nnz)
 
-    do i=1,A%g%n
-        ptr(p(i)+1) = A%g%ptr(i+1)-A%g%ptr(i)
-    enddo
-
-    ptr(1) = 1
-    do i=1,A%g%n
-        ptr(i+1) = ptr(i+1)+ptr(i)
-    enddo
-
-    do i=1,A%g%n
-        do k=0,A%g%ptr(i+1)-A%g%ptr(i)-1
-            val( ptr(p(i))+k ) = A%val( A%g%ptr(i)+k )
-        enddo
-    enddo
-
-    A%val = val
-
-    call A%g%left_permute(p)
+    call A%left_permute_impl(p)
 
 end subroutine cs_left_permute
 
@@ -263,7 +257,7 @@ subroutine cs_right_permute(A,p)                                           !
     class(cs_matrix), intent(inout) :: A
     integer, intent(in) :: p(:)
 
-    call A%g%right_permute(p)
+    call A%right_permute_impl(p)
 
 end subroutine cs_right_permute
 
@@ -306,7 +300,7 @@ subroutine cs_set_value_not_preallocated(A,i,j,val)                        !
     real(dp) :: val_temp(A%nnz)
     integer :: k
 
-    if (A%orientation=='c') then
+    if (A%orientation=='col') then
         call A%g%add_edge(j,i)
     else
         call A%g%add_edge(i,j)
@@ -397,6 +391,7 @@ subroutine csc_matvec(A,x,y)                                               !
     integer :: i,j,k
     real(dp) :: z
 
+    y = 0_dp
     do i=1,A%g%n
         z = x(i)
         do k=A%g%ptr(i),A%g%ptr(i+1)-1
@@ -406,6 +401,52 @@ subroutine csc_matvec(A,x,y)                                               !
     enddo
 
 end subroutine csc_matvec
+
+
+
+!--------------------------------------------------------------------------!
+subroutine cs_matrix_permute_vals(A,p)                                     !
+!--------------------------------------------------------------------------!
+    class(cs_matrix), intent(inout) :: A
+    integer, intent(in) :: p(:)
+
+    call A%g%right_permute(p)
+
+end subroutine cs_matrix_permute_vals
+
+
+
+!--------------------------------------------------------------------------!
+subroutine cs_matrix_permute_ptrs(A,p)                                     !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(cs_matrix), intent(inout) :: A
+    integer, intent(in) :: p(:)
+    ! local variables
+    integer :: i,k,ptr(A%g%n+1)
+    real(dp) :: val(A%nnz)
+
+    do i=1,A%g%n
+        ptr(p(i)+1) = A%g%ptr(i+1)-A%g%ptr(i)
+    enddo
+
+    ptr(1) = 1
+    do i=1,A%g%n
+        ptr(i+1) = ptr(i+1)+ptr(i)
+    enddo
+
+    do i=1,A%g%n
+        do k=0,A%g%ptr(i+1)-A%g%ptr(i)-1
+            val( ptr(p(i))+k ) = A%val( A%g%ptr(i)+k )
+        enddo
+    enddo
+
+    A%val = val
+
+    call A%g%left_permute(p)
+
+end subroutine cs_matrix_permute_ptrs
+
 
 
 

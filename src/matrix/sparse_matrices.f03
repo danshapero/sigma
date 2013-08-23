@@ -11,6 +11,7 @@ implicit none
 type, abstract :: sparse_matrix                                            !
 !--------------------------------------------------------------------------!
     integer :: nrow, ncol, nnz, max_degree
+    character(len=3) :: orientation
     logical :: pos_def
     logical :: assembled
 contains

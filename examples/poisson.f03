@@ -42,10 +42,8 @@ implicit none
         endif
     enddo
 
-    allocate(csr_matrix::A)
-    allocate(csr_matrix::B)
-    call A%assemble(g)
-    call B%assemble(g)
+    call new_sparse_matrix(A,'csr',nn,nn,g)
+    call new_sparse_matrix(B,'csr',nn,nn,g)
 
 
 !--------------------------------------------------------------------------!

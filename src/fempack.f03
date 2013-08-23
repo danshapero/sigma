@@ -32,13 +32,16 @@ implicit none
 
 
 
+contains
+
+
 !--------------------------------------------------------------------------!
-function new_graph(graph_format,n,m,edges) return(g)                       !
+subroutine new_graph(g,graph_format,n,m,edges)                             !
 !--------------------------------------------------------------------------!
+    class(graph), pointer, intent(inout) :: g
     character(len=*), intent(in) :: graph_format
     integer, intent(in) :: n
     integer, intent(in), optional :: m, edges(:,:)
-    class(graph), allocatable :: g
 
     select case(trim(graph_format))
         case('cs')
@@ -51,31 +54,59 @@ function new_graph(graph_format,n,m,edges) return(g)                       !
 
     call g%init(n,m,edges)
     
-end function new_graph
+end subroutine new_graph
 
 
 
 !--------------------------------------------------------------------------!
-function new_sparse_matrix(matrix_format,nrow,ncol,g) return(A)            !
+subroutine new_sparse_matrix(A,matrix_format,nrow,ncol,g)                  !
 !--------------------------------------------------------------------------!
     ! input/output variables
+    class(sparse_matrix), pointer, intent(inout) :: A
     character(len=*), intent(in) :: matrix_format
     integer, intent(in) :: nrow, ncol
     class(graph), pointer, intent(in), optional :: g
-    class(sparse_matrix), allocatable :: A
+    ! local variables
+    class(graph), pointer :: ag
 
     select case(trim(matrix_format))
         case('csr')
             allocate(cs_matrix::A)
-            A%orientation = 'r'
+            A%orientation = 'row'
         case('csc')
             allocate(cs_matrix::A)
-            A%orientation = 'c'
+            A%orientation = 'col'
         case('coo')
-            allocate(coo_matrix::A
+            allocate(coo_matrix::A)
+            A%orientation = 'row'
     end select
 
-end function new_sparse_matrix
+    A%nrow = nrow
+    A%ncol = ncol
+
+    if (present(g)) then
+        call A%assemble(g)
+    else
+        select type(A)
+            type is(cs_matrix)
+                allocate(cs_graph::ag)
+            type is(coo_matrix)
+                allocate(coo_graph::ag)
+        end select
+
+        select case(A%orientation)
+            case('row')
+                call ag%init(nrow,ncol)
+            case('col')
+                call ag%init(ncol,nrow)
+        end select
+
+        call A%assemble(ag)
+
+        ! nullify(ag)   <- should we do this?
+    endif
+
+end subroutine new_sparse_matrix
 
 
 
@@ -86,3 +117,4 @@ end function new_sparse_matrix
 
 
 end module fempack
+
