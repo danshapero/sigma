@@ -10,6 +10,7 @@ use cs_graphs
 use sparse_matrices
 use cs_matrices
 use coo_matrices
+use ll_matrices
 
 ! Use all the block matrix modules
 use block_sparse_matrices

@@ -1,62 +1,63 @@
-module cs_matrices
+module ll_matrices
 
 use sparse_matrices
-use cs_graphs
+use ll_graphs
+use types
 
 implicit none
 
 
-
 !--------------------------------------------------------------------------!
-type, extends(sparse_matrix) :: cs_matrix                                  !
+type, extends(sparse_matrix) :: ll_matrix                                  !
 !--------------------------------------------------------------------------!
     real(dp), allocatable :: val(:)
-    class(cs_graph), pointer :: g
+    type(linked_list), allocatable :: ptrs(:)
+    integer :: last
+    class(ll_graph), pointer :: g
     ! procedure pointers to implementations of matrix operations
-    ! Shouldn't we make all of these private?
-    procedure(cs_find_entry_ifc), pointer :: find_entry
-    procedure(cs_permute_ifc), pointer :: left_permute_impl, &
+    ! Should these be private?
+    procedure(ll_find_entry_ifc), pointer :: find_entry
+    procedure(ll_matvec_ifc), pointer :: matvec_impl, matvec_t_impl
+    procedure(ll_permute_ifc), pointer :: left_permute_impl, &
                                         & right_permute_impl
-    procedure(cs_matvec_ifc), pointer :: matvec_impl, matvec_t_impl
 contains
     ! front-ends to matrix operations
-    procedure :: init => cs_matrix_init
-    procedure :: assemble => cs_assemble
-    procedure :: neighbors => cs_matrix_neighbors
-    procedure :: get_value => cs_get_value
-    procedure :: set_value => cs_set_value, add_value => cs_add_value
-    procedure :: sub_matrix_add => cs_sub_matrix_add
-    procedure :: left_permute => cs_left_permute, &
-                & right_permute => cs_right_permute
-    procedure :: matvec => cs_matvec, matvec_t => cs_matvec_t
-    procedure, private :: cs_set_value_not_preallocated
-end type cs_matrix
-
+    procedure :: init => ll_matrix_init
+    procedure :: assemble => ll_assemble
+    procedure :: neighbors => ll_matrix_neighbors
+    procedure :: get_value => ll_get_value
+    procedure :: set_value => ll_set_value, add_value => ll_add_value
+    procedure :: sub_matrix_add => ll_sub_matrix_add
+    procedure :: left_permute => ll_left_permute, &
+                & right_permute => ll_right_permute
+    procedure :: matvec => ll_matvec, matvec_t => ll_matvec_t
+    procedure, private :: ll_set_value_not_preallocated
+end type ll_matrix
 
 
 
 !--------------------------------------------------------------------------!
 abstract interface                                                         !
 !--------------------------------------------------------------------------!
-    function cs_find_entry_ifc(A,i,j)
-        import :: cs_matrix
-        class(cs_matrix), intent(in) :: A
+    function ll_find_entry_ifc(A,i,j)
+        import :: ll_matrix
+        class(ll_matrix), intent(in) :: A
         integer, intent(in) :: i,j
-        integer :: cs_find_entry_ifc
-    end function cs_find_entry_ifc
+        integer :: ll_find_entry_ifc
+    end function ll_find_entry_ifc
 
-    subroutine cs_matvec_ifc(A,x,y)
-        import :: cs_matrix, dp
-        class(cs_matrix), intent(in) :: A
+    subroutine ll_matvec_ifc(A,x,y)
+        import :: ll_matrix, dp
+        class(ll_matrix), intent(in) :: A
         real(dp), intent(in)  :: x(:)
         real(dp), intent(out) :: y(:)
     end subroutine
 
-    subroutine cs_permute_ifc(A,p)
-        import :: cs_matrix
-        class(cs_matrix), intent(inout) :: A
+    subroutine ll_permute_ifc(A,p)
+        import :: ll_matrix
+        class(ll_matrix), intent(inout) :: A
         integer, intent(in) :: p(:)
-    end subroutine cs_permute_ifc
+    end subroutine ll_permute_ifc
 
 end interface
 
@@ -75,65 +76,61 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_matrix_init(A,nrow,ncol)                                     !
+subroutine ll_matrix_init(A,nrow,ncol)                                     !
 !--------------------------------------------------------------------------!
-    class(cs_matrix), intent(inout) :: A
+    class(ll_matrix), intent(inout) :: A
     integer, intent(in) :: nrow, ncol
 
     A%nrow = nrow
     A%ncol = ncol
     A%max_degree = 0
 
-end subroutine cs_matrix_init
-
-
-
-! Should we put a subroutine in here which sets the row/column oriented
-! storage format for a matrix, or should we change the API so that the
-! assembly routine now takes an additional argument "orientation" that
-! determines the format?
+end subroutine ll_matrix_init
 
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_assemble(A,g)                                                !
+subroutine ll_assemble(A,g)                                                !
 !--------------------------------------------------------------------------!
-    class(cs_matrix), intent(inout) :: A
-    class(cs_graph), pointer, intent(in) :: g
+    class(ll_matrix), intent(inout) :: A
+    class(ll_graph), pointer, intent(in) :: g
+    ! local variables
+    integer :: i,k
 
     A%g => g
 
-    ! Check whether the matrix is stored in row- or column-oriented format.
-    ! If we take a CSR matrix A and use the CSC matvec operation
-    !       A%csc_matvec(x,y),
-    ! we fortuitously get an output vector y: y = transpose(A)*x.
-    ! Likewise, CSR_matvec = CSC_transpose_matvec.
-    ! We exploit this property by having
-    !       csr_matvec_t => csc_matvec,     csc_matvec_t => csr_matvec.
-    ! This saves us from writing excess code.
     if (A%orientation=='col') then
         A%ncol = g%n
         A%nrow = g%m
 
-        A%find_entry => csc_find_entry
+        A%find_entry => llc_find_entry
 
-        A%matvec_impl => csc_matvec
-        A%matvec_t_impl => csr_matvec
+        A%matvec_impl   => llc_matvec
+        A%matvec_t_impl => llr_matvec
 
-        A%left_permute_impl => cs_matrix_permute_vals
-        A%right_permute_impl => cs_matrix_permute_ptrs
+        A%left_permute_impl => ll_matrix_permute_vals
+        A%right_permute_impl => ll_matrix_permute_ptrs
     else
         A%nrow = g%n
         A%ncol = g%m
 
-        A%find_entry => csr_find_entry
+        A%find_entry => llr_find_entry
 
-        A%matvec_impl => csr_matvec
-        A%matvec_t_impl => csc_matvec
+        A%matvec_impl   => llr_matvec
+        A%matvec_t_impl => llc_matvec
 
-        A%left_permute_impl => cs_matrix_permute_ptrs
-        A%right_permute_impl => cs_matrix_permute_vals
+        A%left_permute_impl => ll_matrix_permute_ptrs
+        A%right_permute_impl => ll_matrix_permute_vals
     endif
+
+    A%last = 0
+    allocate(A%ptrs(g%n))
+    do i=1,g%n
+        do k=1,g%lists(i)%length
+            A%last = A%last+1
+            call A%ptrs(i)%prepend(A%last)
+        enddo
+    enddo
 
     A%nnz = g%ne
     A%max_degree = g%max_degree
@@ -141,47 +138,46 @@ subroutine cs_assemble(A,g)                                                !
     allocate(A%val(A%nnz))
     A%val = 0.0_dp
 
-end subroutine cs_assemble
+end subroutine ll_assemble
 
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_matrix_neighbors(A,i,nbrs)                                   !
+subroutine ll_matrix_neighbors(A,i,nbrs)                                   !
 !--------------------------------------------------------------------------!
-    class(cs_matrix), intent(in) :: A
-    integer, intent(in)  :: i
+    class(ll_matrix), intent(in) :: A
+    integer, intent(in) :: i
     integer, intent(out) :: nbrs(:)
 
-    nbrs = 0
     call A%g%neighbors(i,nbrs)
 
-end subroutine cs_matrix_neighbors
+end subroutine ll_matrix_neighbors
 
 
 
 !--------------------------------------------------------------------------!
-function cs_get_value(A,i,j)                                               !
+function ll_get_value(A,i,j)                                               !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(cs_matrix), intent(in) :: A
+    class(ll_matrix), intent(in) :: A
     integer, intent(in) :: i,j
-    real(dp) :: cs_get_value
+    real(dp) :: ll_get_value
     ! local variables
     integer :: k
 
-    cs_get_value = 0_dp
+    ll_get_value = 0.0_dp
     k = A%find_entry(i,j)
-    if (k/=-1) cs_get_value = A%val(k)
+    if (k/=-1) ll_get_value = A%val(k)
 
-end function cs_get_value
+end function ll_get_value
 
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_set_value(A,i,j,val)                                         !
+subroutine ll_set_value(A,i,j,val)                                         !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(cs_matrix), intent(inout) :: A
+    class(ll_matrix), intent(inout) :: A
     integer, intent(in) :: i,j
     real(dp), intent(in) :: val
     ! local variables
@@ -191,18 +187,18 @@ subroutine cs_set_value(A,i,j,val)                                         !
     if (k/=-1) then
         A%val(k) = val
     else
-        call A%cs_set_value_not_preallocated(i,j,val)
+        call A%ll_set_value_not_preallocated(i,j,val)
     endif
 
-end subroutine cs_set_value
+end subroutine ll_set_value
 
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_add_value(A,i,j,val)                                         !
+subroutine ll_add_value(A,i,j,val)                                         !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(cs_matrix), intent(inout) :: A
+    class(ll_matrix), intent(inout) :: A
     integer, intent(in) :: i,j
     real(dp), intent(in) :: val
     ! local variables
@@ -212,114 +208,117 @@ subroutine cs_add_value(A,i,j,val)                                         !
     if (k/=-1) then
         A%val(k) = A%val(k)+val
     else
-        call A%cs_set_value_not_preallocated(i,j,val)
+        call A%ll_set_value_not_preallocated(i,j,val)
     endif
 
-end subroutine cs_add_value
+end subroutine ll_add_value
 
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_sub_matrix_add(A,B)                                          !
+subroutine ll_sub_matrix_add(A,B)                                          !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(cs_matrix), intent(inout) :: A
-    class(cs_matrix), intent(in)    :: B
+    class(ll_matrix), intent(inout) :: A
+    class(ll_matrix), intent(in)    :: B
     ! local variables
-    integer :: i,j,k,indx,nbrs(B%max_degree)
+    integer :: i,j,k
+    real(dp) :: Bij
 
     do i=1,B%g%n
-        do k=B%g%ptr(i),B%g%ptr(i+1)-1
-            j = B%g%node(k)
-            indx = A%g%find_edge(i,j)
-            A%val(indx) = A%val(indx)+B%val(k)
+        do k=1,B%g%lists(i)%length
+            j = B%g%lists(i)%get_value(k)
+            Bij = B%val( B%ptrs(i)%get_value(k) )
+            call A%add_value(i,j,Bij)
         enddo
     enddo
 
-end subroutine cs_sub_matrix_add
+end subroutine ll_sub_matrix_add
 
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_left_permute(A,p)                                            !
+subroutine ll_left_permute(A,p)                                            !
 !--------------------------------------------------------------------------!
-    class(cs_matrix), intent(inout) :: A
+    class(ll_matrix), intent(inout) :: A
     integer, intent(in) :: p(:)
 
     call A%left_permute_impl(p)
 
-end subroutine cs_left_permute
+end subroutine ll_left_permute
 
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_right_permute(A,p)                                           !
+subroutine ll_right_permute(A,p)                                           !
 !--------------------------------------------------------------------------!
-    class(cs_matrix), intent(inout) :: A
+    class(ll_matrix), intent(inout) :: A
     integer, intent(in) :: p(:)
 
     call A%right_permute_impl(p)
 
-end subroutine cs_right_permute
+end subroutine ll_right_permute
 
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_matvec(A,x,y)                                                !
+subroutine ll_matvec(A,x,y)                                                !
 !--------------------------------------------------------------------------!
-    class(cs_matrix), intent(in) :: A
+    class(ll_matrix), intent(in) :: A
     real(dp), intent(in)  :: x(:)
     real(dp), intent(out) :: y(:)
 
     call A%matvec_impl(x,y)
 
-end subroutine cs_matvec
+end subroutine ll_matvec
 
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_matvec_t(A,x,y)                                              !
+subroutine ll_matvec_t(A,x,y)                                              !
 !--------------------------------------------------------------------------!
-    class(cs_matrix), intent(in) :: A
+    class(ll_matrix), intent(in) :: A
     real(dp), intent(in)  :: x(:)
     real(dp), intent(out) :: y(:)
 
     call A%matvec_t_impl(x,y)
 
-end subroutine cs_matvec_t
+end subroutine ll_matvec_t
 
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_set_value_not_preallocated(A,i,j,val)                        !
+subroutine ll_set_value_not_preallocated(A,i,j,val)                        !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(cs_matrix), intent(inout) :: A
+    class(ll_matrix), intent(inout) :: A
     integer, intent(in) :: i,j
     real(dp), intent(in) :: val
     ! local variables
-    real(dp) :: val_temp(A%nnz)
-    integer :: k
+    integer :: k,l
+    real(dp), allocatable :: val_tmp(:)
+
+    k = A%last
+    if (k>A%nnz) then
+        allocate(val_tmp(2*A%nnz))
+        val_tmp(1:A%nnz) = A%val
+        call move_alloc(from=val_tmp, to=A%val)
+    endif
 
     if (A%orientation=='col') then
         call A%g%add_edge(j,i)
+        call A%ptrs(j)%prepend(k)
     else
         call A%g%add_edge(i,j)
+        call A%ptrs(i)%prepend(k)
     endif
 
-    k = A%find_entry(i,j)
-
-    val_temp = A%val
-    deallocate(A%val)
-    allocate(A%val(A%nnz+1))
-    A%val(1:k-1) = val_temp(1:k-1)
     A%val(k) = val
-    A%val(k+1:A%nnz+1) = val_temp(k:A%nnz)
 
-    A%nnz = A%nnz+1
     A%max_degree = A%g%max_degree
+    A%nnz = A%nnz+1
 
-end subroutine cs_set_value_not_preallocated
+end subroutine ll_set_value_not_preallocated
 
 
 
@@ -333,124 +332,133 @@ end subroutine cs_set_value_not_preallocated
 
 
 !--------------------------------------------------------------------------!
-function csr_find_entry(A,i,j)                                             !
-!--------------------------------------------------------------------------!
-    class(cs_matrix), intent(in) :: A
-    integer, intent(in) :: i,j
-    integer :: csr_find_entry
-
-    csr_find_entry = A%g%find_edge(i,j)
-
-end function csr_find_entry
-
-
-
-!--------------------------------------------------------------------------!
-function csc_find_entry(A,i,j)                                             !
-!--------------------------------------------------------------------------!
-    class(cs_matrix), intent(in) :: A
-    integer, intent(in) :: i,j
-    integer :: csc_find_entry
-
-    csc_find_entry = A%g%find_edge(j,i)
-
-end function csc_find_entry
-
-
-
-!--------------------------------------------------------------------------!
-subroutine csr_matvec(A,x,y)                                               !
+function llr_find_entry(A,i,j)                                             !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(cs_matrix), intent(in) :: A
+    class(ll_matrix), intent(in) :: A
+    integer, intent(in) :: i,j
+    integer :: llr_find_entry
+    ! local variables
+    integer :: k
+
+    k = A%g%find_edge(i,j)
+    llr_find_entry = A%ptrs(i)%get_value(k)
+
+end function llr_find_entry
+
+
+
+!--------------------------------------------------------------------------!
+function llc_find_entry(A,i,j)                                             !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(ll_matrix), intent(in) :: A
+    integer, intent(in) :: i,j
+    integer :: llc_find_entry
+    ! local variables
+    integer :: k
+
+    k = A%g%find_edge(j,i)
+    llc_find_entry = A%ptrs(j)%get_value(k)
+
+end function llc_find_entry
+
+
+
+!--------------------------------------------------------------------------!
+subroutine llr_matvec(A,x,y)                                               !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(ll_matrix), intent(in) :: A
     real(dp), intent(in)  :: x(:)
     real(dp), intent(out) :: y(:)
     ! local variables
     integer :: i,j,k
-    real(dp) :: z
+    real(dp) :: z,Aij
 
     do i=1,A%g%n
-        z = 0_dp
-        do k=A%g%ptr(i),A%g%ptr(i+1)-1
-            j = A%g%node(k)
-            z = z+A%val(k)*x(j)
+        z = 0.0_dp
+        do k=1,A%ptrs(i)%length
+            j = A%g%lists(i)%get_value(k)
+            Aij = A%val( A%ptrs(i)%get_value(k) )
+            z = z+Aij*x(j)
         enddo
         y(i) = z
     enddo
 
-end subroutine csr_matvec
+end subroutine llr_matvec
 
 
 
 !--------------------------------------------------------------------------!
-subroutine csc_matvec(A,x,y)                                               !
+subroutine llc_matvec(A,x,y)                                               !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(cs_matrix), intent(in) :: A
+    class(ll_matrix), intent(in) :: A
     real(dp), intent(in)  :: x(:)
     real(dp), intent(out) :: y(:)
     ! local variables
     integer :: i,j,k
-    real(dp) :: z
+    real(dp) :: z,Aij
 
-    y = 0_dp
+    y = 0.0_dp
     do j=1,A%g%n
         z = x(j)
-        do k=A%g%ptr(j),A%g%ptr(j+1)-1
-            i = A%g%node(k)
-            y(i) = y(i)+A%val(k)*z
+        do k=1,A%ptrs(i)%length
+            i = A%g%lists(j)%get_value(k)
+            Aij = A%val( A%ptrs(j)%get_value(k) )
+            y(i) = y(i)+Aij*z
         enddo
     enddo
 
-end subroutine csc_matvec
+end subroutine llc_matvec
 
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_matrix_permute_vals(A,p)                                     !
+subroutine ll_matrix_permute_vals(A,p)                                     !
 !--------------------------------------------------------------------------!
-    class(cs_matrix), intent(inout) :: A
+    class(ll_matrix), intent(inout) :: A
     integer, intent(in) :: p(:)
 
     call A%g%right_permute(p)
 
-end subroutine cs_matrix_permute_vals
+end subroutine ll_matrix_permute_vals
 
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_matrix_permute_ptrs(A,p)                                     !
+subroutine ll_matrix_permute_ptrs(A,p)                                     !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(cs_matrix), intent(inout) :: A
+    class(ll_matrix), intent(inout) :: A
     integer, intent(in) :: p(:)
     ! local variables
-    integer :: i,k,ptr(A%g%n+1)
-    real(dp) :: val(A%nnz)
+    integer :: i,j,k
+    type(linked_list) :: ptrs(A%g%n)
 
     do i=1,A%g%n
-        ptr(p(i)+1) = A%g%ptr(i+1)-A%g%ptr(i)
-    enddo
-
-    ptr(1) = 1
-    do i=1,A%g%n
-        ptr(i+1) = ptr(i+1)+ptr(i)
-    enddo
-
-    do i=1,A%g%n
-        do k=0,A%g%ptr(i+1)-A%g%ptr(i)-1
-            val( ptr(p(i))+k ) = A%val( A%g%ptr(i)+k )
+        do k=1,A%ptrs(i)%length
+            j = A%ptrs(i)%get_value(k)
+            call ptrs(i)%append(j)
         enddo
+        call A%ptrs(i)%free()
     enddo
 
-    A%val = val
+    do i=1,A%g%n
+        do k=1,ptrs(i)%length
+            j = ptrs(i)%get_value(k)
+            call A%ptrs(p(i))%append(j)
+        enddo
+        call ptrs(i)%free()
+    enddo
 
     call A%g%left_permute(p)
 
-end subroutine cs_matrix_permute_ptrs
+end subroutine ll_matrix_permute_ptrs
 
 
 
 
 
-end module cs_matrices
+end module ll_matrices
