@@ -5,12 +5,14 @@ use graphs
 use ll_graphs
 use coo_graphs
 use cs_graphs
+use ellpack_graphs
 
 ! Use all the matrix modules
 use sparse_matrices
-use cs_matrices
-use coo_matrices
 use ll_matrices
+use coo_matrices
+use cs_matrices
+use ellpack_matrices
 
 ! Use all the block matrix modules
 use block_sparse_matrices

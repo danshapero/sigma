@@ -15,11 +15,11 @@ type, extends(sparse_matrix) :: ll_matrix                                  !
     integer :: last
     class(ll_graph), pointer :: g
     ! procedure pointers to implementations of matrix operations
-    ! Should these be private?
-    procedure(ll_find_entry_ifc), pointer :: find_entry
-    procedure(ll_matvec_ifc), pointer :: matvec_impl, matvec_t_impl
-    procedure(ll_permute_ifc), pointer :: left_permute_impl, &
+    procedure(ll_find_entry_ifc), pointer, private :: find_entry
+    procedure(ll_permute_ifc), pointer, private :: left_permute_impl, &
                                         & right_permute_impl
+    procedure(ll_matvec_ifc), pointer, private :: matvec_impl, matvec_t_impl
+
 contains
     ! front-ends to matrix operations
     procedure :: init => ll_matrix_init
@@ -369,6 +369,50 @@ end function llc_find_entry
 
 
 !--------------------------------------------------------------------------!
+subroutine ll_matrix_permute_vals(A,p)                                     !
+!--------------------------------------------------------------------------!
+    class(ll_matrix), intent(inout) :: A
+    integer, intent(in) :: p(:)
+
+    call A%g%right_permute(p)
+
+end subroutine ll_matrix_permute_vals
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ll_matrix_permute_ptrs(A,p)                                     !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(ll_matrix), intent(inout) :: A
+    integer, intent(in) :: p(:)
+    ! local variables
+    integer :: i,j,k
+    type(linked_list) :: ptrs(A%g%n)
+
+    do i=1,A%g%n
+        do k=1,A%ptrs(i)%length
+            j = A%ptrs(i)%get_value(k)
+            call ptrs(i)%append(j)
+        enddo
+        call A%ptrs(i)%free()
+    enddo
+
+    do i=1,A%g%n
+        do k=1,ptrs(i)%length
+            j = ptrs(i)%get_value(k)
+            call A%ptrs(p(i))%append(j)
+        enddo
+        call ptrs(i)%free()
+    enddo
+
+    call A%g%left_permute(p)
+
+end subroutine ll_matrix_permute_ptrs
+
+
+
+!--------------------------------------------------------------------------!
 subroutine llr_matvec(A,x,y)                                               !
 !--------------------------------------------------------------------------!
     ! input/output variables
@@ -415,51 +459,6 @@ subroutine llc_matvec(A,x,y)                                               !
     enddo
 
 end subroutine llc_matvec
-
-
-
-!--------------------------------------------------------------------------!
-subroutine ll_matrix_permute_vals(A,p)                                     !
-!--------------------------------------------------------------------------!
-    class(ll_matrix), intent(inout) :: A
-    integer, intent(in) :: p(:)
-
-    call A%g%right_permute(p)
-
-end subroutine ll_matrix_permute_vals
-
-
-
-!--------------------------------------------------------------------------!
-subroutine ll_matrix_permute_ptrs(A,p)                                     !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(ll_matrix), intent(inout) :: A
-    integer, intent(in) :: p(:)
-    ! local variables
-    integer :: i,j,k
-    type(linked_list) :: ptrs(A%g%n)
-
-    do i=1,A%g%n
-        do k=1,A%ptrs(i)%length
-            j = A%ptrs(i)%get_value(k)
-            call ptrs(i)%append(j)
-        enddo
-        call A%ptrs(i)%free()
-    enddo
-
-    do i=1,A%g%n
-        do k=1,ptrs(i)%length
-            j = ptrs(i)%get_value(k)
-            call A%ptrs(p(i))%append(j)
-        enddo
-        call ptrs(i)%free()
-    enddo
-
-    call A%g%left_permute(p)
-
-end subroutine ll_matrix_permute_ptrs
-
 
 
 

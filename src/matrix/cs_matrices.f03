@@ -13,11 +13,10 @@ type, extends(sparse_matrix) :: cs_matrix                                  !
     real(dp), allocatable :: val(:)
     class(cs_graph), pointer :: g
     ! procedure pointers to implementations of matrix operations
-    ! Shouldn't we make all of these private?
-    procedure(cs_find_entry_ifc), pointer :: find_entry
-    procedure(cs_permute_ifc), pointer :: left_permute_impl, &
-                                        & right_permute_impl
-    procedure(cs_matvec_ifc), pointer :: matvec_impl, matvec_t_impl
+    procedure(cs_find_entry_ifc), pointer, private :: find_entry
+    procedure(cs_permute_ifc), pointer, private :: left_permute_impl, &
+                                                & right_permute_impl
+    procedure(cs_matvec_ifc), pointer, private :: matvec_impl, matvec_t_impl
 contains
     ! front-ends to matrix operations
     procedure :: init => cs_matrix_init
@@ -359,6 +358,51 @@ end function csc_find_entry
 
 
 !--------------------------------------------------------------------------!
+subroutine cs_matrix_permute_vals(A,p)                                     !
+!--------------------------------------------------------------------------!
+    class(cs_matrix), intent(inout) :: A
+    integer, intent(in) :: p(:)
+
+    call A%g%right_permute(p)
+
+end subroutine cs_matrix_permute_vals
+
+
+
+!--------------------------------------------------------------------------!
+subroutine cs_matrix_permute_ptrs(A,p)                                     !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(cs_matrix), intent(inout) :: A
+    integer, intent(in) :: p(:)
+    ! local variables
+    integer :: i,k,ptr(A%g%n+1)
+    real(dp) :: val(A%nnz)
+
+    do i=1,A%g%n
+        ptr(p(i)+1) = A%g%ptr(i+1)-A%g%ptr(i)
+    enddo
+
+    ptr(1) = 1
+    do i=1,A%g%n
+        ptr(i+1) = ptr(i+1)+ptr(i)
+    enddo
+
+    do i=1,A%g%n
+        do k=0,A%g%ptr(i+1)-A%g%ptr(i)-1
+            val( ptr(p(i))+k ) = A%val( A%g%ptr(i)+k )
+        enddo
+    enddo
+
+    A%val = val
+
+    call A%g%left_permute(p)
+
+end subroutine cs_matrix_permute_ptrs
+
+
+
+!--------------------------------------------------------------------------!
 subroutine csr_matvec(A,x,y)                                               !
 !--------------------------------------------------------------------------!
     ! input/output variables
@@ -403,51 +447,6 @@ subroutine csc_matvec(A,x,y)                                               !
     enddo
 
 end subroutine csc_matvec
-
-
-
-!--------------------------------------------------------------------------!
-subroutine cs_matrix_permute_vals(A,p)                                     !
-!--------------------------------------------------------------------------!
-    class(cs_matrix), intent(inout) :: A
-    integer, intent(in) :: p(:)
-
-    call A%g%right_permute(p)
-
-end subroutine cs_matrix_permute_vals
-
-
-
-!--------------------------------------------------------------------------!
-subroutine cs_matrix_permute_ptrs(A,p)                                     !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(cs_matrix), intent(inout) :: A
-    integer, intent(in) :: p(:)
-    ! local variables
-    integer :: i,k,ptr(A%g%n+1)
-    real(dp) :: val(A%nnz)
-
-    do i=1,A%g%n
-        ptr(p(i)+1) = A%g%ptr(i+1)-A%g%ptr(i)
-    enddo
-
-    ptr(1) = 1
-    do i=1,A%g%n
-        ptr(i+1) = ptr(i+1)+ptr(i)
-    enddo
-
-    do i=1,A%g%n
-        do k=0,A%g%ptr(i+1)-A%g%ptr(i)-1
-            val( ptr(p(i))+k ) = A%val( A%g%ptr(i)+k )
-        enddo
-    enddo
-
-    A%val = val
-
-    call A%g%left_permute(p)
-
-end subroutine cs_matrix_permute_ptrs
 
 
 
