@@ -80,6 +80,12 @@ subroutine new_sparse_matrix(A,matrix_format,nrow,ncol,g)                  !
         case('coo')
             allocate(coo_matrix::A)
             A%orientation = 'row'
+        case('llr')
+            allocate(ll_matrix::A)
+            A%orientation = 'row'
+        case('llc')
+            allocate(ll_matrix::A)
+            A%orientation = 'col'
     end select
 
     A%nrow = nrow

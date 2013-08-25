@@ -123,12 +123,12 @@ subroutine ll_assemble(A,g)                                                !
         A%right_permute_impl => ll_matrix_permute_vals
     endif
 
-    A%last = 0
+    A%last = 1
     allocate(A%ptrs(g%n))
     do i=1,g%n
         do k=1,g%lists(i)%length
-            A%last = A%last+1
             call A%ptrs(i)%prepend(A%last)
+            A%last = A%last+1
         enddo
     enddo
 
@@ -299,8 +299,8 @@ subroutine ll_set_value_not_preallocated(A,i,j,val)                        !
     real(dp), allocatable :: val_tmp(:)
 
     k = A%last
-    if (k>A%nnz) then
-        allocate(val_tmp(2*A%nnz))
+    if (k>size(A%val)) then
+        allocate(val_tmp(max(2*A%nnz,10)))
         val_tmp(1:A%nnz) = A%val
         call move_alloc(from=val_tmp, to=A%val)
     endif
@@ -317,6 +317,7 @@ subroutine ll_set_value_not_preallocated(A,i,j,val)                        !
 
     A%max_degree = A%g%max_degree
     A%nnz = A%nnz+1
+    A%last = A%last+1
 
 end subroutine ll_set_value_not_preallocated
 
@@ -341,8 +342,9 @@ function llr_find_entry(A,i,j)                                             !
     ! local variables
     integer :: k
 
+    llr_find_entry = -1
     k = A%g%find_edge(i,j)
-    llr_find_entry = A%ptrs(i)%get_value(k)
+    if (k/=-1) llr_find_entry = A%ptrs(i)%get_value(k)
 
 end function llr_find_entry
 
@@ -358,8 +360,9 @@ function llc_find_entry(A,i,j)                                             !
     ! local variables
     integer :: k
 
+    llc_find_entry = -1
     k = A%g%find_edge(j,i)
-    llc_find_entry = A%ptrs(j)%get_value(k)
+    if (k/=-1) llc_find_entry = A%ptrs(j)%get_value(k)
 
 end function llc_find_entry
 
