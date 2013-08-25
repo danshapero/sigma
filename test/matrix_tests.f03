@@ -40,7 +40,7 @@ implicit none
     enddo
     p(1) = 7
 
-    do test=1,4
+    do test=1,5
         ! Allocate the graph & matrix
         select case(test)
             case(1)
@@ -67,6 +67,12 @@ implicit none
 
                 call new_graph(h,'ll',7,7)
                 call new_sparse_matrix(B,'llr',7,7,h)
+            case(5)
+                call new_graph(g,'ll',7,7,edges)
+                call new_sparse_matrix(A,'llc',7,7,g)
+
+                call new_graph(h,'ll',7,7)
+                call new_sparse_matrix(B,'llc',7,7,h)
         end select
 
         ! Fill A to be the graph Laplacian

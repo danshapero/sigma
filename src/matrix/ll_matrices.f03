@@ -407,7 +407,7 @@ subroutine llc_matvec(A,x,y)                                               !
     y = 0.0_dp
     do j=1,A%g%n
         z = x(j)
-        do k=1,A%ptrs(i)%length
+        do k=1,A%ptrs(j)%length
             i = A%g%lists(j)%get_value(k)
             Aij = A%val( A%ptrs(j)%get_value(k) )
             y(i) = y(i)+Aij*z
