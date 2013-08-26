@@ -21,6 +21,7 @@ use bcsr_matrices
 ! Use the solver and preconditioner modules
 use iterative_solvers
 use cg_solvers
+use bicgstab_solvers
 use jacobi_preconditioners
 
 ! Use the C wrapper module

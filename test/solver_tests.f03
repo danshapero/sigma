@@ -8,7 +8,7 @@ implicit none
     class(sparse_matrix), allocatable :: A
     class(iterative_solver), allocatable :: solver
     class(preconditioner), allocatable :: pc
-    integer :: i,j,k
+    integer :: i,j,k,test
     real(dp) :: z
     integer, allocatable :: edges(:,:)
     real(dp), allocatable :: x(:), b(:)
@@ -37,18 +37,29 @@ implicit none
     x = 0.0_dp
     b = 2.0*(0.01_dp)**2
 
-    allocate(cg_solver::solver)
-    call solver%init(99)
+    do test=1,2
+        select case(test)
+            case(1)
+                allocate(cg_solver::solver)
+            case(2)
+                allocate(bicgstab_solver::solver)
+        end select
 
-    allocate(jacobi_preconditioner::pc)
-    call pc%init(A,0)
+        call solver%init(99)
 
-    call solver%solve(A,x,b,pc)
+        allocate(jacobi_preconditioner::pc)
+        call pc%init(A,0)
 
-    if ( abs( maxval(x)-0.25_dp )>1.0e-14 ) then
-        print *, 'Max value of x should be 1/4;'
-        print *, 'Value found:', maxval(x)
-    endif
+        call solver%solve(A,x,b,pc)
+
+        if ( abs( maxval(x)-0.25_dp )>1.0e-14 ) then
+            print *, 'Max value of x should be 1/4;'
+            print *, 'Value found:', maxval(x)
+            call exit(1)
+        endif
+
+        deallocate(solver,pc)
+    enddo
 
 
 end program solver_tests
