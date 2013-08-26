@@ -210,7 +210,6 @@ subroutine convert_c(cgp,storage_format) bind(c,name='convert')            !
     integer(c_int), intent(in), value :: storage_format
     ! local variables
     type(graph_pointer), pointer :: gp
-    class(graph), pointer :: g
     character(len=3) :: str_fmt
 
     select case(storage_format)

@@ -225,7 +225,7 @@ subroutine cs_sub_matrix_add(A,B)                                          !
     class(cs_matrix), intent(inout) :: A
     class(cs_matrix), intent(in)    :: B
     ! local variables
-    integer :: i,j,k,indx,nbrs(B%max_degree)
+    integer :: i,j,k,indx
 
     do i=1,B%g%n
         do k=B%g%ptr(i),B%g%ptr(i+1)-1

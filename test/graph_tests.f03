@@ -1,8 +1,6 @@
 program graph_tests
 
-use coo_graphs
-use ll_graphs
-use cs_graphs
+use fempack
 
 implicit none
 
@@ -30,7 +28,7 @@ implicit none
     !----------------------------------------------------------------------!
     ! Loop through and test each graph type                                !
     !----------------------------------------------------------------------!
-    do test=1,3
+    do test=1,4
 
         select case(test)
             case(1)
@@ -39,12 +37,15 @@ implicit none
                 allocate(coo_graph::g)
             case(3)
                 allocate(cs_graph::g)
+            case(4)
+                allocate(ellpack_graph::g)
         end select
 
         call g%init(7,7,edges)
 
         if (g%ne/=12) then
             print *, 'Graph should have 12 edges'
+            call exit(1)
         endif
 
         if (.not.g%connected(1,2) .or. g%connected(2,1)) then
@@ -54,10 +55,12 @@ implicit none
             else
                 print *, ' 2 -> 1'
             endif
+            call exit(1)
         endif
 
         if (g%max_degree/=6) then
             print *, 'Max degree of g should be 6; it is:',g%max_degree
+            call exit(1)
         endif
 
         do i=1,12

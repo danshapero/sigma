@@ -53,6 +53,8 @@ subroutine new_graph(g,graph_format,n,m,edges)                             !
             allocate(coo_graph::g)
         case('ll')
             allocate(ll_graph::g)
+        case('ellpack')
+            allocate(ellpack_graph::g)
     end select
 
     call g%init(n,m,edges)
@@ -87,6 +89,12 @@ subroutine new_sparse_matrix(A,matrix_format,nrow,ncol,g)                  !
             A%orientation = 'row'
         case('llc')
             allocate(ll_matrix::A)
+            A%orientation = 'col'
+        case('ellpackr')
+            allocate(ellpack_matrix::A)
+            A%orientation = 'row'
+        case('ellpackc')
+            allocate(ellpack_matrix::A)
             A%orientation = 'col'
     end select
 

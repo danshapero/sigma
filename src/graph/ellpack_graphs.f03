@@ -68,7 +68,8 @@ subroutine ellpack_graph_init(g,n,m,edges)                                 !
         g%max_degree = 0
     endif
 
-    allocate( g%node(g%max_degree,ne) )
+    allocate( g%node(g%max_degree,g%n) )
+    g%node = 0
 
     if (present(edges)) then
         degree = 0
@@ -93,7 +94,7 @@ subroutine ellpack_neighbors(g,i,nbrs)                                     !
     integer, intent(in) :: i
     integer, intent(out) :: nbrs(:)
 
-    nbrs = g%node(:,i)
+    nbrs(1:g%max_degree) = g%node(:,i)
 
 end subroutine ellpack_neighbors
 
@@ -220,7 +221,7 @@ subroutine ellpack_graph_left_permute(g,p)                                 !
     class(ellpack_graph), intent(inout) :: g
     integer, intent(in) :: p(:)
     ! local variables
-    integer :: i,k,node(g%max_degree,g%n)
+    integer :: i,node(g%max_degree,g%n)
 
     do i=1,g%n
         node(:,p(i)) = g%node(:,i)
@@ -312,7 +313,7 @@ subroutine ellpack_add_edge_with_max_degree_increase(g,i,j)                !
         g%node(1:g%max_degree,k) = node(1:g%max_degree,k)
     enddo
 
-    g%node(i,g%max_degree+1) = j
+    g%node(g%max_degree+1,i) = j
 
     g%max_degree = g%max_degree+1
 

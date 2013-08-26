@@ -156,7 +156,7 @@ function ellpack_get_value(A,i,j)                                          !
 
     ellpack_get_value = 0.0_dp
     call A%find_entry(i,j,k,l)
-    if (k/=-1) ellpack_get_value = A%val(k,l)
+    if (l/=-1) ellpack_get_value = A%val(l,k)
 
 end function ellpack_get_value
 
@@ -173,8 +173,8 @@ subroutine ellpack_set_value(A,i,j,val)                                    !
     integer :: k,l
 
     call A%find_entry(i,j,k,l)
-    if (k/=-1) then
-        A%val(k,l) = val
+    if (l/=-1) then
+        A%val(l,k) = val
     else
         call A%ellpack_set_value_not_preallocated(i,j,val)
     endif
@@ -194,8 +194,8 @@ subroutine ellpack_add_value(A,i,j,val)                                    !
     integer :: k,l
 
     call A%find_entry(i,j,k,l)
-    if (k/=-1) then
-        A%val(k,l) = A%val(k,l)+val
+    if (l/=-1) then
+        A%val(l,k) = A%val(l,k)+val
     else
         call A%ellpack_set_value_not_preallocated(i,j,val)
     endif
@@ -218,7 +218,7 @@ subroutine ellpack_sub_matrix_add(A,B)                                     !
             j = B%g%node(k,i)
             if (j/=0) then
                 call A%find_entry(i,j,indx,l)
-                A%val(indx,i) = A%val(indx,i)+B%val(k,i)
+                A%val(l,i) = A%val(l,i)+B%val(k,i)
             endif
         enddo
     enddo
@@ -296,12 +296,13 @@ subroutine ellpack_set_value_not_preallocated(A,i,j,val)                   !
 
     call A%find_entry(i,j,k,l)
 
-    if (k<=A%max_degree) then
-        A%val(k,l) = val
+    if (l<=A%max_degree) then
+        A%val(l,k) = val
     else
         allocate(val_temp(A%max_degree+1,A%g%n))
         val_temp(1:A%max_degree,:) = A%val
         call move_alloc(from=val_temp, to=A%val)
+        A%val(A%max_degree+1,k) = val
     endif
 
     A%nnz = A%nnz+1
@@ -367,7 +368,7 @@ subroutine ellpack_matrix_permute_ptrs(A,p)                                !
     class(ellpack_matrix), intent(inout) :: A
     integer, intent(in) :: p(:)
     ! local variables
-    integer :: i,k
+    integer :: i
     real(dp) :: val(A%max_degree,A%g%n)
 
     do i=1,A%g%n
@@ -399,6 +400,7 @@ subroutine ellr_matvec(A,x,y)                                              !
             j = A%g%node(k,i)
             if (j/=0) z = z+A%val(k,i)*x(j)
         enddo
+        y(i) = z
     enddo
 
 end subroutine ellr_matvec

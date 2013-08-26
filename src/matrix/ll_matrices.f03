@@ -295,7 +295,7 @@ subroutine ll_set_value_not_preallocated(A,i,j,val)                        !
     integer, intent(in) :: i,j
     real(dp), intent(in) :: val
     ! local variables
-    integer :: k,l
+    integer :: k
     real(dp), allocatable :: val_tmp(:)
 
     k = A%last
