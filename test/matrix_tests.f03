@@ -124,7 +124,7 @@ implicit none
         call A%sub_matrix_add(B)
         y = 0.0_dp
         call A%matvec(x,y)
-        if ( maxval(dabs(y)-1.0)>1.0e-14 ) then
+        if ( maxval(dabs(y-1.0))>1.0e-14 ) then
             print *, '(A+I)*[1,...,1] should be = 1;'
             print *, 'range(y) = ',minval(y),maxval(y)
         endif
@@ -140,6 +140,13 @@ implicit none
         enddo
         if (.not.correct) then
             print *, 'Permutation failed'
+        endif
+
+        call A%matvec(x,y)
+
+        if ( maxval(dabs(y-1.0))>1.0e-14 ) then
+            print *, 'permuted (A+I)*[1,...,1] should still be = 1'
+            print *, 'range(y) = ',minval(y),maxval(y)
         endif
 
         ! Free up the graphs and matrices for the next test

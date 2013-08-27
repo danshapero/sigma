@@ -36,6 +36,9 @@ end type preconditioner
 !--------------------------------------------------------------------------!
 abstract interface                                                         !
 !--------------------------------------------------------------------------!
+
+    !--------------------------------------------
+    ! Interfaces for iterative solver procedures
     subroutine init_solver_ifc(solver,nn,tolerance)
         import :: iterative_solver, dp
         class(iterative_solver), intent(inout)  :: solver
@@ -65,7 +68,8 @@ abstract interface                                                         !
         class(iterative_solver), intent(inout)  :: solver
     end subroutine free_solver_ifc
 
-
+    !------------------------------------------
+    ! Interfaces for preconditioner procedures
     subroutine init_preconditioner_ifc(pc,A,level)
         import :: preconditioner, sparse_matrix
         class(preconditioner), intent(inout)    :: pc

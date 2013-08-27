@@ -56,8 +56,47 @@ subroutine bicgstab_pc_solve(solver,A,x,b,pc)                              !
     ! local variables
     real(dp) :: res2
 
-    ! Haven't written the preconditioned version yet
-    call solver%no_pc_solve(A,x,b)
+    associate( p => solver%p, q => solver%q, r => solver%r, &
+        & r0 => solver%r0, v => solver%v, s => solver%s, t => solver%t, &
+        & z => solver%z, alpha => solver%alpha, rho => solver%rho, &
+        & rho_old => solver%rho_old, beta => solver%beta, &
+        & omega => solver%omega )
+
+    call A%matvec(x,q)
+    z = b-q
+    call pc%precondition(A,r0,z)
+    r = r0
+
+    rho = 1.0_dp
+    rho_old = 1.0_dp
+    alpha = 1.0_dp
+    omega = 1.0_dp
+
+    v = 0.0_dp
+    p = 0.0_dp
+
+    res2 = dot_product(r,r)
+
+    do while ( dsqrt(res2)>solver%tolerance )
+        rho = dot_product(r0,r)
+        beta = rho/rho_old*alpha/omega
+        p = r+beta*(p-omega*v)
+        call A%matvec(p,z)
+        call pc%precondition(A,v,z)
+
+        alpha = rho/dot_product(r0,v)
+        s = r-alpha*v
+        call A%matvec(s,z)
+        call pc%precondition(A,t,z)
+        omega = dot_product(s,t)/dot_product(t,t)
+        x = x+alpha*p+omega*s
+        r = s-omega*t
+
+        rho_old = rho
+        res2 = dot_product(r,r)
+    enddo
+
+    end associate
 
 end subroutine bicgstab_pc_solve
 
@@ -75,7 +114,7 @@ subroutine bicgstab_no_pc_solve(solver,A,x,b)                              !
     real(dp) :: res2
 
     associate( p => solver%p, q => solver%q, r => solver%r, &
-        & r0 => solver%r0, v => solver%v, s => solver%s, t => solver%s, &
+        & r0 => solver%r0, v => solver%v, s => solver%s, t => solver%t, &
         & z => solver%z, alpha => solver%alpha, rho => solver%rho, &
         & rho_old => solver%rho_old, beta => solver%beta, &
         & omega => solver%omega )
@@ -105,10 +144,12 @@ subroutine bicgstab_no_pc_solve(solver,A,x,b)                              !
 
         call A%matvec(s,t)
         omega = dot_product(s,t)/dot_product(t,t)
+        if (isnan(omega)) omega = 0.0_dp
         x = x+alpha*p+omega*s
         r = s-omega*t
 
         res2 = dot_product(r,r)
+        rho_old = rho
     enddo
 
     end associate
