@@ -35,7 +35,8 @@ implicit none
     enddo
 
     allocate(cs_graph::g)
-    allocate(bcsr_matrix::A)
+    allocate(bcs_matrix::A)
+    A%orientation = "row"
 
     call g%init(7,7,edges)
     call A%init(14,14)
