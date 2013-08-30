@@ -9,3 +9,4 @@ set(LIBRARY_OUTPUT_PATH ${fempack_BINARY_DIR}/lib)
 
 add_subdirectory("${CMAKE_SOURCE_DIR}/src")
 add_subdirectory("${CMAKE_SOURCE_DIR}/test")
+add_subdirectory("${CMAKE_SOURCE_DIR}/examples")
