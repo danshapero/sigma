@@ -4,8 +4,8 @@ use fempack
 
 implicit none
 
-    class(graph), allocatable :: g, h
-    class(sparse_matrix), allocatable :: A, B
+    class(graph), pointer :: g, h
+    class(sparse_matrix), pointer :: A, B
     integer :: i,j,k,degree,test
     real(dp) :: z
     logical :: correct

@@ -19,10 +19,13 @@ contains
     procedure(assemble_ifc), deferred       :: assemble
     procedure(mat_neighbors_ifc), deferred  :: neighbors
     procedure(get_value_ifc), deferred      :: get_value
-    procedure(set_value_ifc), deferred      :: set_value, add_value
+    procedure(set_value_ifc), deferred      :: set_value
+    procedure(set_value_ifc), deferred      :: add_value
     procedure(sub_matrix_add_ifc), deferred :: sub_matrix_add
-    procedure(permute_matrix_ifc), deferred :: left_permute, right_permute
-    procedure(matvec_ifc), deferred         :: matvec, matvec_t
+    procedure(permute_matrix_ifc), deferred :: left_permute
+    procedure(permute_matrix_ifc), deferred :: right_permute
+    procedure(matvec_ifc), deferred         :: matvec
+    procedure(matvec_ifc), deferred         :: matvec_t
     generic :: matmul => matvec
     generic :: matmul_t => matvec_t
 end type sparse_matrix

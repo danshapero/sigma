@@ -12,21 +12,31 @@ type, extends(sparse_matrix), abstract :: block_sparse_matrix              !
 !--------------------------------------------------------------------------!
     integer :: nr, nc
 contains
-    procedure(get_block_ifc), deferred      :: get_block
-    procedure(set_block_ifc), deferred      :: set_block, add_block
-    procedure(block_matvec_ifc), deferred   :: block_matvec, block_matvec_t
-    procedure(l_block_matvec_ifc), deferred :: l_block_matvec, &
-                                             & l_block_matvec_t
-    procedure(r_block_matvec_ifc), deferred :: r_block_matvec, &
-                                             & r_block_matvec_t
-    generic :: matmul => matvec, &
-                 & block_matvec, & 
-               & l_block_matvec, &
-               & r_block_matvec
-    generic :: matmul_t => matvec_t, &
-                   & block_matvec_t, &
-                 & l_block_matvec_t, &
-                 & r_block_matvec_t
+    procedure(get_block_ifc), deferred        :: get_block
+    procedure(set_block_ifc), deferred        :: set_block
+    procedure(set_block_ifc), deferred        :: add_block
+    procedure(b_matvec_ifc), deferred         :: matvec
+    procedure(b_matvec_ifc), deferred         :: matvec_t
+    procedure(block_matvec_ifc), deferred     :: block_matvec
+    procedure(block_matvec_ifc), deferred     :: block_matvec_t
+    procedure(l_block_matvec_ifc), deferred   :: l_block_matvec
+    procedure(l_block_matvec_ifc), deferred   :: l_block_matvec_t
+    procedure(r_block_matvec_ifc), deferred   :: r_block_matvec
+    procedure(r_block_matvec_ifc), deferred   :: r_block_matvec_t
+!    generic :: matmul => matvec, &
+!                 & block_matvec, & 
+!               & l_block_matvec, &
+!               & r_block_matvec
+!    generic :: matmul_t => matvec_t, &
+!                   & block_matvec_t, &
+!                 & l_block_matvec_t, &
+!                 & r_block_matvec_t
+    generic :: matmul => block_matvec, &
+         & l_block_matvec, &
+         & r_block_matvec
+    generic :: matmul_t => block_matvec_t, &
+         & l_block_matvec_t, &
+         & r_block_matvec_t
 end type block_sparse_matrix
 
 

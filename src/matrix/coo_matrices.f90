@@ -17,11 +17,13 @@ contains
     procedure :: assemble => coo_assemble
     procedure :: neighbors => coo_matrix_neighbors
     procedure :: get_value => coo_get_value
-    procedure :: set_value => coo_set_value, add_value => coo_add_value
+    procedure :: set_value => coo_set_value
+    procedure :: add_value => coo_add_value
     procedure :: sub_matrix_add => coo_sub_matrix_add
-    procedure :: left_permute => coo_left_permute, &
-                & right_permute => coo_right_permute
-    procedure :: matvec => coo_matvec, matvec_t => coo_matvec_t
+    procedure :: left_permute => coo_left_permute
+    procedure :: right_permute => coo_right_permute
+    procedure :: matvec => coo_matvec
+    procedure :: matvec_t => coo_matvec_t
     procedure, private :: coo_set_value_not_preallocated
 end type coo_matrix
 
@@ -51,9 +53,12 @@ end subroutine coo_matrix_init
 subroutine coo_assemble(A,g)                                               !
 !--------------------------------------------------------------------------!
     class(coo_matrix), intent(inout) :: A
-    class(coo_graph), pointer, intent(in) :: g
+    class(graph), pointer, intent(in) :: g
 
-    A%g => g
+    select type(g)
+        type is(coo_graph)
+            A%g => g
+    end select
 
     A%nrow = g%n
     A%ncol = g%m
@@ -146,15 +151,14 @@ subroutine coo_sub_matrix_add(A,B)                                         !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(coo_matrix), intent(inout) :: A
-    class(coo_matrix), intent(in)    :: B
+    class(sparse_matrix), intent(in) :: B
     ! local variables
     integer :: i,j,k,indx
 
-    do k=1,B%nnz
-        i = B%g%edges(1,k)
-        j = B%g%edges(2,k)
-        indx = A%g%find_edge(i,j)
-        A%val(indx) = A%val(indx)+B%val(k)
+    do k=1,A%nnz
+        i = A%g%edges(1,k)
+        j = A%g%edges(2,k)
+        A%val(k) = A%val(k)+B%get_value(i,j)
     enddo
 
 end subroutine coo_sub_matrix_add

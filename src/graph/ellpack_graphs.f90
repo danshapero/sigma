@@ -17,8 +17,8 @@ contains
     procedure :: find_edge => ellpack_find_edge
     procedure :: add_edge => ellpack_add_edge
     procedure :: delete_edge => ellpack_delete_edge
-    procedure :: left_permute => ellpack_graph_left_permute, &
-                & right_permute => ellpack_graph_right_permute
+    procedure :: left_permute => ellpack_graph_left_permute
+    procedure :: right_permute => ellpack_graph_right_permute
     procedure :: free => ellpack_free
     procedure :: dump_edges => ellpack_dump_edges
     ! auxiliary routines

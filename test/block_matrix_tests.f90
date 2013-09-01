@@ -4,7 +4,7 @@ use fempack
 
 implicit none
 
-    class(graph), allocatable :: g
+    class(graph), pointer :: g
     class(block_sparse_matrix), allocatable :: A
     integer :: i,j,k
     integer, allocatable :: edges(:,:), nbrs(:)

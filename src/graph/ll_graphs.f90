@@ -17,8 +17,8 @@ contains
     procedure :: find_edge => ll_find_edge
     procedure :: add_edge => ll_add_edge
     procedure :: delete_edge => ll_delete_edge
-    procedure :: left_permute => ll_graph_left_permute, &
-                & right_permute => ll_graph_right_permute
+    procedure :: left_permute => ll_graph_left_permute
+    procedure :: right_permute => ll_graph_right_permute
     procedure :: free => ll_free
     procedure :: dump_edges => ll_dump_edges
 

@@ -4,7 +4,7 @@ use fempack
 
 implicit none
 
-    class(graph), allocatable :: g
+    class(graph), pointer :: g
     class(sparse_matrix), allocatable :: A
     class(iterative_solver), allocatable :: solver
     class(preconditioner), allocatable :: pc

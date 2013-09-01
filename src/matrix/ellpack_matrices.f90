@@ -14,22 +14,23 @@ type, extends(sparse_matrix) :: ellpack_matrix                             !
     class(ellpack_graph), pointer :: g
     ! procedure pointers to implementations of matrix operations
     procedure(ellpack_find_entry_ifc), pointer, private :: find_entry
-    procedure(ellpack_permute_ifc), pointer, private :: left_permute_impl, &
-                                                        & right_permute_impl
-    procedure(ellpack_matvec_ifc), pointer, private :: matvec_impl, &
-                                                        & matvec_t_impl
+    procedure(ellpack_permute_ifc), pointer, private :: left_permute_impl
+    procedure(ellpack_permute_ifc), pointer, private :: right_permute_impl
+    procedure(ellpack_matvec_ifc), pointer, private :: matvec_impl
+    procedure(ellpack_matvec_ifc), pointer, private :: matvec_t_impl
 contains
     ! front-ends to matrix operations
     procedure :: init => ellpack_matrix_init
     procedure :: assemble => ellpack_assemble
     procedure :: neighbors => ellpack_matrix_neighbors
     procedure :: get_value => ellpack_get_value
-    procedure :: set_value => ellpack_set_value, &
-                & add_value => ellpack_add_value
+    procedure :: set_value => ellpack_set_value
+    procedure :: add_value => ellpack_add_value
     procedure :: sub_matrix_add => ellpack_sub_matrix_add
-    procedure :: left_permute => ellpack_left_permute, &
-                & right_permute => ellpack_right_permute
-    procedure :: matvec => ellpack_matvec, matvec_t => ellpack_matvec_t
+    procedure :: left_permute => ellpack_left_permute
+    procedure :: right_permute => ellpack_right_permute
+    procedure :: matvec => ellpack_matvec
+    procedure :: matvec_t => ellpack_matvec_t
     procedure, private :: ellpack_set_value_not_preallocated
 end type ellpack_matrix
 
@@ -93,9 +94,12 @@ end subroutine ellpack_matrix_init
 subroutine ellpack_assemble(A,g)                                           !
 !--------------------------------------------------------------------------!
     class(ellpack_matrix), intent(inout) :: A
-    class(ellpack_graph), pointer, intent(in) :: g
+    class(graph), pointer, intent(in) :: g
 
-    A%g => g
+    select type(g)
+        type is(ellpack_graph)
+            A%g => g
+    end select
 
     if (A%orientation=='col') then
         A%ncol = g%n
@@ -209,16 +213,15 @@ subroutine ellpack_sub_matrix_add(A,B)                                     !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(ellpack_matrix), intent(inout) :: A
-    class(ellpack_matrix), intent(in)    :: B
+    class(sparse_matrix), intent(in)     :: B
     ! local variables
     integer :: i,j,k,l,indx
 
-    do i=1,B%g%n
-        do k=1,B%max_degree
-            j = B%g%node(k,i)
+    do i=1,A%g%n
+        do k=1,A%max_degree
+            j = A%g%node(k,i)
             if (j/=0) then
-                call A%find_entry(i,j,indx,l)
-                A%val(l,i) = A%val(l,i)+B%val(k,i)
+                A%val(k,i) = A%val(k,i)+B%get_value(i,j)
             endif
         enddo
     enddo

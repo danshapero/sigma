@@ -14,35 +14,38 @@ type, extends(block_sparse_matrix) :: bcs_matrix                           !
     real(dp), allocatable :: val(:,:,:)
     ! procedure pointers to implementations of matrix operations
     procedure(bcs_find_block_ifc), pointer, private :: find_block
-    procedure(bcs_permute_ifc), pointer, private  &
-        & :: left_permute_impl, right_permute_impl
-    procedure(bcs_matvec_ifc), pointer, private &
-        & :: matvec_impl, matvec_t_impl
-    procedure(bcs_block_matvec_ifc), pointer, private &
-        & :: block_matvec_impl, block_matvec_t_impl
-    procedure(bcs_l_block_matvec_ifc), pointer, private &
-        & :: l_block_matvec_impl, l_block_matvec_t_impl
-    procedure(bcs_r_block_matvec_ifc), pointer, private &
-        & :: r_block_matvec_impl, r_block_matvec_t_impl
+    procedure(bcs_permute_ifc), pointer, private :: left_permute_impl
+    procedure(bcs_permute_ifc), pointer, private :: right_permute_impl
+    procedure(bcs_matvec_ifc), pointer, private :: matvec_impl
+    procedure(bcs_matvec_ifc), pointer, private :: matvec_t_impl
+    procedure(bcs_block_matvec_ifc), pointer, private :: block_matvec_impl
+    procedure(bcs_block_matvec_ifc), pointer, private :: block_matvec_t_impl
+    procedure(bcs_l_block_matvec_ifc), pointer, private :: l_block_matvec_impl
+    procedure(bcs_l_block_matvec_ifc), pointer, private :: l_block_matvec_t_impl
+    procedure(bcs_r_block_matvec_ifc), pointer, private :: r_block_matvec_impl
+    procedure(bcs_r_block_matvec_ifc), pointer, private :: r_block_matvec_t_impl
 contains
     ! front-ends to matrix operations
     procedure :: init => bcs_init
     procedure :: assemble => bcs_assemble
     procedure :: neighbors => bcs_matrix_neighbors
     procedure :: get_value => bcs_get_value
-    procedure :: set_value => bcs_set_value, add_value => bcs_add_value
+    procedure :: set_value => bcs_set_value
+    procedure :: add_value => bcs_add_value
     procedure :: get_block => bcs_get_block
-    procedure :: set_block => bcs_set_block, add_block => bcs_add_block
+    procedure :: set_block => bcs_set_block
+    procedure :: add_block => bcs_add_block
     procedure :: sub_matrix_add => bcs_sub_matrix_add
-    procedure :: left_permute => bcs_left_permute, &
-                & right_permute => bcs_right_permute
-    procedure :: matvec => bcs_matvec, matvec_t => bcs_matvec_t
-    procedure :: block_matvec => bcs_block_matvec, &
-                & block_matvec_t => bcs_block_matvec_t
-    procedure :: l_block_matvec => bcs_l_block_matvec, &
-                & l_block_matvec_t => bcs_l_block_matvec_t
-    procedure :: r_block_matvec => bcs_r_block_matvec, &
-                & r_block_matvec_t => bcs_r_block_matvec_t
+    procedure :: left_permute => bcs_left_permute
+    procedure :: right_permute => bcs_right_permute
+    procedure :: matvec => bcs_matvec
+    procedure :: matvec_t => bcs_matvec_t
+    procedure :: block_matvec => bcs_block_matvec
+    procedure :: block_matvec_t => bcs_block_matvec_t
+    procedure :: l_block_matvec => bcs_l_block_matvec
+    procedure :: l_block_matvec_t => bcs_l_block_matvec_t
+    procedure :: r_block_matvec => bcs_r_block_matvec
+    procedure :: r_block_matvec_t => bcs_r_block_matvec_t
     procedure, private :: bcs_set_block_not_preallocated
 end type bcs_matrix
 
@@ -127,9 +130,13 @@ end subroutine bcs_init
 subroutine bcs_assemble(A,g)                                               !
 !--------------------------------------------------------------------------!
     class(bcs_matrix), intent(inout) :: A
-    class(cs_graph), pointer, intent(in) :: g
+    class(graph), pointer, intent(in) :: g
 
-    A%g => g
+    select type(g)
+        type is(cs_graph)
+            A%g => g
+    end select
+
     A%nnz = g%ne
     A%max_degree = g%max_degree
 
@@ -355,17 +362,29 @@ subroutine bcs_sub_matrix_add(A,B)                                         !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(bcs_matrix), intent(inout) :: A
-    class(bcs_matrix), intent(in)    :: B
+    class(sparse_matrix), intent(in) :: B
     ! local variables
-    integer :: i,j,k,indx
+    integer :: i,j,k,n1,n2
+    real(dp) :: vals(size(A%val,1),size(A%val,2))
 
-    do i=1,B%nrow
-        do k=B%g%ptr(i),B%g%ptr(i+1)-1
-            j = B%g%node(k)
-            indx = A%g%find_edge(i,j)
-            A%val(:,:,indx) = A%val(:,:,indx)+B%val(:,:,k)
-        enddo
-    enddo
+    select type(B)
+        class is(block_sparse_matrix)
+            do i=1,A%g%n
+                do k=A%g%ptr(i),A%g%ptr(i+1)-1
+                    j = A%g%node(k)
+                    call B%get_block(i,j,vals)
+                    A%val(:,:,k) = A%val(:,:,k)+vals
+                enddo
+            enddo
+            return
+        class is(sparse_matrix)
+!            do i=1,A%g%n
+!                do k=A%g%ptr(i),A%g%ptr(i+1)-1
+!                    j = A%g%node(k)
+!                    
+!                enddo
+!            enddo
+    end select
 
 end subroutine bcs_sub_matrix_add
 

@@ -12,7 +12,7 @@ implicit none
     integer, allocatable :: bnd(:), ele(:,:), mask(:)
 
     ! variables for the stiffness and mass matrices
-    class(sparse_matrix), allocatable :: A, B
+    class(sparse_matrix), pointer :: A, B
 
     ! variables for solving the linear system
     class(iterative_solver), allocatable :: solver

@@ -17,8 +17,8 @@ contains
     procedure :: find_edge => coo_find_edge
     procedure :: add_edge => coo_add_edge
     procedure :: delete_edge => coo_delete_edge
-    procedure :: left_permute => coo_graph_left_permute, &
-                & right_permute => coo_graph_right_permute
+    procedure :: left_permute => coo_graph_left_permute
+    procedure :: right_permute => coo_graph_right_permute
     procedure :: free => coo_free
     procedure :: dump_edges => coo_dump_edges
 

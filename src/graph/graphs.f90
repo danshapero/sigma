@@ -15,7 +15,8 @@ type, abstract :: graph                                                    !
     procedure(find_edge_ifc), deferred      :: find_edge
     procedure(add_edge_ifc), deferred       :: add_edge
     procedure(delete_edge_ifc), deferred    :: delete_edge
-    procedure(permute_graph_ifc), deferred  :: left_permute, right_permute
+    procedure(permute_graph_ifc), deferred  :: left_permute
+    procedure(permute_graph_ifc), deferred  :: right_permute
     procedure(free_ifc), deferred           :: free
     procedure(dump_edges_ifc), deferred     :: dump_edges
 end type graph

@@ -18,8 +18,8 @@ contains
     procedure :: find_edge => cs_find_edge
     procedure :: add_edge  => cs_add_edge
     procedure :: delete_edge => cs_delete_edge
-    procedure :: left_permute => cs_graph_left_permute, &
-                & right_permute => cs_graph_right_permute
+    procedure :: left_permute => cs_graph_left_permute
+    procedure :: right_permute => cs_graph_right_permute
     procedure :: free => cs_free
     procedure :: dump_edges => cs_dump_edges
     ! auxiliary routines

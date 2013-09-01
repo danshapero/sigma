@@ -14,20 +14,23 @@ type, extends(sparse_matrix) :: cs_matrix                                  !
     class(cs_graph), pointer :: g
     ! procedure pointers to implementations of matrix operations
     procedure(cs_find_entry_ifc), pointer, private :: find_entry
-    procedure(cs_permute_ifc), pointer, private :: left_permute_impl, &
-                                                & right_permute_impl
-    procedure(cs_matvec_ifc), pointer, private :: matvec_impl, matvec_t_impl
+    procedure(cs_permute_ifc), pointer, private :: left_permute_impl
+    procedure(cs_permute_ifc), pointer, private :: right_permute_impl
+    procedure(cs_matvec_ifc), pointer, private :: matvec_impl
+    procedure(cs_matvec_ifc), pointer, private :: matvec_t_impl
 contains
     ! front-ends to matrix operations
     procedure :: init => cs_matrix_init
     procedure :: assemble => cs_assemble
     procedure :: neighbors => cs_matrix_neighbors
     procedure :: get_value => cs_get_value
-    procedure :: set_value => cs_set_value, add_value => cs_add_value
+    procedure :: set_value => cs_set_value
+    procedure :: add_value => cs_add_value
     procedure :: sub_matrix_add => cs_sub_matrix_add
-    procedure :: left_permute => cs_left_permute, &
-                & right_permute => cs_right_permute
-    procedure :: matvec => cs_matvec, matvec_t => cs_matvec_t
+    procedure :: left_permute => cs_left_permute
+    procedure :: right_permute => cs_right_permute
+    procedure :: matvec => cs_matvec
+    procedure :: matvec_t => cs_matvec_t
     procedure, private :: cs_set_value_not_preallocated
 end type cs_matrix
 
@@ -98,9 +101,12 @@ end subroutine cs_matrix_init
 subroutine cs_assemble(A,g)                                                !
 !--------------------------------------------------------------------------!
     class(cs_matrix), intent(inout) :: A
-    class(cs_graph), pointer, intent(in) :: g
+    class(graph), pointer, intent(in) :: g
 
-    A%g => g
+    select type(g)
+        type is(cs_graph)
+            A%g => g
+    end select
 
     ! Check whether the matrix is stored in row- or column-oriented format.
     ! If we take a CSR matrix A and use the CSC matvec operation
@@ -222,16 +228,15 @@ end subroutine cs_add_value
 subroutine cs_sub_matrix_add(A,B)                                          !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(cs_matrix), intent(inout) :: A
-    class(cs_matrix), intent(in)    :: B
+    class(cs_matrix), intent(inout)  :: A
+    class(sparse_matrix), intent(in) :: B
     ! local variables
     integer :: i,j,k,indx
 
-    do i=1,B%g%n
-        do k=B%g%ptr(i),B%g%ptr(i+1)-1
-            j = B%g%node(k)
-            indx = A%g%find_edge(i,j)
-            A%val(indx) = A%val(indx)+B%val(k)
+    do i=1,A%g%n
+        do k=A%g%ptr(i),A%g%ptr(i+1)-1
+            j = A%g%node(k)
+            A%val(k) = A%val(k)+B%get_value(i,j)
         enddo
     enddo
 

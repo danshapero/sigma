@@ -16,21 +16,23 @@ type, extends(sparse_matrix) :: ll_matrix                                  !
     class(ll_graph), pointer :: g
     ! procedure pointers to implementations of matrix operations
     procedure(ll_find_entry_ifc), pointer, private :: find_entry
-    procedure(ll_permute_ifc), pointer, private :: left_permute_impl, &
-                                        & right_permute_impl
-    procedure(ll_matvec_ifc), pointer, private :: matvec_impl, matvec_t_impl
-
+    procedure(ll_permute_ifc), pointer, private    :: left_permute_impl
+    procedure(ll_permute_ifc), pointer, private    :: right_permute_impl
+    procedure(ll_matvec_ifc), pointer, private     :: matvec_impl
+    procedure(ll_matvec_ifc), pointer, private     :: matvec_t_impl
 contains
     ! front-ends to matrix operations
     procedure :: init => ll_matrix_init
     procedure :: assemble => ll_assemble
     procedure :: neighbors => ll_matrix_neighbors
     procedure :: get_value => ll_get_value
-    procedure :: set_value => ll_set_value, add_value => ll_add_value
+    procedure :: set_value => ll_set_value
+    procedure :: add_value => ll_add_value
     procedure :: sub_matrix_add => ll_sub_matrix_add
-    procedure :: left_permute => ll_left_permute, &
-                & right_permute => ll_right_permute
-    procedure :: matvec => ll_matvec, matvec_t => ll_matvec_t
+    procedure :: left_permute => ll_left_permute
+    procedure :: right_permute => ll_right_permute
+    procedure :: matvec => ll_matvec
+    procedure :: matvec_t => ll_matvec_t
     procedure, private :: ll_set_value_not_preallocated
 end type ll_matrix
 
@@ -93,11 +95,13 @@ end subroutine ll_matrix_init
 subroutine ll_assemble(A,g)                                                !
 !--------------------------------------------------------------------------!
     class(ll_matrix), intent(inout) :: A
-    class(ll_graph), pointer, intent(in) :: g
+    class(graph), pointer, intent(in) :: g
     ! local variables
     integer :: i,k
 
-    A%g => g
+    select type(g)
+        type is(ll_graph)
+            A%g => g
 
     if (A%orientation=='col') then
         A%ncol = g%n
@@ -131,6 +135,8 @@ subroutine ll_assemble(A,g)                                                !
             A%last = A%last+1
         enddo
     enddo
+
+    end select
 
     A%nnz = g%ne
     A%max_degree = g%max_degree
@@ -219,16 +225,16 @@ end subroutine ll_add_value
 subroutine ll_sub_matrix_add(A,B)                                          !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(ll_matrix), intent(inout) :: A
-    class(ll_matrix), intent(in)    :: B
+    class(ll_matrix), intent(inout)  :: A
+    class(sparse_matrix), intent(in) :: B
     ! local variables
     integer :: i,j,k
     real(dp) :: Bij
 
-    do i=1,B%g%n
-        do k=1,B%g%lists(i)%length
-            j = B%g%lists(i)%get_value(k)
-            Bij = B%val( B%ptrs(i)%get_value(k) )
+    do i=1,A%g%n
+        do k=1,A%g%lists(i)%length
+            j = A%g%lists(i)%get_value(k)
+            Bij = B%get_value(i,j)
             call A%add_value(i,j,Bij)
         enddo
     enddo
