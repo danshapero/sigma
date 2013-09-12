@@ -238,16 +238,25 @@ end subroutine convert_c
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine sparse_matrix_init_c(cmp,n,m) bind(c,name='sparse_matrix_init') !
+subroutine sparse_matrix_init_c(cmp,nrow,ncol,orientation) &               !
+    & bind(c,name='sparse_matrix_init')                                    !
 !--------------------------------------------------------------------------!
     ! input/output variables
     type(c_ptr), intent(in) :: cmp
-    integer(c_int), intent(in), value :: n,m
+    integer(c_int), intent(in), value :: nrow,ncol
+    integer(c_int), intent(in), value :: orientation
     ! local variables
     class(sparse_matrix), pointer :: A
+!    class(graph), pointer :: g
 
     A => cmatrix_to_fmatrix(cmp)
-    call A%init(n,m)
+!    g => cgraph_to_fgraph(cgp)
+    select case(orientation)
+        case(1)
+            call A%init(nrow,ncol,'row')
+        case(-1)
+            call A%init(nrow,ncol,'col')
+    end select
 
 end subroutine sparse_matrix_init_c
 

@@ -27,7 +27,6 @@ type, extends(block_sparse_matrix) :: bcs_matrix                           !
 contains
     ! front-ends to matrix operations
     procedure :: init => bcs_init
-    procedure :: assemble => bcs_assemble
     procedure :: neighbors => bcs_matrix_neighbors
     procedure :: get_value => bcs_get_value
     procedure :: set_value => bcs_set_value
@@ -113,80 +112,86 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine bcs_init(A,nrow,ncol)                                           !
+subroutine bcs_init(A,nrow,ncol,orientation,g)                             !
 !--------------------------------------------------------------------------!
     class(bcs_matrix), intent(inout) :: A
     integer, intent(in) :: nrow, ncol
+    character(len=3), intent(in) :: orientation
+    class(graph), pointer, intent(in), optional :: g
 
     A%nrow = nrow
     A%ncol = ncol
-    A%max_degree = 0
+    A%orientation = orientation
 
-end subroutine bcs_init
+    if (present(g)) then
+        ! Check to make sure the graph given is of the right type
+        select type(g)
+            class is(cs_graph)
+                A%g => g
+            class default
+                ! Change this to converting the graph
+                print *, 'Structure graph g of a Block CS matrix A must be'
+                print *, 'a CS graph. Exiting.'
+                call exit(1)
+        end select
 
-
-
-!--------------------------------------------------------------------------!
-subroutine bcs_assemble(A,g)                                               !
-!--------------------------------------------------------------------------!
-    class(bcs_matrix), intent(inout) :: A
-    class(graph), pointer, intent(in) :: g
-
-    select type(g)
-        type is(cs_graph)
-            A%g => g
-    end select
-
-    A%nnz = g%ne
-    A%max_degree = g%max_degree
-
-    if (A%orientation=='col') then
-        A%nc = A%ncol/g%n
-        A%nr = A%nrow/g%m
-        allocate(A%val(A%nc,A%nr,A%nnz))
-
-        A%find_block => bcsc_find_block
-
-        A%left_permute_impl => bcs_matrix_permute_vals
-        A%right_permute_impl => bcs_matrix_permute_ptrs
-
-        A%matvec_impl   => bcsc_matvec
-        A%matvec_t_impl => bcsr_matvec
-
-        A%block_matvec_impl   => bcsc_block_matvec
-        A%block_matvec_t_impl => bcsr_block_matvec
-
-        A%l_block_matvec_impl   => bcsc_l_block_matvec
-        A%l_block_matvec_t_impl => bcsr_l_block_matvec
-
-        A%r_block_matvec_impl   => bcsc_r_block_matvec
-        A%r_block_matvec_t_impl => bcsr_r_block_matvec
+        select case(orientation)
+            case('row')
+                A%nr = nrow/g%n
+                A%nc = ncol/g%m
+            case('col')
+                A%nc = ncol/g%n
+                A%nr = nrow/g%m
+        end select
     else
-        A%nr = A%nrow/g%n
-        A%nc = A%ncol/g%m
-        allocate(A%val(A%nr,A%nc,A%nnz))
-
-        A%find_block => bcsr_find_block
-
-        A%left_permute_impl => bcs_matrix_permute_ptrs
-        A%right_permute_impl => bcs_matrix_permute_vals
-
-        A%matvec_impl   => bcsr_matvec
-        A%matvec_t_impl => bcsc_matvec
-
-        A%block_matvec_impl   => bcsr_block_matvec
-        A%block_matvec_t_impl => bcsc_block_matvec
-
-        A%l_block_matvec_impl   => bcsr_l_block_matvec
-        A%l_block_matvec_t_impl => bcsc_l_block_matvec
-
-        A%r_block_matvec_impl   => bcsr_r_block_matvec
-        A%r_block_matvec_t_impl => bcsc_r_block_matvec
+        ! What the hell do we even do here?
     endif
 
-    A%val = 0.0_dp
+    A%nnz = A%g%ne
+    A%max_degree = A%g%max_degree
 
-end subroutine bcs_assemble
+    select case(orientation)
+        case('row')
+            allocate(A%val(A%nr,A%nc,A%nnz))
+
+            A%find_block => bcsr_find_block
+
+            A%left_permute_impl => bcs_matrix_permute_ptrs
+            A%right_permute_impl => bcs_matrix_permute_vals
+
+            A%matvec_impl   => bcsr_matvec
+            A%matvec_t_impl => bcsc_matvec
+
+            A%block_matvec_impl   => bcsr_block_matvec
+            A%block_matvec_t_impl => bcsc_block_matvec
+
+            A%l_block_matvec_impl   => bcsr_l_block_matvec
+            A%l_block_matvec_t_impl => bcsc_l_block_matvec
+
+            A%r_block_matvec_impl   => bcsr_r_block_matvec
+            A%r_block_matvec_t_impl => bcsc_r_block_matvec
+        case('col')
+            allocate(A%val(A%nc,A%nr,A%nnz))
+
+            A%find_block => bcsc_find_block
+
+            A%left_permute_impl => bcs_matrix_permute_vals
+            A%right_permute_impl => bcs_matrix_permute_ptrs
+
+            A%matvec_impl   => bcsc_matvec
+            A%matvec_t_impl => bcsr_matvec
+
+            A%block_matvec_impl   => bcsc_block_matvec
+            A%block_matvec_t_impl => bcsr_block_matvec
+
+            A%l_block_matvec_impl   => bcsc_l_block_matvec
+            A%l_block_matvec_t_impl => bcsr_l_block_matvec
+
+            A%r_block_matvec_impl   => bcsc_r_block_matvec
+            A%r_block_matvec_t_impl => bcsr_r_block_matvec
+    end select
+
+end subroutine bcs_init
 
 
 

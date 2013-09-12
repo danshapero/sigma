@@ -36,11 +36,9 @@ implicit none
 
     allocate(cs_graph::g)
     allocate(bcs_matrix::A)
-    A%orientation = "row"
 
     call g%init(7,7,edges)
-    call A%init(14,14)
-    call A%assemble(g)
+    call A%init(14,14,'row',g)
 
     allocate(block(2,2), nbrs(8))
 

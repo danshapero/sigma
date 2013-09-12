@@ -24,7 +24,7 @@ implicit none
     call convert(g,'coo')
 
     allocate(coo_matrix::A)
-    call A%assemble(g)
+    call A%init(99,99,'row',g)
 
     do i=1,98
         call A%set_value(i,i,2.0_dp)

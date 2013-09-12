@@ -42,8 +42,10 @@ implicit none
         endif
     enddo
 
-    call new_sparse_matrix(A,'csr',nn,nn,g)
-    call new_sparse_matrix(B,'csr',nn,nn,g)
+    allocate(cs_matrix::A)
+    allocate(cs_matrix::B)
+    call A%init(nn,nn,'row',g)
+    call B%init(nn,nn,'row',g)
 
 
 !--------------------------------------------------------------------------!

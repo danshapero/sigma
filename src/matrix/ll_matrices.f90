@@ -23,7 +23,6 @@ type, extends(sparse_matrix) :: ll_matrix                                  !
 contains
     ! front-ends to matrix operations
     procedure :: init => ll_matrix_init
-    procedure :: assemble => ll_assemble
     procedure :: neighbors => ll_matrix_neighbors
     procedure :: get_value => ll_get_value
     procedure :: set_value => ll_set_value
@@ -78,73 +77,83 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine ll_matrix_init(A,nrow,ncol)                                     !
+subroutine ll_matrix_init(A,nrow,ncol,orientation,g)                       !
 !--------------------------------------------------------------------------!
+    ! input/output variables
     class(ll_matrix), intent(inout) :: A
     integer, intent(in) :: nrow, ncol
-
-    A%nrow = nrow
-    A%ncol = ncol
-    A%max_degree = 0
-
-end subroutine ll_matrix_init
-
-
-
-!--------------------------------------------------------------------------!
-subroutine ll_assemble(A,g)                                                !
-!--------------------------------------------------------------------------!
-    class(ll_matrix), intent(inout) :: A
-    class(graph), pointer, intent(in) :: g
+    character(len=3), intent(in) :: orientation
+    class(graph), pointer, intent(in), optional :: g
     ! local variables
     integer :: i,k
 
-    select type(g)
-        type is(ll_graph)
-            A%g => g
+    A%nrow = nrow
+    A%ncol = ncol
+    A%orientation = orientation
 
-    if (A%orientation=='col') then
-        A%ncol = g%n
-        A%nrow = g%m
+    if (present(g)) then
+        select type(g)
+            class is(ll_graph)
+                A%g => g
+            class default
+                print *, 'Structure graph g of LL matrix A must be '
+                print *, 'a LL graph. Exiting.'
+                call exit(1)
+        end select
 
-        A%find_entry => llc_find_entry
-
-        A%matvec_impl   => llc_matvec
-        A%matvec_t_impl => llr_matvec
-
-        A%left_permute_impl => ll_matrix_permute_vals
-        A%right_permute_impl => ll_matrix_permute_ptrs
+        select case(orientation)
+            case('row')
+                A%nrow = g%n
+                A%ncol = g%m
+            case('col')
+                A%ncol = g%n
+                A%nrow = g%m
+        end select
     else
-        A%nrow = g%n
-        A%ncol = g%m
+        allocate(ll_graph::A%g)
 
-        A%find_entry => llr_find_entry
-
-        A%matvec_impl   => llr_matvec
-        A%matvec_t_impl => llc_matvec
-
-        A%left_permute_impl => ll_matrix_permute_ptrs
-        A%right_permute_impl => ll_matrix_permute_vals
+        select case(orientation)
+            case('row')
+                call A%g%init(nrow,ncol)
+            case('col')
+                call A%g%init(ncol,nrow)
+        end select
     endif
+
+    A%nnz = A%g%ne
+    allocate(A%val(A%nnz))
+    A%val = 0.0_dp
+    A%max_degree = A%g%max_degree
+
+    select case(orientation)
+        case('row')
+            A%find_entry => llr_find_entry
+
+            A%matvec_impl   => llr_matvec
+            A%matvec_t_impl => llc_matvec
+
+            A%left_permute_impl => ll_matrix_permute_ptrs
+            A%right_permute_impl => ll_matrix_permute_vals
+        case('col')
+            A%find_entry => llc_find_entry
+
+            A%matvec_impl   => llc_matvec
+            A%matvec_t_impl => llr_matvec
+
+            A%left_permute_impl => ll_matrix_permute_vals
+            A%right_permute_impl => ll_matrix_permute_ptrs
+    end select
 
     A%last = 1
     allocate(A%ptrs(g%n))
-    do i=1,g%n
-        do k=1,g%lists(i)%length
+    do i=1,A%g%n
+        do k=1,A%g%lists(i)%length
             call A%ptrs(i)%prepend(A%last)
             A%last = A%last+1
         enddo
     enddo
 
-    end select
-
-    A%nnz = g%ne
-    A%max_degree = g%max_degree
-
-    allocate(A%val(A%nnz))
-    A%val = 0.0_dp
-
-end subroutine ll_assemble
+end subroutine ll_matrix_init
 
 
 

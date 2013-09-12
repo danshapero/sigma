@@ -21,7 +21,6 @@ type, extends(sparse_matrix) :: cs_matrix                                  !
 contains
     ! front-ends to matrix operations
     procedure :: init => cs_matrix_init
-    procedure :: assemble => cs_assemble
     procedure :: neighbors => cs_matrix_neighbors
     procedure :: get_value => cs_get_value
     procedure :: set_value => cs_set_value
@@ -77,76 +76,84 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_matrix_init(A,nrow,ncol)                                     !
+subroutine cs_matrix_init(A,nrow,ncol,orientation,g)                       !
 !--------------------------------------------------------------------------!
     class(cs_matrix), intent(inout) :: A
     integer, intent(in) :: nrow, ncol
+    character(len=3), intent(in) :: orientation
+    class(graph), pointer, intent(in), optional :: g
 
     A%nrow = nrow
     A%ncol = ncol
-    A%max_degree = 0
+    A%orientation = orientation
 
-end subroutine cs_matrix_init
+    ! Check if the user has supplied a graph representing the matrix's
+    ! non-zero structure
+    if (present(g)) then
+        ! Check to make sure the graph given is of the right type
+        select type(g)
+            class is(cs_graph)
+                A%g => g
+            class default
+                ! Change this to convert the graph
+                print *, 'Structure graph g of CS matrix A must be '
+                print *, 'a CS graph. Exiting.'
+                call exit(1)
+        end select
 
-
-
-! Should we put a subroutine in here which sets the row/column oriented
-! storage format for a matrix, or should we change the API so that the
-! assembly routine now takes an additional argument "orientation" that
-! determines the format?
-
-
-
-!--------------------------------------------------------------------------!
-subroutine cs_assemble(A,g)                                                !
-!--------------------------------------------------------------------------!
-    class(cs_matrix), intent(inout) :: A
-    class(graph), pointer, intent(in) :: g
-
-    select type(g)
-        type is(cs_graph)
-            A%g => g
-    end select
-
-    ! Check whether the matrix is stored in row- or column-oriented format.
-    ! If we take a CSR matrix A and use the CSC matvec operation
-    !       A%csc_matvec(x,y),
-    ! we fortuitously get an output vector y: y = transpose(A)*x.
-    ! Likewise, CSR_matvec = CSC_transpose_matvec.
-    ! We exploit this property by having
-    !       csr_matvec_t => csc_matvec,     csc_matvec_t => csr_matvec.
-    ! This saves us from writing excess code.
-    if (A%orientation=='col') then
-        A%ncol = g%n
-        A%nrow = g%m
-
-        A%find_entry => csc_find_entry
-
-        A%matvec_impl => csc_matvec
-        A%matvec_t_impl => csr_matvec
-
-        A%left_permute_impl => cs_matrix_permute_vals
-        A%right_permute_impl => cs_matrix_permute_ptrs
+        ! Set the number of rows and columns of the matrix to be the
+        ! number of left- or right-nodes of the graph according to whether
+        ! the matrix is row- or column-oriented
+        select case(orientation)
+            case('row')
+                A%nrow = g%n
+                A%ncol = g%m
+            case('col')
+                A%ncol = g%n
+                A%nrow = g%m
+        end select
     else
-        A%nrow = g%n
-        A%ncol = g%m
+        ! If the user has provided no matrix structure already, allocate it
+        allocate(cs_graph::A%g)
 
-        A%find_entry => csr_find_entry
-
-        A%matvec_impl => csr_matvec
-        A%matvec_t_impl => csc_matvec
-
-        A%left_permute_impl => cs_matrix_permute_ptrs
-        A%right_permute_impl => cs_matrix_permute_vals
+        ! Set the number of left- and right-nodes of the graph to be the
+        ! number of rows or columns of the matrix according to whether the
+        ! matrix is row- or column-oriented
+        select case(orientation)
+            case('row')
+                call A%g%init(nrow,ncol)
+            case('col')
+                call A%g%init(ncol,nrow)
+        end select
     endif
 
-    A%nnz = g%ne
-    A%max_degree = g%max_degree
-
+    ! Set the number of non-zero entries and the max degree of the matrix
+    A%nnz = A%g%ne
     allocate(A%val(A%nnz))
-    A%val = 0.0_dp
+    A%max_degree = A%g%max_degree
 
-end subroutine cs_assemble
+    ! Associate some procedure pointers according to whether the matrix is
+    ! row- or column-oriented
+    select case(orientation)
+        case('row')
+            A%find_entry => csr_find_entry
+
+            A%matvec_impl => csr_matvec
+            A%matvec_t_impl => csc_matvec
+
+            A%left_permute_impl => cs_matrix_permute_ptrs
+            A%right_permute_impl => cs_matrix_permute_vals
+        case('col')
+            A%find_entry => csc_find_entry
+
+            A%matvec_impl => csc_matvec
+            A%matvec_t_impl => csr_matvec
+
+            A%left_permute_impl => cs_matrix_permute_vals
+            A%right_permute_impl => cs_matrix_permute_ptrs
+    end select
+
+end subroutine cs_matrix_init
 
 
 

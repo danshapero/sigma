@@ -16,7 +16,6 @@ type, abstract :: sparse_matrix                                            !
     logical :: assembled
 contains
     procedure(init_matrix_ifc), deferred    :: init
-    procedure(assemble_ifc), deferred       :: assemble
     procedure(mat_neighbors_ifc), deferred  :: neighbors
     procedure(get_value_ifc), deferred      :: get_value
     procedure(set_value_ifc), deferred      :: set_value
@@ -34,17 +33,13 @@ end type sparse_matrix
 !--------------------------------------------------------------------------!
 abstract interface                                                         !
 !--------------------------------------------------------------------------!
-    subroutine init_matrix_ifc(A,nrow,ncol)
-        import :: sparse_matrix
-        class(sparse_matrix), intent(inout) :: A
-        integer, intent(in) :: nrow, ncol
-    end subroutine init_matrix_ifc
-
-    subroutine assemble_ifc(A,g)
+    subroutine init_matrix_ifc(A,nrow,ncol,orientation,g)
         import :: sparse_matrix, graph
         class(sparse_matrix), intent(inout) :: A
-        class(graph), pointer, intent(in) :: g
-    end subroutine assemble_ifc
+        integer, intent(in) :: nrow, ncol
+        character(len=3), intent(in) :: orientation
+        class(graph), pointer, intent(in), optional :: g
+    end subroutine init_matrix_ifc
 
     subroutine mat_neighbors_ifc(A,i,nbrs)
         import :: sparse_matrix

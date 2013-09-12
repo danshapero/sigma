@@ -21,7 +21,6 @@ type, extends(sparse_matrix) :: ellpack_matrix                             !
 contains
     ! front-ends to matrix operations
     procedure :: init => ellpack_matrix_init
-    procedure :: assemble => ellpack_assemble
     procedure :: neighbors => ellpack_matrix_neighbors
     procedure :: get_value => ellpack_get_value
     procedure :: set_value => ellpack_set_value
@@ -77,60 +76,70 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine ellpack_matrix_init(A,nrow,ncol)                                !
+subroutine ellpack_matrix_init(A,nrow,ncol,orientation,g)                  !
 !--------------------------------------------------------------------------!
     class(ellpack_matrix), intent(inout) :: A
     integer, intent(in) :: nrow, ncol
+    character(len=3), intent(in) :: orientation
+    class(graph), pointer, intent(in), optional :: g
 
     A%nrow = nrow
     A%ncol = ncol
-    A%max_degree = 0
+    A%orientation = orientation
 
-end subroutine ellpack_matrix_init
+    if (present(g)) then
+        select type(g)
+            class is(ellpack_graph)
+                A%g => g
+            class default
+                print *, 'Structure graph g of ellpack matrix A must be '
+                print *, ' an ellpack graph. Exiting.'
+                call exit(1)
+        end select
 
-
-
-!--------------------------------------------------------------------------!
-subroutine ellpack_assemble(A,g)                                           !
-!--------------------------------------------------------------------------!
-    class(ellpack_matrix), intent(inout) :: A
-    class(graph), pointer, intent(in) :: g
-
-    select type(g)
-        type is(ellpack_graph)
-            A%g => g
-    end select
-
-    if (A%orientation=='col') then
-        A%ncol = g%n
-        A%nrow = g%m
-
-        A%find_entry => ellc_find_entry
-
-        A%matvec_impl => ellc_matvec
-        A%matvec_t_impl => ellr_matvec
-
-        A%left_permute_impl => ellpack_matrix_permute_vals
-        A%right_permute_impl => ellpack_matrix_permute_ptrs
+        select case(orientation)
+            case('row')
+                A%nrow = g%n
+                A%ncol = g%m
+            case('col')
+                A%ncol = g%n
+                A%nrow = g%m
+        end select
     else
-        A%nrow = g%n
-        A%ncol = g%m
+        allocate(ellpack_graph::A%g)
 
-        A%find_entry => ellr_find_entry
-
-        A%matvec_impl => ellr_matvec
-        A%matvec_t_impl => ellc_matvec
-
-        A%left_permute_impl => ellpack_matrix_permute_ptrs
-        A%right_permute_impl => ellpack_matrix_permute_vals
+        select case(orientation)
+            case('row')
+                call A%g%init(nrow,ncol)
+            case('col')
+                call A%g%init(ncol,nrow)
+        end select
     endif
 
-    A%nnz = g%ne
-    A%max_degree = g%max_degree
+    A%nnz = A%g%ne
+    allocate(A%val(A%g%max_degree,A%g%n))
+    A%max_degree = A%g%max_degree
 
-    allocate(A%val(A%max_degree,g%n))
+    select case(orientation)
+        case('row')
+            A%find_entry => ellr_find_entry
 
-end subroutine ellpack_assemble
+            A%matvec_impl => ellr_matvec
+            A%matvec_t_impl => ellc_matvec
+
+            A%left_permute_impl => ellpack_matrix_permute_ptrs
+            A%right_permute_impl => ellpack_matrix_permute_vals
+        case('col')
+            A%find_entry => ellc_find_entry
+
+            A%matvec_impl => ellc_matvec
+            A%matvec_t_impl => ellr_matvec
+
+            A%left_permute_impl => ellpack_matrix_permute_vals
+            A%right_permute_impl => ellpack_matrix_permute_ptrs
+    end select
+
+end subroutine ellpack_matrix_init
 
 
 

@@ -14,7 +14,6 @@ type, extends(sparse_matrix) :: coo_matrix                                 !
     class(coo_graph), pointer :: g
 contains
     procedure :: init => coo_matrix_init
-    procedure :: assemble => coo_assemble
     procedure :: neighbors => coo_matrix_neighbors
     procedure :: get_value => coo_get_value
     procedure :: set_value => coo_set_value
@@ -37,38 +36,39 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine coo_matrix_init(A,nrow,ncol)                                    !
+subroutine coo_matrix_init(A,nrow,ncol,orientation,g)                      !
 !--------------------------------------------------------------------------!
     class(coo_matrix), intent(inout) :: A
     integer, intent(in) :: nrow, ncol
+    character(len=3), intent(in) :: orientation
+    class(graph), pointer, intent(in), optional :: g
 
     A%nrow = nrow
     A%ncol = ncol
+    A%orientation = orientation
+
+    if (present(g)) then
+        select type(g)
+            class is(coo_graph)
+                A%g => g
+            class default
+                print *, 'Structure graph g of COO matrix A must be '
+                print *, 'a COO graph. Exiting.'
+                call exit(1)
+        end select
+
+        A%nrow = g%n
+        A%ncol = g%n
+    else
+        allocate(coo_graph::A%g)
+        call A%g%init(nrow,ncol)
+    endif
+
+    A%nnz = A%g%ne
+    allocate(A%val(A%nnz))
+    A%max_degree = A%g%max_degree
 
 end subroutine coo_matrix_init
-
-
-
-!--------------------------------------------------------------------------!
-subroutine coo_assemble(A,g)                                               !
-!--------------------------------------------------------------------------!
-    class(coo_matrix), intent(inout) :: A
-    class(graph), pointer, intent(in) :: g
-
-    select type(g)
-        type is(coo_graph)
-            A%g => g
-    end select
-
-    A%nrow = g%n
-    A%ncol = g%m
-    A%nnz = g%ne
-    A%max_degree = g%max_degree
-
-    allocate(A%val(A%nnz))
-    A%val = 0.0_dp
-
-end subroutine coo_assemble
 
 
 
@@ -87,7 +87,7 @@ end subroutine coo_matrix_neighbors
 
 
 !--------------------------------------------------------------------------!
-function coo_get_value(A,i,j)                                               !
+function coo_get_value(A,i,j)                                              !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(coo_matrix), intent(in) :: A
