@@ -97,8 +97,8 @@ implicit none
                 call A%init(7,7,'col',g)
 
                 call new_graph(h,'ellpack',7,7)
-                allocate(ellpack_matrix::A)
-                call A%init(7,7,'col',h)
+                allocate(ellpack_matrix::B)
+                call B%init(7,7,'col',h)
         end select
 
         ! Fill A to be the graph Laplacian

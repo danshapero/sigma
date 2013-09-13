@@ -4,6 +4,7 @@ project( fempack Fortran C )
 enable_language(Fortran)
 enable_testing()
 
+set(CMAKE_Fortran_FLAGS_DEBUG "-g -Wall -fbounds-check")
 set(CMAKE_Fortran_MODULE_DIRECTORY ${fempack_BINARY_DIR}/include)
 set(LIBRARY_OUTPUT_PATH ${fempack_BINARY_DIR}/lib)
 
