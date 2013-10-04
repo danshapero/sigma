@@ -65,7 +65,7 @@ subroutine coo_matrix_init(A,nrow,ncol,orientation,g)                      !
     endif
 
     A%nnz = A%g%ne
-    allocate(A%val(A%nnz))
+    allocate(A%val(A%g%edges(1)%capacity))
     A%max_degree = A%g%max_degree
 
 end subroutine coo_matrix_init
@@ -156,8 +156,8 @@ subroutine coo_sub_matrix_add(A,B)                                         !
     integer :: i,j,k,indx
 
     do k=1,A%nnz
-        i = A%g%edges(1,k)
-        j = A%g%edges(2,k)
+        i = A%g%edges(1)%get_entry(k)
+        j = A%g%edges(2)%get_entry(k)
         A%val(k) = A%val(k)+B%get_value(i,j)
     enddo
 
@@ -201,8 +201,8 @@ subroutine coo_matvec(A,x,y)                                               !
 
     y = 0.0_dp
     do k=1,A%nnz
-        i = A%g%edges(1,k)
-        j = A%g%edges(2,k)
+        i = A%g%edges(1)%get_entry(k)
+        j = A%g%edges(2)%get_entry(k)
         y(i) = y(i)+A%val(k)*x(j)
     enddo
 
@@ -222,8 +222,8 @@ subroutine coo_matvec_t(A,x,y)                                             !
     integer :: i,j,k
 
     do k=1,A%nnz
-        i = A%g%edges(2,k)
-        j = A%g%edges(1,k)
+        i = A%g%edges(2)%get_entry(k)
+        j = A%g%edges(1)%get_entry(k)
         y(i) = y(i)+A%val(k)*x(j)
     enddo
 
@@ -239,15 +239,34 @@ subroutine coo_set_value_not_preallocated(A,i,j,val)                       !
     integer, intent(in) :: i,j
     real(dp), intent(in) :: val
     ! local variables
-    real(dp) :: val_temp(A%nnz)
+    integer :: capacity
+    real(dp), allocatable :: val_temp(:)
 
+    capacity = A%g%edges(1)%capacity
+
+    ! If A is at capacity, we need to increase the storage size
+    if (A%nnz==capacity) then
+        ! Make a temporary array with twice the storage capacity as the
+        ! array for the values of A
+        allocate(val_temp(2*capacity))
+
+        ! Copy the values of A over into the temporary array
+        val_temp(1:A%nnz) = A%val(1:A%nnz)
+
+        ! Move the allocation from the temporary array to the values of A
+        call move_alloc(from=val_temp, to=A%val)
+    endif
+
+    ! Add the new edge to the graph g storing A's structure
     call A%g%add_edge(i,j)
-    val_temp = A%val
-    deallocate(A%val)
-    allocate(A%val(A%nnz+1))
-    A%val(1:A%nnz) = val_temp
+
+    ! Add in the new matrix entry
     A%val(A%nnz+1) = val
+
+    ! Increment the number of non-zero entries
     A%nnz = A%nnz+1
+
+    ! Increment the maximum degree of the matrix, if need be
     A%max_degree = A%g%max_degree
 
 end subroutine coo_set_value_not_preallocated

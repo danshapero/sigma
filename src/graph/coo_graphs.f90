@@ -1,6 +1,7 @@
 module coo_graphs
 
 use graphs
+use types, only: dynamic_array
 
 implicit none
 
@@ -9,7 +10,8 @@ implicit none
 !--------------------------------------------------------------------------!
 type, extends(graph) :: coo_graph                                          !
 !--------------------------------------------------------------------------!
-    integer, allocatable :: edges(:,:)
+    type(dynamic_array) :: edges(2)
+    integer, allocatable :: degree(:)
 contains
     procedure :: init => coo_init
     procedure :: neighbors => coo_neighbors
@@ -40,9 +42,10 @@ subroutine coo_init(g,n,m,edges)                                           !
     integer, intent(in) :: n
     integer, intent(in), optional :: m, edges(:,:)
     ! local variables
-    integer :: i,k,ne,degree(n)
+    integer :: i,k,ne
 
     g%n = n
+    allocate(g%degree(n))
 
     if (present(m)) then
         g%m = m
@@ -54,22 +57,26 @@ subroutine coo_init(g,n,m,edges)                                           !
         ne = size(edges,2)
         g%ne = ne
 
-        degree = 0
+        g%degree = 0
         do k=1,ne
             i = edges(1,k)
-            degree(i) = degree(i)+1
+            g%degree(i) = g%degree(i)+1
         enddo
-        g%max_degree = maxval(degree)
+        g%max_degree = maxval(g%degree)
     else
         ne = 0
         g%ne = ne
         g%max_degree = 0
     endif
 
-    allocate( g%edges(2,ne) )
+    call g%edges(1)%init()
+    call g%edges(2)%init()
 
     if (present(edges)) then
-        g%edges = edges
+        do k=1,ne
+            call g%edges(1)%push( edges(1,k) )
+            call g%edges(2)%push( edges(2,k) )
+        enddo
     endif
     
 end subroutine coo_init
@@ -89,9 +96,9 @@ subroutine coo_neighbors(g,i,nbrs)                                         !
     nbrs = 0
     next = 0
     do k=1,g%ne
-        if (g%edges(1,k)==i) then
+        if (g%edges(1)%get_entry(k)==i) then
             next = next+1
-            nbrs(next) = g%edges(2,k)
+            nbrs(next) = g%edges(2)%get_entry(k)
         endif
     enddo
 
@@ -112,7 +119,9 @@ function coo_connected(g,i,j)                                              !
     coo_connected = .false.
 
     do k=1,g%ne
-        if (g%edges(1,k)==i .and. g%edges(2,k)==j) coo_connected = .true.
+        if (g%edges(1)%get_entry(k)==i.and.g%edges(2)%get_entry(k)==j) then
+            coo_connected = .true.
+        endif
     enddo
 
 end function coo_connected
@@ -132,7 +141,9 @@ function coo_find_edge(g,i,j)                                              !
     coo_find_edge = -1
 
     do k=1,g%ne
-        if (g%edges(1,k)==i .and. g%edges(2,k)==j) coo_find_edge = k
+        if (g%edges(1)%get_entry(k)==i.and.g%edges(2)%get_entry(k)==j) then
+            coo_find_edge = k
+        endif
     enddo
 
 end function coo_find_edge
@@ -146,32 +157,20 @@ subroutine coo_add_edge(g,i,j)                                             !
     class(coo_graph), intent(inout) :: g
     integer, intent(in) :: i,j
     ! local variables
-    integer :: k,degree,edges_temp(2,g%ne)
+    integer :: k
 
     if (.not.g%connected(i,j)) then
-        ! Copy the current edge list into a temporary array
-        edges_temp = g%edges
-
-        ! Deallocate the edge list and reallocate it with extra room
-        deallocate(g%edges)
-        allocate(g%edges(2,g%ne+1))
-
-        ! Copy in the temporary array
-        g%edges(:,1:g%ne) = edges_temp
-
         ! Add in the new edge
-        g%edges(:,g%ne+1) = [i, j]
+        call g%edges(1)%push(i)
+        call g%edges(2)%push(j)
 
         ! Increase the number of edges
         g%ne = g%ne+1
 
         ! If the degree of node i is now the greatest of all nodes in the
         ! graph, update the degree accordingly
-        degree = 0
-        do k=1,g%ne
-            if (g%edges(1,k)==i) degree = degree+1
-        enddo
-        if (degree > g%max_degree) g%max_degree = degree
+        g%degree(i) = g%degree(i)+1
+        if (g%degree(i) > g%max_degree) g%max_degree = g%degree(i)
     endif
 
 end subroutine coo_add_edge
@@ -185,34 +184,25 @@ subroutine coo_delete_edge(g,i,j)                                          !
     class(coo_graph), intent(inout) :: g
     integer, intent(in) :: i,j
     ! local variables
-    integer :: k,l,indx,degree(g%n),edges_temp(2,g%ne)
+    integer :: k,l,it,jt
 
-    if (g%connected(i,j)) then
+    k = g%find_edge(i,j)
 
-        ! Find the index in the list of edges of the edge to be removed
-        indx = g%find_edge(i,j)
+    if (k/=-1) then
+        it = g%edges(1)%pop()
+        jt = g%edges(2)%pop()
 
-        ! Store the current edge list in a temporary array
-        edges_temp = g%edges
-
-        ! Rebuild the edge array with extra space
-        ! NOTE: This can probably be done with reallocate to save pain
-        deallocate(g%edges)
-        allocate(g%edges(2,g%ne-1))
-
-        g%edges(:,1:indx-1) = edges_temp(:,1:indx-1)
-        g%edges(:,indx:g%ne-1) = edges_temp(:,indx+1:g%ne)
+        if (k<g%ne) then
+            call g%edges(1)%set_entry(k,it)
+            call g%edges(2)%set_entry(k,jt)
+        endif
 
         ! Decrement the number of edges
         g%ne = g%ne-1
 
         ! Evaluate the graph's new maximum degree
-        degree = 0
-        do k=1,g%ne
-            l = g%edges(1,k)
-            degree(l) = degree(l)+1
-        enddo
-        g%max_degree = maxval(degree)
+        g%degree(i) = g%degree(i)-1
+        if (g%degree(i)+1==g%max_degree) g%max_degree = maxval(g%degree)
     endif
 
 end subroutine coo_delete_edge
@@ -229,7 +219,7 @@ subroutine coo_graph_left_permute(g,p)                                     !
     integer :: k
 
     do k=1,g%ne
-        g%edges(1,k) = p(g%edges(1,k))
+        call g%edges(1)%set_entry(k,p(g%edges(1)%get_entry(k)))
     enddo
 
 end subroutine coo_graph_left_permute
@@ -246,7 +236,7 @@ subroutine coo_graph_right_permute(g,p)                                    !
     integer :: k
 
     do k=1,g%ne
-        g%edges(2,k) = p(g%edges(2,k))
+        call g%edges(2)%set_entry(k,p(g%edges(2)%get_entry(k)))
     enddo
 
 end subroutine coo_graph_right_permute
@@ -258,7 +248,7 @@ subroutine coo_free(g)                                                     !
 !--------------------------------------------------------------------------!
     class(coo_graph), intent(inout) :: g
 
-    deallocate(g%edges)
+    deallocate(g%edges(1)%array,g%edges(2)%array)
 
     g%n = 0
     g%m = 0
@@ -272,10 +262,16 @@ end subroutine coo_free
 !--------------------------------------------------------------------------!
 subroutine coo_dump_edges(g,edges)                                         !
 !--------------------------------------------------------------------------!
+    ! input/output variables
     class(coo_graph), intent(in) :: g
     integer, intent(out) :: edges(:,:)
+    ! local variables
+    integer :: k
 
-    edges = g%edges
+    do k=1,g%ne
+        edges(1,k) = g%edges(1)%get_entry(k)
+        edges(2,k) = g%edges(2)%get_entry(k)
+    enddo
 
 end subroutine coo_dump_edges
 
