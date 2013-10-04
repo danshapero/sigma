@@ -13,6 +13,14 @@ type :: vector                                                             !
     integer :: nn, nc
     integer, allocatable :: ptr(:)
 contains
+    procedure :: init_vector
+    procedure :: init_multi_vector
+    procedure :: vec_get_value
+    procedure :: vec_set_value
+    procedure :: vec_add_value
+    procedure :: vec_get_value_multi_index
+    procedure :: vec_set_value_multi_index
+    procedure :: vec_add_value_multi_index
     generic :: init => init_vector, init_multi_vector
     generic :: get_value => vec_get_value, vec_get_value_multi_index
     generic :: set_value => vec_set_value, vec_set_value_multi_index
@@ -28,7 +36,7 @@ contains
 !--------------------------------------------------------------------------!
 subroutine init_vector(v,nn)                                               !
 !--------------------------------------------------------------------------!
-    type(vector), intent(inout) :: v
+    class(vector), intent(inout) :: v
     integer, intent(in) :: nn
 
     v%nn = nn
@@ -47,7 +55,7 @@ end subroutine init_vector
 subroutine init_multi_vector(v,nn_per_field)                               !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    type(vector), intent(inout) :: v
+    class(vector), intent(inout) :: v
     integer, intent(in) :: nn_per_field(:)
     ! local variables
     integer :: i
@@ -70,7 +78,7 @@ end subroutine init_multi_vector
 !--------------------------------------------------------------------------!
 function vec_get_value(v,i)                                                !
 !--------------------------------------------------------------------------!
-    type(vector), intent(in) :: v
+    class(vector), intent(in) :: v
     integer, intent(in) :: i
     real(dp) :: vec_get_value
 
@@ -84,7 +92,7 @@ end function vec_get_value
 function vec_get_value_multi_index(v,multi_index)                          !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    type(vector), intent(in) :: v
+    class(vector), intent(in) :: v
     integer, intent(in) :: multi_index(2)
     real(dp) :: vec_get_value_multi_index
     ! local variables
@@ -102,7 +110,7 @@ end function vec_get_value_multi_index
 !--------------------------------------------------------------------------!
 subroutine vec_set_value(v,i,val)                                          !
 !--------------------------------------------------------------------------!
-    type(vector), intent(inout) :: v
+    class(vector), intent(inout) :: v
     integer, intent(in) :: i
     real(dp), intent(in) :: val
 
@@ -116,7 +124,7 @@ end subroutine vec_set_value
 subroutine vec_set_value_multi_index(v,multi_index,val)                    !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    type(vector), intent(inout) :: v
+    class(vector), intent(inout) :: v
     integer, intent(in) :: multi_index(2)
     real(dp), intent(in) :: val
     ! local variables
@@ -134,7 +142,7 @@ end subroutine vec_set_value_multi_index
 !--------------------------------------------------------------------------!
 subroutine vec_add_value(v,i,val)                                          !
 !--------------------------------------------------------------------------!
-    type(vector), intent(inout) :: v
+    class(vector), intent(inout) :: v
     integer, intent(in) :: i
     real(dp), intent(in) :: val
 
@@ -148,7 +156,7 @@ end subroutine vec_add_value
 subroutine vec_add_value_multi_index(v,multi_index,val)                    !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    type(vector), intent(inout) :: v
+    class(vector), intent(inout) :: v
     integer, intent(in) :: multi_index(2)
     real(dp), intent(in) :: val
     ! local variables
@@ -166,7 +174,7 @@ end subroutine vec_add_value_multi_index
 !--------------------------------------------------------------------------!
 subroutine vec_zero(v)                                                     !
 !--------------------------------------------------------------------------!
-    type(vector), intent(inout) :: v
+    class(vector), intent(inout) :: v
 
     v%val = 0.0_dp
 

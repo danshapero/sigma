@@ -1,6 +1,7 @@
 module block_matrices
 
 use types
+use vectors
 use sparse_matrices
 
 implicit none
@@ -31,6 +32,9 @@ contains
     ! procedures specific to block matrices
     procedure :: get_block
     procedure :: set_block
+
+    generic :: matmul => block_mat_vector_matvec
+    generic :: matmul_t => block_mat_vector_matvec_t
 end type block_matrix
 
 
@@ -219,7 +223,7 @@ subroutine block_mat_matvec(A,x,y)                                         !
             i2 = A%row_ptr(k+1)-1
 
             call A%mats(k,l)%matvec(x(j1:j2),A%z(i1:i2))
-            y(i1:i2) = y(i1:i2)+z
+            y(i1:i2) = y(i1:i2)+A%z(i1:i2)
         enddo
     enddo
 
@@ -246,7 +250,7 @@ subroutine block_mat_matvec_t(A,x,y)                                       !
             i2 = A%row_ptr(k+1)-1
 
             call A%mats(k,l)%matvec_t(x(i1:i2),A%z(j1:j2))
-            y(j1:j2) = y(j1:j2)+z
+            y(j1:j2) = y(j1:j2)+A%z(j1:j2)
         enddo
     enddo
 
@@ -277,6 +281,19 @@ subroutine set_block(A,B,k,l)                                              !
     A%mats(k,l) => B
 
 end subroutine set_block
+
+
+
+!--------------------------------------------------------------------------!
+subroutine block_mat_vector_matvec(A,x,y)                                  !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(block_matrix), intent(in) :: A
+    class(vector), intent(in)  :: x
+    class(vector), intent(out) :: y
+    ! local variables
+
+end subroutine block_mat_vector_matvec
 
 
 
