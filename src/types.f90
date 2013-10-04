@@ -6,13 +6,15 @@ integer, parameter :: dp=kind(0.d0)
 real(dp), parameter :: pi=3.1415926535897932_dp
 
 
-
 type :: node
     integer :: val
     type(node), pointer :: next => null()
 end type node
 
-type :: linked_list
+
+!--------------------------------------------------------------------------!
+type :: linked_list                                                        !
+!--------------------------------------------------------------------------!
     integer :: length = 0
     type(node), pointer :: head => null()
 contains
@@ -27,8 +29,30 @@ contains
 end type linked_list
 
 
+!--------------------------------------------------------------------------!
+type :: dynamic_array                                                      !
+!--------------------------------------------------------------------------!
+    integer :: length, capacity, min_capacity
+    integer, allocatable :: array(:)
+contains
+    procedure :: init => dynamic_array_init
+    procedure :: get_entry => dynamic_array_get_entry
+    procedure :: set_entry => dynamic_array_set_entry
+    procedure :: push => dynamic_array_push
+    procedure :: pop => dynamic_array_pop
+    procedure :: peek => dynamic_array_peek
+end type dynamic_array
+
+
 contains
 
+
+
+!==========================================================================!
+!==========================================================================!
+!==== Methods for linked lists                                         ====!
+!==========================================================================!
+!==========================================================================!
 
 
 !--------------------------------------------------------------------------!
@@ -271,6 +295,130 @@ subroutine linked_list_free(list)                                          !
     enddo
 
 end subroutine linked_list_free
+
+
+
+
+!==========================================================================!
+!==========================================================================!
+!==== Methods for dynamic arrays                                       ====!
+!==========================================================================!
+!==========================================================================!
+
+
+!--------------------------------------------------------------------------!
+subroutine dynamic_array_init(a,capacity,min_capacity)                     !
+!--------------------------------------------------------------------------!
+    class(dynamic_array), intent(inout) :: a
+    integer, intent(in), optional :: capacity, min_capacity
+
+    a%length = 0
+    a%min_capacity = 4
+    a%capacity = 32
+
+    if (present(capacity)) then
+        a%capacity = capacity
+    endif
+
+    if (present(min_capacity)) then
+        a%min_capacity = min_capacity
+    endif
+
+    allocate(a%array(a%capacity))
+
+end subroutine dynamic_array_init
+
+
+
+!--------------------------------------------------------------------------!
+elemental function dynamic_array_get_entry(a,i)                            !
+!--------------------------------------------------------------------------!
+    class(dynamic_array), intent(in) :: a
+    integer, intent(in) :: i
+    integer :: dynamic_array_get_entry
+
+    dynamic_array_get_entry = a%array(i)
+
+end function dynamic_array_get_entry
+
+
+
+!--------------------------------------------------------------------------!
+elemental subroutine dynamic_array_set_entry(a,i,k)                        !
+!--------------------------------------------------------------------------!
+    class(dynamic_array), intent(inout) :: a
+    integer, intent(in) :: i,k
+
+    a%array(i) = k
+
+end subroutine dynamic_array_set_entry
+
+
+
+!--------------------------------------------------------------------------!
+subroutine dynamic_array_push(a,k)                                         !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(dynamic_array), intent(inout) :: a
+    integer, intent(in) :: k
+    ! local variables
+    integer, allocatable :: array(:)
+
+    if (a%length==a%capacity) then
+        allocate(array(2*a%capacity))
+        a%capacity = 2*a%capacity
+        array(1:a%length) = a%array(1:a%length)
+        call move_alloc(from=array, to=a%array)
+    endif
+
+    a%length = a%length+1
+    a%array(a%length) = k
+
+end subroutine dynamic_array_push
+
+
+
+!--------------------------------------------------------------------------!
+function dynamic_array_pop(a)                                              !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(dynamic_array), intent(inout) :: a
+    integer :: dynamic_array_pop
+    ! local variables
+    integer, allocatable :: array(:)
+
+    if (a%length<a%capacity/2 .and. a%capacity/2>=a%min_capacity) then
+        allocate(array(a%capacity/2))
+        a%capacity = a%capacity/2
+        array(1:a%length) = a%array(1:a%length)
+        call move_alloc(from=array, to=a%array)
+    endif
+
+    if (a%length>0) then
+        dynamic_array_pop = a%array(a%length)
+        a%array(a%length) = 0
+        a%length = a%length-1
+    else
+        print *, 'Error: cannot pop from an empty dynamic array'
+        call exit(1)
+    endif
+
+end function dynamic_array_pop
+
+
+
+!--------------------------------------------------------------------------!
+pure function dynamic_array_peek(a)                                        !
+!--------------------------------------------------------------------------!
+    class(dynamic_array), intent(in) :: a
+    integer :: dynamic_array_peek
+
+    dynamic_array_peek = 0
+    if (a%length>0) dynamic_array_peek = a%array(a%length)
+
+end function dynamic_array_peek
+
+
 
 
 
