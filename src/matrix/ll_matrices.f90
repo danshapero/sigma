@@ -12,10 +12,9 @@ type, extends(sparse_matrix) :: ll_matrix                                  !
 !--------------------------------------------------------------------------!
     real(dp), allocatable :: val(:)
     type(linked_list), allocatable :: ptrs(:)
-    integer :: last
+    integer :: last, order(2)
     class(ll_graph), pointer :: g
     ! procedure pointers to implementations of matrix operations
-    procedure(ll_find_entry_ifc), pointer, private :: find_entry
     procedure(ll_permute_ifc), pointer, private    :: left_permute_impl
     procedure(ll_permute_ifc), pointer, private    :: right_permute_impl
     procedure(ll_matvec_ifc), pointer, private     :: matvec_impl
@@ -40,13 +39,6 @@ end type ll_matrix
 !--------------------------------------------------------------------------!
 abstract interface                                                         !
 !--------------------------------------------------------------------------!
-    function ll_find_entry_ifc(A,i,j)
-        import :: ll_matrix
-        class(ll_matrix), intent(in) :: A
-        integer, intent(in) :: i,j
-        integer :: ll_find_entry_ifc
-    end function ll_find_entry_ifc
-
     subroutine ll_matvec_ifc(A,x,y)
         import :: ll_matrix, dp
         class(ll_matrix), intent(in) :: A
@@ -127,7 +119,7 @@ subroutine ll_matrix_init(A,nrow,ncol,orientation,g)                       !
 
     select case(orientation)
         case('row')
-            A%find_entry => llr_find_entry
+            A%order = [1,2]
 
             A%matvec_impl   => llr_matvec
             A%matvec_t_impl => llc_matvec
@@ -135,7 +127,7 @@ subroutine ll_matrix_init(A,nrow,ncol,orientation,g)                       !
             A%left_permute_impl => ll_matrix_permute_ptrs
             A%right_permute_impl => ll_matrix_permute_vals
         case('col')
-            A%find_entry => llc_find_entry
+            A%order = [2,1]
 
             A%matvec_impl   => llc_matvec
             A%matvec_t_impl => llr_matvec
@@ -178,10 +170,13 @@ function ll_get_value(A,i,j)                                               !
     integer, intent(in) :: i,j
     real(dp) :: ll_get_value
     ! local variables
-    integer :: k
+    integer :: k, ind(2)
 
-    ll_get_value = 0.0_dp
-    k = A%find_entry(i,j)
+    ind = [i,j]
+    ind = ind(A%order)
+
+    ll_get_value = 0_dp
+    k = A%g%find_edge(ind(1),ind(2))
     if (k/=-1) ll_get_value = A%val(k)
 
 end function ll_get_value
@@ -196,9 +191,12 @@ subroutine ll_set_value(A,i,j,val)                                         !
     integer, intent(in) :: i,j
     real(dp), intent(in) :: val
     ! local variables
-    integer :: k
+    integer :: k, ind(2)
 
-    k = A%find_entry(i,j)
+    ind = [i,j]
+    ind = ind(A%order)
+
+    k = A%g%find_edge(ind(1),ind(2))
     if (k/=-1) then
         A%val(k) = val
     else
@@ -217,9 +215,12 @@ subroutine ll_add_value(A,i,j,val)                                         !
     integer, intent(in) :: i,j
     real(dp), intent(in) :: val
     ! local variables
-    integer :: k
+    integer :: k, ind(2)
 
-    k = A%find_entry(i,j)
+    ind = [i,j]
+    ind = ind(A%order)
+
+    k = A%g%find_edge(ind(1),ind(2))
     if (k/=-1) then
         A%val(k) = A%val(k)+val
     else
@@ -310,7 +311,7 @@ subroutine ll_set_value_not_preallocated(A,i,j,val)                        !
     integer, intent(in) :: i,j
     real(dp), intent(in) :: val
     ! local variables
-    integer :: k
+    integer :: k, ind(2)
     real(dp), allocatable :: val_tmp(:)
 
     k = A%last
@@ -320,13 +321,10 @@ subroutine ll_set_value_not_preallocated(A,i,j,val)                        !
         call move_alloc(from=val_tmp, to=A%val)
     endif
 
-    if (A%orientation=='col') then
-        call A%g%add_edge(j,i)
-        call A%ptrs(j)%prepend(k)
-    else
-        call A%g%add_edge(i,j)
-        call A%ptrs(i)%prepend(k)
-    endif
+    ind = [i,j]
+    ind = ind(A%order)
+    call A%g%add_edge(ind(1),ind(2))
+    call A%ptrs(ind(1))%prepend(k)
 
     A%val(k) = val
 
@@ -345,42 +343,6 @@ end subroutine ll_set_value_not_preallocated
 !== Implementations of matrix operations                                 ==!
 !==========================================================================!
 !==========================================================================!
-
-
-!--------------------------------------------------------------------------!
-function llr_find_entry(A,i,j)                                             !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(ll_matrix), intent(in) :: A
-    integer, intent(in) :: i,j
-    integer :: llr_find_entry
-    ! local variables
-    integer :: k
-
-    llr_find_entry = -1
-    k = A%g%find_edge(i,j)
-    if (k/=-1) llr_find_entry = A%ptrs(i)%get_value(k)
-
-end function llr_find_entry
-
-
-
-!--------------------------------------------------------------------------!
-function llc_find_entry(A,i,j)                                             !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(ll_matrix), intent(in) :: A
-    integer, intent(in) :: i,j
-    integer :: llc_find_entry
-    ! local variables
-    integer :: k
-
-    llc_find_entry = -1
-    k = A%g%find_edge(j,i)
-    if (k/=-1) llc_find_entry = A%ptrs(j)%get_value(k)
-
-end function llc_find_entry
-
 
 
 !--------------------------------------------------------------------------!

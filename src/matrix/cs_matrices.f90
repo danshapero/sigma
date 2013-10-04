@@ -12,8 +12,8 @@ type, extends(sparse_matrix) :: cs_matrix                                  !
 !--------------------------------------------------------------------------!
     real(dp), allocatable :: val(:)
     class(cs_graph), pointer :: g
+    integer :: order(2)
     ! procedure pointers to implementations of matrix operations
-    procedure(cs_find_entry_ifc), pointer, private :: find_entry
     procedure(cs_permute_ifc), pointer, private :: left_permute_impl
     procedure(cs_permute_ifc), pointer, private :: right_permute_impl
     procedure(cs_matvec_ifc), pointer, private :: matvec_impl
@@ -39,13 +39,6 @@ end type cs_matrix
 !--------------------------------------------------------------------------!
 abstract interface                                                         !
 !--------------------------------------------------------------------------!
-    function cs_find_entry_ifc(A,i,j)
-        import :: cs_matrix
-        class(cs_matrix), intent(in) :: A
-        integer, intent(in) :: i,j
-        integer :: cs_find_entry_ifc
-    end function cs_find_entry_ifc
-
     subroutine cs_matvec_ifc(A,x,y)
         import :: cs_matrix, dp
         class(cs_matrix), intent(in) :: A
@@ -136,7 +129,7 @@ subroutine cs_matrix_init(A,nrow,ncol,orientation,g)                       !
     ! row- or column-oriented
     select case(orientation)
         case('row')
-            A%find_entry => csr_find_entry
+            A%order = [1, 2]
 
             A%matvec_impl => csr_matvec
             A%matvec_t_impl => csc_matvec
@@ -144,7 +137,7 @@ subroutine cs_matrix_init(A,nrow,ncol,orientation,g)                       !
             A%left_permute_impl => cs_matrix_permute_ptrs
             A%right_permute_impl => cs_matrix_permute_vals
         case('col')
-            A%find_entry => csc_find_entry
+            A%order = [2, 1]
 
             A%matvec_impl => csc_matvec
             A%matvec_t_impl => csr_matvec
@@ -179,11 +172,20 @@ function cs_get_value(A,i,j)                                               !
     integer, intent(in) :: i,j
     real(dp) :: cs_get_value
     ! local variables
-    integer :: k
+    integer :: k, ind(2)
 
+    ! (i,j) => (j,i) if the matrix is in column format
+    ind = [i,j]
+    ind = ind(A%order)
+
+    ! Set the value to return to 0
     cs_get_value = 0_dp
-    k = A%find_entry(i,j)
-    if (k/=-1) cs_get_value = A%val(k)
+
+    ! Iterate through the non-zero entries in the row/column according to
+    ! the matrix's orientation
+    do k=A%g%ptr(ind(1)),A%g%ptr(ind(1)+1)-1
+        if (A%g%node(k)==ind(2)) cs_get_value = A%val(k)
+    enddo
 
 end function cs_get_value
 
@@ -197,14 +199,27 @@ subroutine cs_set_value(A,i,j,val)                                         !
     integer, intent(in) :: i,j
     real(dp), intent(in) :: val
     ! local variables
-    integer :: k
+    integer :: k, ind(2)
+    logical :: found
 
-    k = A%find_entry(i,j)
-    if (k/=-1) then
-        A%val(k) = val
-    else
-        call A%cs_set_value_not_preallocated(i,j,val)
-    endif
+    ! (i,j) => (j,i) if A is in column format
+    ind = [i,j]
+    ind = ind(A%order)
+
+    ! Assume that entry (i,j) is not in the matrix
+    found = .false.
+
+    ! Iterate through the non-zero entries in the row/column
+    do k=A%g%ptr(ind(1)),A%g%ptr(ind(1)+1)-1
+        if (A%g%node(k)==ind(2)) then
+            A%val(k) = val
+            found = .true.
+        endif
+    enddo
+
+    ! If entry (i,j) isn't in the matrix, rebuild the matrix structure
+    ! Check the indices here
+    if (.not.found) call A%cs_set_value_not_preallocated(i,j,val)
 
 end subroutine cs_set_value
 
@@ -218,14 +233,23 @@ subroutine cs_add_value(A,i,j,val)                                         !
     integer, intent(in) :: i,j
     real(dp), intent(in) :: val
     ! local variables
-    integer :: k
+    integer :: k, ind(2)
+    logical :: found
 
-    k = A%find_entry(i,j)
-    if (k/=-1) then
-        A%val(k) = A%val(k)+val
-    else
-        call A%cs_set_value_not_preallocated(i,j,val)
-    endif
+    ind = [i,j]
+    ind = ind(A%order)
+
+    found = .false.
+
+    do k=A%g%ptr(ind(1)),A%g%ptr(ind(1)+1)-1
+        if (A%g%node(k)==ind(2)) then
+            A%val(k) = A%val(k)+val
+            found = .true.
+        endif
+    enddo
+
+    ! Check the indices here
+    if (.not.found) call A%cs_set_value_not_preallocated(i,j,val)
 
 end subroutine cs_add_value
 
@@ -310,15 +334,16 @@ subroutine cs_set_value_not_preallocated(A,i,j,val)                        !
     real(dp), intent(in) :: val
     ! local variables
     real(dp) :: val_temp(A%nnz)
-    integer :: k
+    integer :: k, ind(2)
 
-    if (A%orientation=='col') then
-        call A%g%add_edge(j,i)
-    else
-        call A%g%add_edge(i,j)
-    endif
+    ind = [i,j]
+    ind = ind(A%order)
 
-    k = A%find_entry(i,j)
+    call A%g%add_edge(ind(1),ind(2))
+
+    do k=A%g%ptr(ind(1)),A%g%ptr(ind(1)+1)-1
+        if (A%g%node(k)==ind(2)) exit
+    enddo
 
     val_temp = A%val
     deallocate(A%val)
@@ -341,32 +366,6 @@ end subroutine cs_set_value_not_preallocated
 !== Implementations of matrix operations                                 ==!
 !==========================================================================!
 !==========================================================================!
-
-
-!--------------------------------------------------------------------------!
-function csr_find_entry(A,i,j)                                             !
-!--------------------------------------------------------------------------!
-    class(cs_matrix), intent(in) :: A
-    integer, intent(in) :: i,j
-    integer :: csr_find_entry
-
-    csr_find_entry = A%g%find_edge(i,j)
-
-end function csr_find_entry
-
-
-
-!--------------------------------------------------------------------------!
-function csc_find_entry(A,i,j)                                             !
-!--------------------------------------------------------------------------!
-    class(cs_matrix), intent(in) :: A
-    integer, intent(in) :: i,j
-    integer :: csc_find_entry
-
-    csc_find_entry = A%g%find_edge(j,i)
-
-end function csc_find_entry
-
 
 
 !--------------------------------------------------------------------------!
