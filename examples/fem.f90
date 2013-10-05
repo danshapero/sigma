@@ -60,7 +60,7 @@ subroutine mass2d(B,x,ele)                                                 !
     real(dp), intent(in) :: x(:,:)
     integer, intent(in) :: ele(:,:)
     ! local variables
-    integer :: i,j,k,n,ne
+    integer :: i,j,n,ne
     real(dp) :: BE(3,3), area
 
     ne = size(ele,2)

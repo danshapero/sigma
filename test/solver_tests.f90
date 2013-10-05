@@ -8,9 +8,8 @@ implicit none
     class(sparse_matrix), allocatable :: A
     class(iterative_solver), allocatable :: solver
     class(preconditioner), allocatable :: pc
-    integer :: i,j,k,n,test
-    real(dp) :: c,dx,z
-    integer, allocatable :: edges(:,:)
+    integer :: i,n,test
+    real(dp) :: c,dx
     real(dp), allocatable :: u(:), b(:), u_c(:)
 
     allocate(ll_graph::g)

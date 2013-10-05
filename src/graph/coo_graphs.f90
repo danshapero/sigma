@@ -153,11 +153,8 @@ end function coo_find_edge
 !--------------------------------------------------------------------------!
 subroutine coo_add_edge(g,i,j)                                             !
 !--------------------------------------------------------------------------!
-    ! input/output variables
     class(coo_graph), intent(inout) :: g
     integer, intent(in) :: i,j
-    ! local variables
-    integer :: k
 
     if (.not.g%connected(i,j)) then
         ! Add in the new edge
@@ -184,7 +181,7 @@ subroutine coo_delete_edge(g,i,j)                                          !
     class(coo_graph), intent(inout) :: g
     integer, intent(in) :: i,j
     ! local variables
-    integer :: k,l,it,jt
+    integer :: k,it,jt
 
     k = g%find_edge(i,j)
 

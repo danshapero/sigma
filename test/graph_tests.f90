@@ -5,7 +5,7 @@ use fempack
 implicit none
 
     class(graph), allocatable :: g
-    integer :: i,j,test
+    integer :: i,test
     integer, allocatable :: edges(:,:), nbrs(:), p(:)
     logical :: correct
 

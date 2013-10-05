@@ -184,7 +184,8 @@ subroutine block_mat_left_permute(A,p)                                     !
     integer, intent(in) :: p(:)
     ! local variables
 
-    ! Or this
+    ! This won't permute the sub-matrices themselves, it'll permute the
+    ! pointers to them, changing the ordering within the block matrix
 
 end subroutine block_mat_left_permute
 
@@ -198,7 +199,7 @@ subroutine block_mat_right_permute(A,p)                                    !
     integer, intent(in) :: p(:)
     ! local variables
 
-    ! Or this too
+    ! Same here
 
 end subroutine block_mat_right_permute
 

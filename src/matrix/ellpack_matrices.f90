@@ -237,7 +237,7 @@ subroutine ellpack_sub_matrix_add(A,B)                                     !
     class(ellpack_matrix), intent(inout) :: A
     class(sparse_matrix), intent(in)     :: B
     ! local variables
-    integer :: i,j,k,l,indx
+    integer :: i,j,k
 
     do i=1,A%g%n
         do k=1,A%max_degree

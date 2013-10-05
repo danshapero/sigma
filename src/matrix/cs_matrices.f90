@@ -262,7 +262,7 @@ subroutine cs_sub_matrix_add(A,B)                                          !
     class(cs_matrix), intent(inout)  :: A
     class(sparse_matrix), intent(in) :: B
     ! local variables
-    integer :: i,j,k,indx
+    integer :: i,j,k
 
     do i=1,A%g%n
         do k=A%g%ptr(i),A%g%ptr(i+1)-1

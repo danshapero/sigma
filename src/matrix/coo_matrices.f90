@@ -153,7 +153,7 @@ subroutine coo_sub_matrix_add(A,B)                                         !
     class(coo_matrix), intent(inout) :: A
     class(sparse_matrix), intent(in) :: B
     ! local variables
-    integer :: i,j,k,indx
+    integer :: i,j,k
 
     do k=1,A%nnz
         i = A%g%edges(1)%get_entry(k)

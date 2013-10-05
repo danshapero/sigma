@@ -18,11 +18,10 @@ implicit none
     class(iterative_solver), allocatable :: solver
     class(preconditioner), allocatable :: pc
     real(dp), allocatable :: u(:), f(:), r(:), z(:), p(:)
-    real(dp) :: alpha, beta, dpr, res2
 
     ! other variables
     integer :: nn, ne, n, next
-    integer, allocatable :: nbrs(:)
+    ! integer, allocatable :: nbrs(:)
 
 
 !--------------------------------------------------------------------------!
