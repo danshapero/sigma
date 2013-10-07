@@ -25,6 +25,8 @@ contains
     procedure(permute_matrix_ifc), deferred :: right_permute
     procedure(matvec_ifc), deferred         :: matvec
     procedure(matvec_ifc), deferred         :: matvec_t
+    procedure(matvec_add_ifc), deferred     :: matvec_add
+    procedure(matvec_add_ifc), deferred     :: matvec_t_add
     generic :: matmul => matvec
     generic :: matmul_t => matvec_t
 end type sparse_matrix
@@ -80,6 +82,13 @@ abstract interface                                                         !
         real(dp), intent(in)  :: x(:)
         real(dp), intent(out) :: y(:)
     end subroutine matvec_ifc
+
+    subroutine matvec_add_ifc(A,x,y)
+        import :: sparse_matrix, dp
+        class(sparse_matrix), intent(in) :: A
+        real(dp), intent(in)    :: x(:)
+        real(dp), intent(inout) :: y(:)
+    end subroutine matvec_add_ifc
 end interface
 
 

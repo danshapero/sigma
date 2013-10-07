@@ -13,7 +13,6 @@ type, extends(sparse_matrix) :: block_matrix                               !
     type(sparse_matrix_pointer), allocatable :: mats(:,:)
     integer :: mat_rows, mat_cols
     integer, allocatable :: row_ptr(:), col_ptr(:)
-    real(dp), allocatable :: z(:)
 
 contains
     ! procedures required by virtue of inheritance from abstract
@@ -54,8 +53,6 @@ subroutine block_mat_init(A,nrow,ncol,orientation,g)                       !
     A%nrow = nrow
     A%ncol = ncol
     A%orientation = orientation
-
-    allocate(A%z(max(nrow,ncol)))
 
 end subroutine block_mat_init
 
@@ -223,8 +220,7 @@ subroutine block_mat_matvec(A,x,y)                                         !
             i1 = A%row_ptr(k)
             i2 = A%row_ptr(k+1)-1
 
-            call A%mats(k,l)%matvec(x(j1:j2),A%z(i1:i2))
-            y(i1:i2) = y(i1:i2)+A%z(i1:i2)
+            call A%mats(k,l)%matvec_add(x(j1:j2),y(i1:i2))
         enddo
     enddo
 
@@ -250,8 +246,7 @@ subroutine block_mat_matvec_t(A,x,y)                                       !
             i1 = A%row_ptr(k)
             i2 = A%row_ptr(k+1)-1
 
-            call A%mats(k,l)%matvec_t(x(i1:i2),A%z(j1:j2))
-            y(j1:j2) = y(j1:j2)+A%z(j1:j2)
+            call A%mats(k,l)%matvec_t_add(x(i1:i2),y(j1:j2))
         enddo
     enddo
 

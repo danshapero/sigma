@@ -30,6 +30,8 @@ contains
     procedure :: right_permute => cs_right_permute
     procedure :: matvec => cs_matvec
     procedure :: matvec_t => cs_matvec_t
+    procedure :: matvec_add => cs_matvec_add
+    procedure :: matvec_t_add => cs_matvec_t_add
     procedure, private :: cs_set_value_not_preallocated
 end type cs_matrix
 
@@ -42,8 +44,8 @@ abstract interface                                                         !
     subroutine cs_matvec_ifc(A,x,y)
         import :: cs_matrix, dp
         class(cs_matrix), intent(in) :: A
-        real(dp), intent(in)  :: x(:)
-        real(dp), intent(out) :: y(:)
+        real(dp), intent(in)    :: x(:)
+        real(dp), intent(inout) :: y(:)
     end subroutine
 
     subroutine cs_permute_ifc(A,p)
@@ -306,6 +308,7 @@ subroutine cs_matvec(A,x,y)                                                !
     real(dp), intent(in)  :: x(:)
     real(dp), intent(out) :: y(:)
 
+    y = 0.0_dp
     call A%matvec_impl(x,y)
 
 end subroutine cs_matvec
@@ -319,9 +322,36 @@ subroutine cs_matvec_t(A,x,y)                                              !
     real(dp), intent(in)  :: x(:)
     real(dp), intent(out) :: y(:)
 
+    y = 0.0_dp
     call A%matvec_t_impl(x,y)
 
 end subroutine cs_matvec_t
+
+
+
+!--------------------------------------------------------------------------!
+subroutine cs_matvec_add(A,x,y)                                            !
+!--------------------------------------------------------------------------!
+    class(cs_matrix), intent(in) :: A
+    real(dp), intent(in)    :: x(:)
+    real(dp), intent(inout) :: y(:)
+
+    call A%matvec_impl(x,y)
+
+end subroutine cs_matvec_add
+
+
+
+!--------------------------------------------------------------------------!
+subroutine cs_matvec_t_add(A,x,y)                                          !
+!--------------------------------------------------------------------------!
+    class(cs_matrix), intent(in) :: A
+    real(dp), intent(in)    :: x(:)
+    real(dp), intent(inout) :: y(:)
+
+    call A%matvec_t_impl(x,y)
+
+end subroutine cs_matvec_t_add
 
 
 
@@ -418,8 +448,8 @@ subroutine csr_matvec(A,x,y)                                               !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_matrix), intent(in) :: A
-    real(dp), intent(in)  :: x(:)
-    real(dp), intent(out) :: y(:)
+    real(dp), intent(in)    :: x(:)
+    real(dp), intent(inout) :: y(:)
     ! local variables
     integer :: i,j,k
     real(dp) :: z
@@ -430,7 +460,7 @@ subroutine csr_matvec(A,x,y)                                               !
             j = A%g%node(k)
             z = z+A%val(k)*x(j)
         enddo
-        y(i) = z
+        y(i) = y(i)+z
     enddo
 
 end subroutine csr_matvec
@@ -442,13 +472,12 @@ subroutine csc_matvec(A,x,y)                                               !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_matrix), intent(in) :: A
-    real(dp), intent(in)  :: x(:)
-    real(dp), intent(out) :: y(:)
+    real(dp), intent(in)    :: x(:)
+    real(dp), intent(inout) :: y(:)
     ! local variables
     integer :: i,j,k
     real(dp) :: z
 
-    y = 0_dp
     do j=1,A%g%n
         z = x(j)
         do k=A%g%ptr(j),A%g%ptr(j+1)-1
