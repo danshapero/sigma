@@ -69,12 +69,14 @@ implicit none
 
         if (.not.g%connected(1,2) .or. .not.g%connected(2,1)) then
             print *, 'Supposed to have 1 -> 2 and 2 -> 1'
+            call exit(1)
         endif
 
         if (g%ne/=24) then
             print *, '12 edges were added; graph should have 24 edges'
             print *, 'Graph has ',g%ne,' edges'
             print *, test
+            call exit(1)
         endif
 
         allocate(nbrs(g%max_degree))
@@ -84,7 +86,10 @@ implicit none
         do i=1,g%max_degree
             if (nbrs(i)/=i+1) correct = .false.
         enddo
-        if (.not.correct) print *, 'Node 1 should neighbor all other nodes'
+        if (.not.correct) then
+            print *, 'Node 1 should neighbor all other nodes'
+            call exit(1)
+        endif
 
         allocate(p(7))
         do i=1,7
@@ -94,6 +99,20 @@ implicit none
         call g%right_permute(p)
         call g%left_permute(p)
         deallocate(p)
+
+        do i=2,6,2
+            call g%delete_edge(1,i)
+            call g%delete_edge(i,1)
+        enddo
+
+        do i=2,6,2
+            if (g%connected(1,i) .or. g%connected(i,1)) then
+                print *, 'All connections between 1 and even nodes were '
+                print *, 'deleted, and yet 1 is still connected '
+                print *, 'to node ',i
+                call exit(1)
+            endif
+        enddo
 
         call g%free()
 

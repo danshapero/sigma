@@ -14,6 +14,9 @@ use coo_matrices
 use cs_matrices
 use ellpack_matrices
 
+! Use the block matrix module
+use block_matrices
+
 ! Use the solver and preconditioner modules
 use iterative_solvers
 use cg_solvers

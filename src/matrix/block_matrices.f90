@@ -25,15 +25,17 @@ contains
     procedure :: sub_matrix_add => block_mat_sub_matrix_add
     procedure :: left_permute => block_mat_left_permute
     procedure :: right_permute => block_mat_right_permute
-    procedure :: matvec => block_mat_matvec
-    procedure :: matvec_t => block_mat_matvec_t
+    procedure :: matvec => block_matvec
+    procedure :: matvec_t => block_matvec_t
+    procedure :: matvec_add => block_matvec_add
+    procedure :: matvec_t_add => block_matvec_t_add
 
     ! procedures specific to block matrices
     procedure :: get_block
     procedure :: set_block
 
-    generic :: matmul => block_mat_vector_matvec
-    generic :: matmul_t => block_mat_vector_matvec_t
+    !generic :: matmul => block_mat_vector_matvec
+    !generic :: matmul_t => block_mat_vector_matvec_t
 end type block_matrix
 
 
@@ -99,7 +101,7 @@ function block_mat_get_value(A,i,j)                                        !
     m = i-A%row_ptr(k)+1
     n = j-A%col_ptr(l)+1
 
-    block_mat_get_value = A%mats(k,l)%get_value(m,n)
+    block_mat_get_value = A%mats(k,l)%A%get_value(m,n)
 
 end function block_mat_get_value
 
@@ -126,7 +128,7 @@ subroutine block_mat_set_value(A,i,j,val)                                  !
     m = i-A%row_ptr(k)+1
     n = j-A%col_ptr(l)+1
 
-    call A%mats(k,l)%set_value(m,n,val)
+    call A%mats(k,l)%A%set_value(m,n,val)
 
 end subroutine block_mat_set_value
 
@@ -153,7 +155,7 @@ subroutine block_mat_add_value(A,i,j,val)                                  !
     m = i-A%row_ptr(k)+1
     n = j-A%col_ptr(l)+1
 
-    call A%mats(k,l)%add_value(m,n,val)
+    call A%mats(k,l)%A%add_value(m,n,val)
 
 end subroutine block_mat_add_value
 
@@ -203,12 +205,40 @@ end subroutine block_mat_right_permute
 
 
 !--------------------------------------------------------------------------!
-subroutine block_mat_matvec(A,x,y)                                         !
+subroutine block_matvec(A,x,y)                                             !
 !--------------------------------------------------------------------------!
-    ! input/output variables
     class(block_matrix), intent(in) :: A
     real(dp), intent(in)  :: x(:)
     real(dp), intent(out) :: y(:)
+
+    y = 0.0_dp
+    call A%matvec_add(x,y)
+
+end subroutine block_matvec
+
+
+
+!--------------------------------------------------------------------------!
+subroutine block_matvec_t(A,x,y)                                           !
+!--------------------------------------------------------------------------!
+    class(block_matrix), intent(in) :: A
+    real(dp), intent(in)  :: x(:)
+    real(dp), intent(out) :: y(:)
+
+    y = 0.0_dp
+    call A%matvec_t_add(x,y)
+
+end subroutine block_matvec_t
+
+
+
+!--------------------------------------------------------------------------!
+subroutine block_matvec_add(A,x,y)                                         !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(block_matrix), intent(in) :: A
+    real(dp), intent(in)    :: x(:)
+    real(dp), intent(inout) :: y(:)
     ! local variables
     integer :: i1,j1,i2,j2,k,l
 
@@ -220,21 +250,21 @@ subroutine block_mat_matvec(A,x,y)                                         !
             i1 = A%row_ptr(k)
             i2 = A%row_ptr(k+1)-1
 
-            call A%mats(k,l)%matvec_add(x(j1:j2),y(i1:i2))
+            call A%mats(k,l)%A%matvec_add(x(j1:j2),y(i1:i2))
         enddo
     enddo
 
-end subroutine block_mat_matvec
+end subroutine block_matvec_add
 
 
 
 !--------------------------------------------------------------------------!
-subroutine block_mat_matvec_t(A,x,y)                                       !
+subroutine block_matvec_t_add(A,x,y)                                       !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(block_matrix), intent(in) :: A
-    real(dp), intent(in)  :: x(:)
-    real(dp), intent(out) :: y(:)
+    real(dp), intent(in)    :: x(:)
+    real(dp), intent(inout) :: y(:)
     ! local variables
     integer :: i1,j1,i2,j2,k,l
 
@@ -246,11 +276,11 @@ subroutine block_mat_matvec_t(A,x,y)                                       !
             i1 = A%row_ptr(k)
             i2 = A%row_ptr(k+1)-1
 
-            call A%mats(k,l)%matvec_t_add(x(i1:i2),y(j1:j2))
+            call A%mats(k,l)%A%matvec_t_add(x(i1:i2),y(j1:j2))
         enddo
     enddo
 
-end subroutine block_mat_matvec_t
+end subroutine block_matvec_t_add
 
 
 
@@ -261,7 +291,7 @@ function get_block(A,k,l)                                                  !
     integer, intent(in) :: k,l
     class(sparse_matrix), pointer :: get_block
 
-    get_block => A%mats(k,l)
+    get_block => A%mats(k,l)%A
 
 end function get_block
 
@@ -274,7 +304,7 @@ subroutine set_block(A,B,k,l)                                              !
     class(sparse_matrix), pointer, intent(in) :: B
     integer, intent(in) :: k,l
 
-    A%mats(k,l) => B
+    A%mats(k,l)%A => B
 
 end subroutine set_block
 
