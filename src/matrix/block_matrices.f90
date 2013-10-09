@@ -18,11 +18,13 @@ contains
     ! procedures required by virtue of inheritance from abstract
     ! sparse_matrix data type
     procedure :: init => block_mat_init
+    procedure :: assemble => block_mat_assemble
     procedure :: neighbors => block_mat_neighbors
     procedure :: get_value => block_mat_get_value
     procedure :: set_value => block_mat_set_value
     procedure :: add_value => block_mat_add_value
     procedure :: sub_matrix_add => block_mat_sub_matrix_add
+    procedure :: zero => block_mat_zero
     procedure :: left_permute => block_mat_left_permute
     procedure :: right_permute => block_mat_right_permute
     procedure :: matvec => block_matvec
@@ -33,9 +35,11 @@ contains
     ! procedures specific to block matrices
     procedure :: get_block
     procedure :: set_block
+    procedure :: matvec_vlr => block_matvec_vlr
+    procedure :: matvec_t_vlr => block_matvec_t_vlr
 
-    !generic :: matmul => block_mat_vector_matvec
-    !generic :: matmul_t => block_mat_vector_matvec_t
+    generic :: matmul => matvec_vlr
+    generic :: matmul_t => matvec_t_vlr
 end type block_matrix
 
 
@@ -57,6 +61,36 @@ subroutine block_mat_init(A,nrow,ncol,orientation,g)                       !
     A%orientation = orientation
 
 end subroutine block_mat_init
+
+
+
+!--------------------------------------------------------------------------!
+subroutine block_mat_assemble(A,num_rows,num_cols)                         !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(block_matrix), intent(inout) :: A
+    integer, intent(in) :: num_rows(:), num_cols(:)
+    ! local variables
+    integer :: i,j
+
+    A%mat_rows = size(num_rows)
+    A%mat_cols = size(num_cols)
+
+    allocate( A%row_ptr(A%mat_rows+1), A%col_ptr(A%mat_cols+1) )
+
+    A%row_ptr(1) = 1
+    do i=1,A%mat_rows
+        A%row_ptr(i+1) = A%row_ptr(i)+num_rows(i)
+    enddo
+
+    A%col_ptr(1) = 1
+    do j=1,A%mat_cols
+        A%col_ptr(j+1) = A%col_ptr(j)+num_cols(j)
+    enddo
+
+    allocate( A%mats(A%mat_rows,A%mat_cols) )
+
+end subroutine block_mat_assemble
 
 
 
@@ -172,6 +206,24 @@ subroutine block_mat_sub_matrix_add(A,B)                                   !
     ! Not quite sure how I'm going to play this one
 
 end subroutine block_mat_sub_matrix_add
+
+
+
+!--------------------------------------------------------------------------!
+subroutine block_mat_zero(A)                                               !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(block_matrix), intent(inout) :: A
+    ! local variables
+    integer :: k,l
+
+    do l=1,A%mat_cols
+        do k=1,A%mat_rows
+            call A%mats(k,l)%A%zero()
+        enddo
+    enddo
+
+end subroutine block_mat_zero
 
 
 
@@ -304,22 +356,41 @@ subroutine set_block(A,B,k,l)                                              !
     class(sparse_matrix), pointer, intent(in) :: B
     integer, intent(in) :: k,l
 
-    A%mats(k,l)%A => B
+    if (B%nrow == A%row_ptr(k+1)-A%row_ptr(k) &
+        & .and. B%ncol == A%col_ptr(l+1)-A%col_ptr(l) ) then
+        A%mats(k,l)%A => B
+    else
+        print *, 'Inconsistent dimensions for block matrix assignment'
+        call exit(1)
+    endif
 
 end subroutine set_block
 
 
 
 !--------------------------------------------------------------------------!
-subroutine block_mat_vector_matvec(A,x,y)                                  !
+subroutine block_matvec_vlr(A,x,y)                                         !
 !--------------------------------------------------------------------------!
-    ! input/output variables
     class(block_matrix), intent(in) :: A
     class(vector), intent(in)  :: x
     class(vector), intent(out) :: y
-    ! local variables
 
-end subroutine block_mat_vector_matvec
+    call A%matvec(x%val,y%val)
+
+end subroutine block_matvec_vlr
+
+
+
+!--------------------------------------------------------------------------!
+subroutine block_matvec_t_vlr(A,x,y)                                       !
+!--------------------------------------------------------------------------!
+    class(block_matrix), intent(in) :: A
+    class(vector), intent(in)  :: x
+    class(vector), intent(out) :: y
+
+    call A%matvec_t(x%val,y%val)
+
+end subroutine block_matvec_t_vlr
 
 
 

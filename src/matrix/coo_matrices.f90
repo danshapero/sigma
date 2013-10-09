@@ -19,6 +19,7 @@ contains
     procedure :: set_value => coo_set_value
     procedure :: add_value => coo_add_value
     procedure :: sub_matrix_add => coo_sub_matrix_add
+    procedure :: zero => coo_zero
     procedure :: left_permute => coo_left_permute
     procedure :: right_permute => coo_right_permute
     procedure :: matvec => coo_matvec
@@ -164,6 +165,17 @@ subroutine coo_sub_matrix_add(A,B)                                         !
     enddo
 
 end subroutine coo_sub_matrix_add
+
+
+
+!--------------------------------------------------------------------------!
+subroutine coo_zero(A)                                                     !
+!--------------------------------------------------------------------------!
+    class(coo_matrix), intent(inout) :: A
+
+    A%val = 0.0_dp
+
+end subroutine coo_zero
 
 
 

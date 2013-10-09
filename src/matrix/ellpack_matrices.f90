@@ -26,6 +26,7 @@ contains
     procedure :: set_value => ellpack_set_value
     procedure :: add_value => ellpack_add_value
     procedure :: sub_matrix_add => ellpack_sub_matrix_add
+    procedure :: zero => ellpack_zero
     procedure :: left_permute => ellpack_left_permute
     procedure :: right_permute => ellpack_right_permute
     procedure :: matvec => ellpack_matvec
@@ -251,6 +252,17 @@ subroutine ellpack_sub_matrix_add(A,B)                                     !
     enddo
 
 end subroutine ellpack_sub_matrix_add
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ellpack_zero(A)                                                 !
+!--------------------------------------------------------------------------!
+    class(ellpack_matrix), intent(inout) :: A
+
+    A%val = 0.0_dp
+
+end subroutine ellpack_zero
 
 
 

@@ -26,6 +26,7 @@ contains
     procedure :: set_value => cs_set_value
     procedure :: add_value => cs_add_value
     procedure :: sub_matrix_add => cs_sub_matrix_add
+    procedure :: zero => cs_zero
     procedure :: left_permute => cs_left_permute
     procedure :: right_permute => cs_right_permute
     procedure :: matvec => cs_matvec
@@ -274,6 +275,17 @@ subroutine cs_sub_matrix_add(A,B)                                          !
     enddo
 
 end subroutine cs_sub_matrix_add
+
+
+
+!--------------------------------------------------------------------------!
+subroutine cs_zero(A)                                                      !
+!--------------------------------------------------------------------------!
+    class(cs_matrix), intent(inout) :: A
+
+    A%val = 0.0_dp
+
+end subroutine cs_zero
 
 
 
