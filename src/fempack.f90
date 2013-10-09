@@ -29,6 +29,7 @@ use wrapper
 ! Use other auxiliary modules
 use conversions
 use meshes
+use vectors
 
 
 implicit none

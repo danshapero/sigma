@@ -21,6 +21,7 @@ contains
     procedure(set_value_ifc), deferred      :: set_value
     procedure(set_value_ifc), deferred      :: add_value
     procedure(sub_matrix_add_ifc), deferred :: sub_matrix_add
+    procedure(matrix_zero_ifc), deferred    :: zero
     procedure(permute_matrix_ifc), deferred :: left_permute
     procedure(permute_matrix_ifc), deferred :: right_permute
     procedure(matvec_ifc), deferred         :: matvec
@@ -69,6 +70,11 @@ abstract interface                                                         !
         class(sparse_matrix), intent(inout) :: A
         class(sparse_matrix), intent(in)    :: B
     end subroutine sub_matrix_add_ifc
+
+    subroutine matrix_zero_ifc(A)
+        import :: sparse_matrix
+        class(sparse_matrix), intent(inout) :: A
+    end subroutine matrix_zero_ifc
 
     subroutine permute_matrix_ifc(A,p)
         import :: sparse_matrix

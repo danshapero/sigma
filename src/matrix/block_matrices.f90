@@ -35,11 +35,15 @@ contains
     ! procedures specific to block matrices
     procedure :: get_block
     procedure :: set_block
-    procedure :: matvec_vlr => block_matvec_vlr
+    procedure :: matvec_vlr   => block_matvec_vlr
     procedure :: matvec_t_vlr => block_matvec_t_vlr
+    procedure :: matvec_vl    => block_matvec_vl
+    procedure :: matvec_t_vl  => block_matvec_t_vl
+    procedure :: matvec_vr    => block_matvec_vr
+    procedure :: matvec_t_vr  => block_matvec_t_vr
 
-    generic :: matmul => matvec_vlr
-    generic :: matmul_t => matvec_t_vlr
+    generic :: matmul => matvec_vlr, matvec_vl, matvec_vr
+    generic :: matmul_t => matvec_t_vlr, matvec_t_vl, matvec_t_vr
 end type block_matrix
 
 
@@ -392,6 +396,57 @@ subroutine block_matvec_t_vlr(A,x,y)                                       !
 
 end subroutine block_matvec_t_vlr
 
+
+
+!--------------------------------------------------------------------------!
+subroutine block_matvec_vl(A,x,y)                                          !
+!--------------------------------------------------------------------------!
+    class(block_matrix), intent(in) :: A
+    real(dp), intent(in)       :: x(:)
+    class(vector), intent(out) :: y
+
+    call A%matvec(x,y%val)
+
+end subroutine block_matvec_vl
+
+
+
+!--------------------------------------------------------------------------!
+subroutine block_matvec_t_vl(A,x,y)                                        !
+!--------------------------------------------------------------------------!
+    class(block_matrix), intent(in) :: A
+    real(dp), intent(in)       :: x(:)
+    class(vector), intent(out) :: y
+
+    call A%matvec_t(x,y%val)
+
+end subroutine block_matvec_t_vl
+
+
+
+!--------------------------------------------------------------------------!
+subroutine block_matvec_vr(A,x,y)                                          !
+!--------------------------------------------------------------------------!
+    class(block_matrix), intent(in) :: A
+    class(vector), intent(in) :: x
+    real(dp), intent(out)     :: y(:)
+
+    call A%matvec(x%val,y)
+
+end subroutine block_matvec_vr
+
+
+
+!--------------------------------------------------------------------------!
+subroutine block_matvec_t_vr(A,x,y)                                        !
+!--------------------------------------------------------------------------!
+    class(block_matrix), intent(in) :: A
+    class(vector), intent(in) :: x
+    real(dp), intent(out)     :: y(:)
+
+    call A%matvec_t(x%val,y)
+
+end subroutine block_matvec_t_vr
 
 
 end module block_matrices
