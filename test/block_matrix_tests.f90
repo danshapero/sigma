@@ -179,6 +179,7 @@ implicit none
     !----------------------------------------------------------------------!
     call x%init([n_nodes,n_triangles])
     call y%init([n_nodes,n_triangles])
+    y%val = 0.0_dp
 
     do i=1,n_nodes
         call x%set_value([i,1],1.0_dp)

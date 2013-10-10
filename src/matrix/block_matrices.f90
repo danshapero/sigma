@@ -376,8 +376,8 @@ end subroutine set_block
 subroutine block_matvec_vlr(A,x,y)                                         !
 !--------------------------------------------------------------------------!
     class(block_matrix), intent(in) :: A
-    class(vector), intent(in)  :: x
-    class(vector), intent(out) :: y
+    class(vector), intent(in)    :: x
+    class(vector), intent(inout) :: y
 
     call A%matvec(x%val,y%val)
 
@@ -389,8 +389,8 @@ end subroutine block_matvec_vlr
 subroutine block_matvec_t_vlr(A,x,y)                                       !
 !--------------------------------------------------------------------------!
     class(block_matrix), intent(in) :: A
-    class(vector), intent(in)  :: x
-    class(vector), intent(out) :: y
+    class(vector), intent(in)    :: x
+    class(vector), intent(inout) :: y
 
     call A%matvec_t(x%val,y%val)
 
@@ -402,8 +402,8 @@ end subroutine block_matvec_t_vlr
 subroutine block_matvec_vl(A,x,y)                                          !
 !--------------------------------------------------------------------------!
     class(block_matrix), intent(in) :: A
-    real(dp), intent(in)       :: x(:)
-    class(vector), intent(out) :: y
+    real(dp), intent(in)         :: x(:)
+    class(vector), intent(inout) :: y
 
     call A%matvec(x,y%val)
 
@@ -415,8 +415,8 @@ end subroutine block_matvec_vl
 subroutine block_matvec_t_vl(A,x,y)                                        !
 !--------------------------------------------------------------------------!
     class(block_matrix), intent(in) :: A
-    real(dp), intent(in)       :: x(:)
-    class(vector), intent(out) :: y
+    real(dp), intent(in)         :: x(:)
+    class(vector), intent(inout) :: y
 
     call A%matvec_t(x,y%val)
 
