@@ -1,7 +1,7 @@
 module ll_graphs
 
 use graphs
-use types
+use types, only: dynamic_array
 
 implicit none
 
@@ -9,7 +9,7 @@ implicit none
 !--------------------------------------------------------------------------!
 type, extends(graph) :: ll_graph                                           !
 !--------------------------------------------------------------------------!
-    type(linked_list), allocatable :: lists(:)
+    type(dynamic_array), allocatable :: lists(:)
 contains
     procedure :: init => ll_init
     procedure :: neighbors => ll_neighbors
@@ -44,6 +44,9 @@ subroutine ll_init(g,n,m,edges)                                            !
 
     g%n = n
     allocate(g%lists(n))
+    do k=1,n
+        call g%lists(k)%init(capacity=4,min_capacity=2)
+    enddo
 
     if (present(m)) then
         g%m = m
@@ -56,7 +59,7 @@ subroutine ll_init(g,n,m,edges)                                            !
         g%ne = ne
 
         do k=1,ne
-            call g%lists(edges(1,k))%append(edges(2,k))
+            call g%lists(edges(1,k))%push(edges(2,k))
         enddo
 
         g%max_degree = 0
@@ -85,7 +88,7 @@ subroutine ll_neighbors(g,i,nbrs)                                          !
 
     nbrs = 0
     do k=1,g%lists(i)%length
-        nbrs(k) = g%lists(i)%get_value(k)
+        nbrs(k) = g%lists(i)%get_entry(k)
     enddo
 
 end subroutine ll_neighbors
@@ -104,7 +107,7 @@ function ll_connected(g,i,j)                                               !
 
     ll_connected = .false.
     do k=1,g%lists(i)%length
-        if (g%lists(i)%get_value(k)==j) then
+        if (g%lists(i)%get_entry(k)==j) then
             ll_connected = .true.
             exit
         endif
@@ -126,7 +129,7 @@ function ll_find_edge(g,i,j)                                               !
 
     ll_find_edge = -1
     do k=1,g%lists(i)%length
-        if (g%lists(i)%get_value(k)==j) then
+        if (g%lists(i)%get_entry(k)==j) then
             ll_find_edge = k
             exit
         endif
@@ -143,7 +146,8 @@ subroutine ll_add_edge(g,i,j)                                              !
     integer, intent(in) :: i,j
 
     if (.not.g%connected(i,j)) then
-        call g%lists(i)%prepend(j)
+        call g%lists(i)%push(j)
+        !!change this to g%max_degree = max(g%max_degree,g%lists(i)%length)
         if (g%lists(i)%length>g%max_degree) then
             g%max_degree = g%lists(i)%length
         endif
@@ -159,19 +163,34 @@ subroutine ll_delete_edge(g,i,j)                                           !
 !--------------------------------------------------------------------------!
     class(ll_graph), intent(inout) :: g
     integer, intent(in) :: i,j
-    integer :: k,degree
+    integer :: k,jt,degree
 
-    degree = g%lists(i)%length
-    call g%lists(i)%delete_value(j)
-    if (g%lists(i)%length<degree) then
+    if (g%connected(i,j)) then
+        ! Record the degree of vertex i
+        degree = g%lists(i)%length
+
+        ! Pop from the list of i's neighbors
+        jt = g%lists(i)%pop()
+
+        ! If the vertex jt popped from i's neighbors is not vertex j,
+        if (jt/=j) then
+            ! find where vertex j was stored and put jt there.
+            k = g%find_edge(i,j)
+            call g%lists(i)%set_entry(k,jt)
+        endif
+
+        ! If the degree of vertex i was the max degree of the graph, we
+        ! need to check that the max degree of the graph hasn't decreased.
+        !!Make this a guaranteed O(1) operation somehow
+        if (degree==g%max_degree) then
+            g%max_degree = 0
+            do k=1,g%n
+                g%max_degree = max(g%max_degree,g%lists(k)%length)
+            enddo
+        endif
+
+        ! Decrement the total number of edges in the graph
         g%ne = g%ne-1
-    endif
-
-    if (degree==g%max_degree) then
-        g%max_degree = 0
-        do k=1,g%n
-            g%max_degree = max(g%max_degree,g%lists(k)%length)
-        enddo
     endif
 
 end subroutine ll_delete_edge
@@ -186,20 +205,22 @@ subroutine ll_graph_left_permute(g,p)                                      !
     integer, intent(in) :: p(:)
     ! local variables
     integer :: i,j,k
-    type(linked_list) :: lists(g%n)
+    type(dynamic_array) :: lists(g%n)
 
     do i=1,g%n
+        call lists(i)%init(capacity=g%lists(i)%capacity,min_capacity=2)
         do k=1,g%lists(i)%length
-            j = g%lists(i)%get_value(k)
-            call lists(i)%append(j)
+            j = g%lists(i)%get_entry(k)
+            call lists(i)%push(j)
         enddo
         call g%lists(i)%free()
     enddo
 
     do i=1,g%n
+        call g%lists(p(i))%init(capacity=lists(i)%capacity,min_capacity=2)
         do k=1,lists(i)%length
-            j = lists(i)%get_value(k)
-            call g%lists(p(i))%append(j)
+            j = lists(i)%get_entry(k)
+            call g%lists(p(i))%push(j)
         enddo
         call lists(i)%free()
     enddo
@@ -219,8 +240,8 @@ subroutine ll_graph_right_permute(g,p)                                     !
 
     do i=1,g%n
         do k=1,g%lists(i)%length
-            j = g%lists(i)%get_value(k)
-            call g%lists(i)%set_value(k,p(j))
+            j = g%lists(i)%get_entry(k)
+            call g%lists(i)%set_entry(k,p(j))
         enddo
     enddo
 
@@ -263,7 +284,7 @@ subroutine ll_dump_edges(g,edges)                                          !
         do k=1,g%lists(i)%length
             next = next+1
             edges(1,next) = i
-            edges(2,next) = g%lists(i)%get_value(k)
+            edges(2,next) = g%lists(i)%get_entry(k)
         enddo
     enddo
 

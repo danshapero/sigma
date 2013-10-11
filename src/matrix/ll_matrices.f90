@@ -2,7 +2,7 @@ module ll_matrices
 
 use sparse_matrices
 use ll_graphs
-use types
+use types, only: dp, dynamic_array
 
 implicit none
 
@@ -11,7 +11,7 @@ implicit none
 type, extends(sparse_matrix) :: ll_matrix                                  !
 !--------------------------------------------------------------------------!
     real(dp), allocatable :: val(:)
-    type(linked_list), allocatable :: ptrs(:)
+    type(dynamic_array), allocatable :: ptrs(:)
     integer :: last, order(2)
     class(ll_graph), pointer :: g
     ! procedure pointers to implementations of matrix operations
@@ -142,8 +142,9 @@ subroutine ll_matrix_init(A,nrow,ncol,orientation,g)                       !
     A%last = 1
     allocate(A%ptrs(g%n))
     do i=1,A%g%n
+        call A%ptrs(i)%init(capacity=A%g%lists(i)%length,min_capacity=2)
         do k=1,A%g%lists(i)%length
-            call A%ptrs(i)%prepend(A%last)
+            call A%ptrs(i)%push(A%last)
             A%last = A%last+1
         enddo
     enddo
@@ -180,7 +181,7 @@ function ll_get_value(A,i,j)                                               !
 
     ll_get_value = 0_dp
     k = A%g%find_edge(ind(1),ind(2))
-    if (k/=-1) ll_get_value = A%val(A%ptrs(ind(1))%get_value(k))
+    if (k/=-1) ll_get_value = A%val(A%ptrs(ind(1))%get_entry(k))
 
 end function ll_get_value
 
@@ -201,7 +202,7 @@ subroutine ll_set_value(A,i,j,val)                                         !
 
     k = A%g%find_edge(ind(1),ind(2))
     if (k/=-1) then
-        k = A%ptrs(ind(1))%get_value(k)
+        k = A%ptrs(ind(1))%get_entry(k)
         A%val(k) = val
     else
         call A%ll_set_value_not_preallocated(i,j,val)
@@ -226,7 +227,7 @@ subroutine ll_add_value(A,i,j,val)                                         !
 
     k = A%g%find_edge(ind(1),ind(2))
     if (k/=-1) then
-        k = A%ptrs(ind(1))%get_value(k)
+        k = A%ptrs(ind(1))%get_entry(k)
         A%val(k) = A%val(k)+val
     else
         call A%ll_set_value_not_preallocated(i,j,val)
@@ -248,7 +249,7 @@ subroutine ll_sub_matrix_add(A,B)                                          !
 
     do i=1,A%g%n
         do k=1,A%g%lists(i)%length
-            j = A%g%lists(i)%get_value(k)
+            j = A%g%lists(i)%get_entry(k)
             Bij = B%get_value(i,j)
             call A%add_value(i,j,Bij)
         enddo
@@ -368,7 +369,7 @@ subroutine ll_set_value_not_preallocated(A,i,j,val)                        !
     ind = [i,j]
     ind = ind(A%order)
     call A%g%add_edge(ind(1),ind(2))
-    call A%ptrs(ind(1))%prepend(k)
+    call A%ptrs(ind(1))%push(k)
 
     A%val(k) = val
 
@@ -409,20 +410,22 @@ subroutine ll_matrix_permute_ptrs(A,p)                                     !
     integer, intent(in) :: p(:)
     ! local variables
     integer :: i,j,k
-    type(linked_list) :: ptrs(A%g%n)
+    type(dynamic_array) :: ptrs(A%g%n)
 
     do i=1,A%g%n
+        call ptrs(i)%init(capacity=A%ptrs(i)%capacity,min_capacity=2)
         do k=1,A%ptrs(i)%length
-            j = A%ptrs(i)%get_value(k)
-            call ptrs(i)%append(j)
+            j = A%ptrs(i)%get_entry(k)
+            call ptrs(i)%push(j)
         enddo
         call A%ptrs(i)%free()
     enddo
 
     do i=1,A%g%n
+        call A%ptrs(p(i))%init(capacity=ptrs(i)%capacity,min_capacity=2)
         do k=1,ptrs(i)%length
-            j = ptrs(i)%get_value(k)
-            call A%ptrs(p(i))%append(j)
+            j = ptrs(i)%get_entry(k)
+            call A%ptrs(p(i))%push(j)
         enddo
         call ptrs(i)%free()
     enddo
@@ -447,8 +450,8 @@ subroutine llr_matvec(A,x,y)                                               !
     do i=1,A%g%n
         z = 0.0_dp
         do k=1,A%ptrs(i)%length
-            j = A%g%lists(i)%get_value(k)
-            Aij = A%val( A%ptrs(i)%get_value(k) )
+            j = A%g%lists(i)%get_entry(k)
+            Aij = A%val( A%ptrs(i)%get_entry(k) )
             z = z+Aij*x(j)
         enddo
         y(i) = y(i)+z
@@ -472,8 +475,8 @@ subroutine llc_matvec(A,x,y)                                               !
     do j=1,A%g%n
         z = x(j)
         do k=1,A%ptrs(j)%length
-            i = A%g%lists(j)%get_value(k)
-            Aij = A%val( A%ptrs(j)%get_value(k) )
+            i = A%g%lists(j)%get_entry(k)
+            Aij = A%val( A%ptrs(j)%get_entry(k) )
             y(i) = y(i)+Aij*z
         enddo
     enddo

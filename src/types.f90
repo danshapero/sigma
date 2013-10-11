@@ -41,6 +41,7 @@ contains
     procedure :: push => dynamic_array_push
     procedure :: pop => dynamic_array_pop
     procedure :: peek => dynamic_array_peek
+    procedure :: free => dynamic_array_free
 end type dynamic_array
 
 
@@ -417,6 +418,21 @@ pure function dynamic_array_peek(a)                                        !
     if (a%length>0) dynamic_array_peek = a%array(a%length)
 
 end function dynamic_array_peek
+
+
+
+!--------------------------------------------------------------------------!
+subroutine dynamic_array_free(a)                                           !
+!--------------------------------------------------------------------------!
+    class(dynamic_array), intent(inout) :: a
+
+    deallocate(a%array)
+
+    a%length = 0
+    a%capacity = 0
+    a%min_capacity = 0
+
+end subroutine dynamic_array_free
 
 
 
