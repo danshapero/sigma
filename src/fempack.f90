@@ -28,6 +28,7 @@ use jacobi_preconditioners
 use wrapper
 
 ! Use other auxiliary modules
+use permutations
 use conversions
 use meshes
 
