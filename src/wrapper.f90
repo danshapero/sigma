@@ -6,10 +6,12 @@ use graphs
 use ll_graphs
 use coo_graphs
 use cs_graphs
+use ellpack_graphs
 
 use sparse_matrices
 use coo_matrices
 use cs_matrices
+use ellpack_matrices
 
 use conversions
 
@@ -38,11 +40,13 @@ subroutine get_graph(cgp,storage_format) bind(c)                           !
 
     select case(storage_format)
         case(0)
-            allocate(ll_graph  ::gp%g)
+            allocate(ll_graph::gp%g)
         case(1)
-            allocate(coo_graph ::gp%g)
+            allocate(coo_graph::gp%g)
         case(2)
-            allocate(cs_graph  ::gp%g)
+            allocate(cs_graph::gp%g)
+        case(3)
+            allocate(ellpack_graph::gp%g)
     end select
 
 end subroutine get_graph
@@ -82,6 +86,8 @@ subroutine get_matrix(cmp,storage_format) bind(c)                          !
             allocate(coo_matrix::mp%A)
         case(1)
             allocate(cs_matrix::mp%A)
+        case(2)
+            allocate(ellpack_matrix::mp%A)
     end select
 
 end subroutine get_matrix
@@ -259,6 +265,25 @@ subroutine sparse_matrix_init_c(cmp,nrow,ncol,orientation) &               !
     end select
 
 end subroutine sparse_matrix_init_c
+
+
+
+!--------------------------------------------------------------------------!
+subroutine sparse_matrix_set_value_c(cmp,i,j,val) &                        !
+    & bind(c,name='sparse_matrix_set_value')                               !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    type(c_ptr), intent(in) :: cmp
+    integer(c_int), intent(in), value :: i,j
+    real(c_double), intent(in), value :: val
+    ! local variables
+    class(sparse_matrix), pointer :: A
+
+    A => cmatrix_to_fmatrix(cmp)
+
+    call A%set_value(i,j,val)
+
+end subroutine sparse_matrix_set_value_c
 
 
 
