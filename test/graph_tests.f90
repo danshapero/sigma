@@ -29,7 +29,7 @@ implicit none
     ! Loop through and test each graph type                                !
     !----------------------------------------------------------------------!
     do test=1,4
-
+        ! Allocate the graph
         select case(test)
             case(1)
                 allocate(ll_graph::g)
@@ -41,13 +41,18 @@ implicit none
                 allocate(ellpack_graph::g)
         end select
 
+        ! Initialize the graph with a set of pre-defined edges
         call g%init(7,7,edges)
 
+        ! Check that the initialization routine has correctly entered the
+        ! number of edges in the graph
         if (g%ne/=12) then
             print *, 'Graph should have 12 edges'
             call exit(1)
         endif
 
+        ! Check that edge 1 has been connected to edge 2 but that edge 2
+        ! is not connected to edge 1
         if (.not.g%connected(1,2) .or. g%connected(2,1)) then
             print *, 'Graph should have 1 -> 2, 2 -/> 1; we have:'
             if (.not.g%connected(1,2)) then
@@ -58,34 +63,47 @@ implicit none
             call exit(1)
         endif
 
+        ! Check that the maximum degree of the graph has been calculated
+        ! properly by the initialization routine
         if (g%max_degree/=6) then
             print *, 'Max degree of g should be 6; it is:',g%max_degree
             call exit(1)
         endif
 
+        ! Add in new edges to symmetrize the graph
         do i=1,12
             call g%add_edge(edges(2,i),edges(1,i))
         enddo
 
+        ! Check that edge 1 is still connected to edge 2 and that edge 2
+        ! is now connected to edge 1
         if (.not.g%connected(1,2) .or. .not.g%connected(2,1)) then
             print *, 'Supposed to have 1 -> 2 and 2 -> 1'
+            call exit(1)
         endif
 
+        ! Check that the total number of edges has been properly updated
         if (g%ne/=24) then
             print *, '12 edges were added; graph should have 24 edges'
             print *, 'Graph has ',g%ne,' edges'
             print *, test
+            call exit(1)
         endif
 
         allocate(nbrs(g%max_degree))
 
+        ! Check that finding all neighbors of a given edge works
         call g%neighbors(1,nbrs)
         correct = .true.
         do i=1,g%max_degree
             if (nbrs(i)/=i+1) correct = .false.
         enddo
-        if (.not.correct) print *, 'Node 1 should neighbor all other nodes'
+        if (.not.correct) then
+            print *, 'Node 1 should neighbor all other nodes'
+            call exit(1)
+        endif
 
+        ! Check that permutation works properly
         allocate(p(7))
         do i=1,7
             p(i) = i-1
@@ -94,6 +112,22 @@ implicit none
         call g%right_permute(p)
         call g%left_permute(p)
         deallocate(p)
+
+        ! Delete all connections between node 1 and any even nodes
+        do i=2,6,2
+            call g%delete_edge(1,i)
+            call g%delete_edge(i,1)
+        enddo
+
+        ! Check that edge deletion worked properly
+        do i=2,6,2
+            if (g%connected(1,i) .or. g%connected(i,1)) then
+                print *, 'All connections between 1 and even nodes were '
+                print *, 'deleted, and yet 1 is still connected '
+                print *, 'to node ',i
+                call exit(1)
+            endif
+        enddo
 
         call g%free()
 

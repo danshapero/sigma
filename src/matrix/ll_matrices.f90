@@ -27,10 +27,13 @@ contains
     procedure :: set_value => ll_set_value
     procedure :: add_value => ll_add_value
     procedure :: sub_matrix_add => ll_sub_matrix_add
+    procedure :: zero => ll_zero
     procedure :: left_permute => ll_left_permute
     procedure :: right_permute => ll_right_permute
     procedure :: matvec => ll_matvec
     procedure :: matvec_t => ll_matvec_t
+    procedure :: matvec_add => ll_matvec_add
+    procedure :: matvec_t_add => ll_matvec_t_add
     procedure, private :: ll_set_value_not_preallocated
 end type ll_matrix
 
@@ -42,8 +45,8 @@ abstract interface                                                         !
     subroutine ll_matvec_ifc(A,x,y)
         import :: ll_matrix, dp
         class(ll_matrix), intent(in) :: A
-        real(dp), intent(in)  :: x(:)
-        real(dp), intent(out) :: y(:)
+        real(dp), intent(in)    :: x(:)
+        real(dp), intent(inout) :: y(:)
     end subroutine
 
     subroutine ll_permute_ifc(A,p)
@@ -177,7 +180,7 @@ function ll_get_value(A,i,j)                                               !
 
     ll_get_value = 0_dp
     k = A%g%find_edge(ind(1),ind(2))
-    if (k/=-1) ll_get_value = A%val(k)
+    if (k/=-1) ll_get_value = A%val(A%ptrs(ind(1))%get_value(k))
 
 end function ll_get_value
 
@@ -198,6 +201,7 @@ subroutine ll_set_value(A,i,j,val)                                         !
 
     k = A%g%find_edge(ind(1),ind(2))
     if (k/=-1) then
+        k = A%ptrs(ind(1))%get_value(k)
         A%val(k) = val
     else
         call A%ll_set_value_not_preallocated(i,j,val)
@@ -222,6 +226,7 @@ subroutine ll_add_value(A,i,j,val)                                         !
 
     k = A%g%find_edge(ind(1),ind(2))
     if (k/=-1) then
+        k = A%ptrs(ind(1))%get_value(k)
         A%val(k) = A%val(k)+val
     else
         call A%ll_set_value_not_preallocated(i,j,val)
@@ -250,6 +255,17 @@ subroutine ll_sub_matrix_add(A,B)                                          !
     enddo
 
 end subroutine ll_sub_matrix_add
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ll_zero(A)                                                      !
+!--------------------------------------------------------------------------!
+    class(ll_matrix), intent(inout) :: A
+
+    A%val = 0.0_dp
+
+end subroutine ll_zero
 
 
 
@@ -284,6 +300,7 @@ subroutine ll_matvec(A,x,y)                                                !
     real(dp), intent(in)  :: x(:)
     real(dp), intent(out) :: y(:)
 
+    y = 0.0_dp
     call A%matvec_impl(x,y)
 
 end subroutine ll_matvec
@@ -297,9 +314,36 @@ subroutine ll_matvec_t(A,x,y)                                              !
     real(dp), intent(in)  :: x(:)
     real(dp), intent(out) :: y(:)
 
+    y = 0.0_dp
     call A%matvec_t_impl(x,y)
 
 end subroutine ll_matvec_t
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ll_matvec_add(A,x,y)                                            !
+!--------------------------------------------------------------------------!
+    class(ll_matrix), intent(in) :: A
+    real(dp), intent(in)    :: x(:)
+    real(dp), intent(inout) :: y(:)
+
+    call A%matvec_impl(x,y)
+
+end subroutine ll_matvec_add
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ll_matvec_t_add(A,x,y)                                          !
+!--------------------------------------------------------------------------!
+    class(ll_matrix), intent(in) :: A
+    real(dp), intent(in)    :: x(:)
+    real(dp), intent(inout) :: y(:)
+
+    call A%matvec_t_impl(x,y)
+
+end subroutine ll_matvec_t_add
 
 
 
@@ -394,8 +438,8 @@ subroutine llr_matvec(A,x,y)                                               !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(ll_matrix), intent(in) :: A
-    real(dp), intent(in)  :: x(:)
-    real(dp), intent(out) :: y(:)
+    real(dp), intent(in)    :: x(:)
+    real(dp), intent(inout) :: y(:)
     ! local variables
     integer :: i,j,k
     real(dp) :: z,Aij
@@ -407,7 +451,7 @@ subroutine llr_matvec(A,x,y)                                               !
             Aij = A%val( A%ptrs(i)%get_value(k) )
             z = z+Aij*x(j)
         enddo
-        y(i) = z
+        y(i) = y(i)+z
     enddo
 
 end subroutine llr_matvec
@@ -419,13 +463,12 @@ subroutine llc_matvec(A,x,y)                                               !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(ll_matrix), intent(in) :: A
-    real(dp), intent(in)  :: x(:)
-    real(dp), intent(out) :: y(:)
+    real(dp), intent(in)    :: x(:)
+    real(dp), intent(inout) :: y(:)
     ! local variables
     integer :: i,j,k
     real(dp) :: z,Aij
 
-    y = 0.0_dp
     do j=1,A%g%n
         z = x(j)
         do k=1,A%ptrs(j)%length

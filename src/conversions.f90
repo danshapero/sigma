@@ -5,6 +5,7 @@ use graphs
 use ll_graphs
 use coo_graphs
 use cs_graphs
+use ellpack_graphs
 
 implicit none
 
@@ -37,6 +38,8 @@ subroutine convert(g,storage_format)                                       !
             allocate(ll_graph::g)
         case('cs')
             allocate(cs_graph::g)
+        case('ell')
+            allocate(ellpack_graph::g)
         case('coo')
             allocate(coo_graph::g)
     end select

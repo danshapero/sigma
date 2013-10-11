@@ -8,12 +8,11 @@ graph/ll_graphs.f90
 
 set(MATRIX_SRCS
 matrix/sparse_matrices.f90
-matrix/block_sparse_matrices.f90
 matrix/coo_matrices.f90
 matrix/cs_matrices.f90
 matrix/ellpack_matrices.f90
 matrix/ll_matrices.f90
-matrix/bcs_matrices.f90
+matrix/block_matrices.f90
 )
 
 set(SOLVER_SRCS

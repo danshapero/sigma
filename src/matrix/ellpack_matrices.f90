@@ -26,10 +26,13 @@ contains
     procedure :: set_value => ellpack_set_value
     procedure :: add_value => ellpack_add_value
     procedure :: sub_matrix_add => ellpack_sub_matrix_add
+    procedure :: zero => ellpack_zero
     procedure :: left_permute => ellpack_left_permute
     procedure :: right_permute => ellpack_right_permute
     procedure :: matvec => ellpack_matvec
     procedure :: matvec_t => ellpack_matvec_t
+    procedure :: matvec_add => ellpack_matvec_add
+    procedure :: matvec_t_add => ellpack_matvec_t_add
     procedure, private :: ellpack_set_value_not_preallocated
 end type ellpack_matrix
 
@@ -42,8 +45,8 @@ abstract interface                                                         !
     subroutine ellpack_matvec_ifc(A,x,y)
         import :: ellpack_matrix, dp
         class(ellpack_matrix), intent(in) :: A
-        real(dp), intent(in)  :: x(:)
-        real(dp), intent(out) :: y(:)
+        real(dp), intent(in)    :: x(:)
+        real(dp), intent(inout) :: y(:)
     end subroutine ellpack_matvec_ifc
 
     subroutine ellpack_permute_ifc(A,p)
@@ -253,6 +256,17 @@ end subroutine ellpack_sub_matrix_add
 
 
 !--------------------------------------------------------------------------!
+subroutine ellpack_zero(A)                                                 !
+!--------------------------------------------------------------------------!
+    class(ellpack_matrix), intent(inout) :: A
+
+    A%val = 0.0_dp
+
+end subroutine ellpack_zero
+
+
+
+!--------------------------------------------------------------------------!
 subroutine ellpack_left_permute(A,p)                                       !
 !--------------------------------------------------------------------------!
     class(ellpack_matrix), intent(inout) :: A
@@ -283,6 +297,7 @@ subroutine ellpack_matvec(A,x,y)                                           !
     real(dp), intent(in)  :: x(:)
     real(dp), intent(out) :: y(:)
 
+    y = 0.0_dp
     call A%matvec_impl(x,y)
 
 end subroutine ellpack_matvec
@@ -296,9 +311,36 @@ subroutine ellpack_matvec_t(A,x,y)                                         !
     real(dp), intent(in)  :: x(:)
     real(dp), intent(out) :: y(:)
 
+    y = 0.0_dp
     call A%matvec_t_impl(x,y)
 
 end subroutine ellpack_matvec_t
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ellpack_matvec_add(A,x,y)                                       !
+!--------------------------------------------------------------------------!
+    class(ellpack_matrix), intent(in) :: A
+    real(dp), intent(in)    :: x(:)
+    real(dp), intent(inout) :: y(:)
+
+    call A%matvec_impl(x,y)
+
+end subroutine ellpack_matvec_add
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ellpack_matvec_t_add(A,x,y)                                     !
+!--------------------------------------------------------------------------!
+    class(ellpack_matrix), intent(in) :: A
+    real(dp), intent(in)    :: x(:)
+    real(dp), intent(inout) :: y(:)
+
+    call A%matvec_t_impl(x,y)
+
+end subroutine ellpack_matvec_t_add
 
 
 
@@ -385,8 +427,8 @@ subroutine ellr_matvec(A,x,y)                                              !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(ellpack_matrix), intent(in) :: A
-    real(dp), intent(in)  :: x(:)
-    real(dp), intent(out) :: y(:)
+    real(dp), intent(in)    :: x(:)
+    real(dp), intent(inout) :: y(:)
     ! local variables
     integer :: i,j,k
     real(dp) :: z
@@ -397,7 +439,7 @@ subroutine ellr_matvec(A,x,y)                                              !
             j = A%g%node(k,i)
             if (j/=0) z = z+A%val(k,i)*x(j)
         enddo
-        y(i) = z
+        y(i) = y(i)+z
     enddo
 
 end subroutine ellr_matvec
@@ -409,13 +451,12 @@ subroutine ellc_matvec(A,x,y)                                              !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(ellpack_matrix), intent(in) :: A
-    real(dp), intent(in)  :: x(:)
-    real(dp), intent(out) :: y(:)
+    real(dp), intent(in)    :: x(:)
+    real(dp), intent(inout) :: y(:)
     ! local variables
     integer :: i,j,k
     real(dp) :: z
 
-    y = 0.0_dp
     do j=1,A%g%n
         z = x(j)
         do k=1,A%max_degree

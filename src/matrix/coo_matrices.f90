@@ -19,10 +19,13 @@ contains
     procedure :: set_value => coo_set_value
     procedure :: add_value => coo_add_value
     procedure :: sub_matrix_add => coo_sub_matrix_add
+    procedure :: zero => coo_zero
     procedure :: left_permute => coo_left_permute
     procedure :: right_permute => coo_right_permute
     procedure :: matvec => coo_matvec
     procedure :: matvec_t => coo_matvec_t
+    procedure :: matvec_add => coo_matvec_add
+    procedure :: matvec_t_add => coo_matvec_t_add
     procedure, private :: coo_set_value_not_preallocated
 end type coo_matrix
 
@@ -166,6 +169,17 @@ end subroutine coo_sub_matrix_add
 
 
 !--------------------------------------------------------------------------!
+subroutine coo_zero(A)                                                     !
+!--------------------------------------------------------------------------!
+    class(coo_matrix), intent(inout) :: A
+
+    A%val = 0.0_dp
+
+end subroutine coo_zero
+
+
+
+!--------------------------------------------------------------------------!
 subroutine coo_left_permute(A,p)                                           !
 !--------------------------------------------------------------------------!
     class(coo_matrix), intent(inout) :: A
@@ -190,34 +204,32 @@ end subroutine coo_right_permute
 
 
 !--------------------------------------------------------------------------!
-subroutine coo_matvec(A,x,y)                                               !
+subroutine coo_matvec_add(A,x,y)                                           !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(coo_matrix), intent(in) :: A
-    real(dp), intent(in)  :: x(:)
-    real(dp), intent(out) :: y(:)
+    real(dp), intent(in)    :: x(:)
+    real(dp), intent(inout) :: y(:)
     ! local variables
     integer :: i,j,k
 
-    y = 0.0_dp
     do k=1,A%nnz
         i = A%g%edges(1)%get_entry(k)
         j = A%g%edges(2)%get_entry(k)
         y(i) = y(i)+A%val(k)*x(j)
     enddo
 
-end subroutine coo_matvec
-
+end subroutine coo_matvec_add
 
 
 
 !--------------------------------------------------------------------------!
-subroutine coo_matvec_t(A,x,y)                                             !
+subroutine coo_matvec_t_add(A,x,y)                                         !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(coo_matrix), intent(in) :: A
-    real(dp), intent(in)  :: x(:)
-    real(dp), intent(out) :: y(:)
+    real(dp), intent(in)    :: x(:)
+    real(dp), intent(inout) :: y(:)
     ! local variables
     integer :: i,j,k
 
@@ -226,6 +238,34 @@ subroutine coo_matvec_t(A,x,y)                                             !
         j = A%g%edges(1)%get_entry(k)
         y(i) = y(i)+A%val(k)*x(j)
     enddo
+
+end subroutine coo_matvec_t_add
+
+
+
+!--------------------------------------------------------------------------!
+subroutine coo_matvec(A,x,y)                                               !
+!--------------------------------------------------------------------------!
+    class(coo_matrix), intent(in) :: A
+    real(dp), intent(in)  :: x(:)
+    real(dp), intent(out) :: y(:)
+
+    y = 0.0_dp
+    call A%matvec_add(x,y)
+
+end subroutine coo_matvec
+
+
+
+!--------------------------------------------------------------------------!
+subroutine coo_matvec_t(A,x,y)                                             !
+!--------------------------------------------------------------------------!
+    class(coo_matrix), intent(in) :: A
+    real(dp), intent(in)  :: x(:)
+    real(dp), intent(out) :: y(:)
+
+    y = 0.0_dp
+    call A%matvec_t_add(x,y)
 
 end subroutine coo_matvec_t
 

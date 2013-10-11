@@ -108,6 +108,7 @@ implicit none
             do k=1,A%max_degree
                 if (nbrs(k)/=0 .and. nbrs(k)/=i) degree = degree+1
             enddo
+
             do k=1,A%max_degree
                 j = nbrs(k)
                 if (j/=0) then
@@ -121,8 +122,10 @@ implicit none
         ! Test matrix multiplications
         z = A%get_value(1,1)
         if (z/=6.0_dp) then
+            print *, 'On matrix test',test
             print *, 'A(1,1) should be = 6.0 for A the graph Laplacian; '
             print *, 'value found: ',z
+            call exit(1)
         endif
 
         x = 1.0_dp
@@ -130,8 +133,10 @@ implicit none
         call A%matvec(x,y)
 
         if ( maxval(dabs(y))>1.0e-14 ) then
+            print *, 'On matrix test',test
             print *, 'A*[1,...,1] should be = 0;'
             print *, 'range(y) = ',minval(y),maxval(y)
+            call exit(1)
         endif
 
         ! Test adding two matrices
@@ -139,8 +144,10 @@ implicit none
         y = 0.0_dp
         call A%matvec(x,y)
         if ( maxval(dabs(y-1.0))>1.0e-14 ) then
+            print *, 'On matrix test',test
             print *, '(A+I)*[1,...,1] should be = 1;'
             print *, 'range(y) = ',minval(y),maxval(y)
+            call exit(1)
         endif
 
         ! Test permuting the matrices
@@ -153,14 +160,61 @@ implicit none
             if (nbrs(i)/=i) correct = .false.
         enddo
         if (.not.correct) then
+            print *, 'On matrix test',test
             print *, 'Permutation failed'
+            call exit(1)
         endif
 
         call A%matvec(x,y)
 
         if ( maxval(dabs(y-1.0))>1.0e-14 ) then
+            print *, 'On matrix test',test
             print *, 'permuted (A+I)*[1,...,1] should still be = 1'
             print *, 'range(y) = ',minval(y),maxval(y)
+            call exit(1)
+        endif
+
+        ! Set all entries of A to zero
+        call A%zero()
+
+        ! Set A(i,j) = 1 if j>i and (i,j) are connected
+        do i=1,7
+            call A%neighbors(i,nbrs)
+            do k=1,A%max_degree
+                j = nbrs(k)
+                if (j/=0 .and. j>i) call A%set_value(i,j,1.0_dp)
+            enddo
+        enddo
+
+        x = 1.0_dp
+        call A%matvec(x,y)
+        x = [3.0_dp, 2.0_dp, 2.0_dp, 2.0_dp, 2.0_dp, 1.0_dp, 0.0_dp]
+        correct = .true.
+        do i=1,7
+            correct = correct .and. y(i)==x(i)
+        enddo
+        if (.not.correct) then
+            print *, 'Multiplying by non-symmetric matrix failed.'
+            print *, 'Should have gotten: '
+            print *, x
+            print *, 'Instead found: '
+            print *, y
+            call exit(1)
+        endif
+
+        x = 1.0_dp
+        call A%matvec_t(x,y)
+        x = [0.0_dp, 1.0_dp, 1.0_dp, 1.0_dp, 1.0_dp, 2.0_dp, 6.0_dp]
+        do i=1,7
+            correct = correct .and. y(i)==x(i)
+        enddo
+        if (.not.correct) then
+            print *, 'Multiplying by non-symmetric matrix failed.'
+            print *, 'Should have gotten: '
+            print *, x
+            print *, 'Instead found: '
+            print *, y
+            call exit(1)
         endif
 
         ! Free up the graphs and matrices for the next test

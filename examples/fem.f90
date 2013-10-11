@@ -91,64 +91,64 @@ end subroutine mass2d
 
 
 !--------------------------------------------------------------------------!
-subroutine system2d(A,x,ele,kappa,d)                                       !
+!subroutine system2d(A,x,ele,kappa,d)                                       !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(block_sparse_matrix), intent(inout) :: A
-    real(dp), intent(in) :: x(:,:), kappa(:,:,:,:,:)
-    integer, intent(in) :: ele(:,:), d
+!    class(block_sparse_matrix), intent(inout) :: A
+!    real(dp), intent(in) :: x(:,:), kappa(:,:,:,:,:)
+!    integer, intent(in) :: ele(:,:), d
     ! local variables
-    integer :: i,j,k,l,n,ne,elem(3)
-    real(dp) :: det,area,S(2,2),T(2,2),V(3,2),grad(3,2),kap(d,2,d,2), &
-        & AE(d,3,d,3)
+!    integer :: i,j,k,l,n,ne,elem(3)
+!    real(dp) :: det,area,S(2,2),T(2,2),V(3,2),grad(3,2),kap(d,2,d,2), &
+!        & AE(d,3,d,3)
 
-    ne = size(ele,2)
+!    ne = size(ele,2)
     ! call A%zero()
 
-    V(1,:) = [ 1.0_dp,  0.0_dp ]
-    V(2,:) = [ 0.0_dp,  1.0_dp ]
-    V(3,:) = [-1.0_dp, -1.0_dp ]
+!    V(1,:) = [ 1.0_dp,  0.0_dp ]
+!    V(2,:) = [ 0.0_dp,  1.0_dp ]
+!    V(3,:) = [-1.0_dp, -1.0_dp ]
 
-    do n=1,ne
-        elem = ele(:,n)
+!    do n=1,ne
+!        elem = ele(:,n)
 
         ! y -> x_3 + T*y maps reference triangle to physical triangle
-        T(:,1) = x(:,elem(1))-x(:,elem(3))
-        T(:,2) = x(:,elem(2))-x(:,elem(3))
-        det = T(1,1)*T(2,2)-T(1,2)*T(2,1)
-        area = 0.5*dabs(det)
+!        T(:,1) = x(:,elem(1))-x(:,elem(3))
+!        T(:,2) = x(:,elem(2))-x(:,elem(3))
+!        det = T(1,1)*T(2,2)-T(1,2)*T(2,1)
+!        area = 0.5*dabs(det)
 
         ! x -> S*(x-x_3) maps physical triangle to reference triangle
-        S(1,1) =  T(2,2)/det
-        S(1,2) = -T(1,2)/det
-        S(2,1) = -T(2,1)/det
-        S(2,2) =  T(1,1)/det
+!        S(1,1) =  T(2,2)/det
+!        S(1,2) = -T(1,2)/det
+!        S(2,1) = -T(2,1)/det
+!        S(2,2) =  T(1,1)/det
 
         ! Compute the gradient of all the shape functions
-        grad = matmul(V,S)
+!        grad = matmul(V,S)
 
         ! Do something less blunt than averaging the diffusivity tensor
-        kap = sum( kappa(:,:,:,:,elem),5 )/3.0_dp
+!        kap = sum( kappa(:,:,:,:,elem),5 )/3.0_dp
 
         ! Fill in the entries of the element stiffness matrix
-        AE = 0.0_dp
-        do l=1,d
-            do k=1,d
-                AE(k,:,l,:) = &
-                    &+area*matmul(grad,matmul(kap(k,:,l,:),transpose(grad)))
-            enddo
-        enddo
+!        AE = 0.0_dp
+!        do l=1,d
+!            do k=1,d
+!                AE(k,:,l,:) = &
+!                    &+area*matmul(grad,matmul(kap(k,:,l,:),transpose(grad)))
+!            enddo
+!        enddo
 
         ! Add the element stiffness matrix to the global matrix
-        do j=1,3
-            do i=1,3
-                call A%add_block(elem(i),elem(j),AE(:,i,:,j))
-            enddo
-        enddo
+!        do j=1,3
+!            do i=1,3
+!                call A%add_block(elem(i),elem(j),AE(:,i,:,j))
+!            enddo
+!        enddo
 
-    enddo
+!    enddo
 
-end subroutine system2d
+!end subroutine system2d
 
 
 
