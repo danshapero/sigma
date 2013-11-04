@@ -16,3 +16,8 @@ foreach(test ${test_list})
     target_link_libraries(${test} fempack)
     add_test(${test} ${test})
 endforeach(test)
+
+set(C_HEADER_FILES ${PROJECT_SOURCE_DIR}/include/graphs.h)
+add_executable(wrapper_tests ${PROJECT_SOURCE_DIR}/test/wrapper_tests.c ${C_HEADER_FILES})
+target_link_libraries(wrapper_tests fempack)
+add_test(wrapper_tests wrapper_tests)

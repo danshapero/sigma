@@ -23,6 +23,7 @@ int main(int argc, char *argv[]) {
     connected(&cgp,i,j,&con);
     if (con!=0) {
         printf("Nodes should not be connected for an empty graph\n");
+        return 1;
     }
 
     // Add an edge and check to see that the nodes are connected
@@ -30,6 +31,7 @@ int main(int argc, char *argv[]) {
     connected(&cgp,i,j,&con);
     if (con!=1) {
         printf("Inserting edge unsuccessful\n");
+        return 1;
     }
 
     // Delete an edge and check to see that the nodes are not connected
@@ -37,6 +39,7 @@ int main(int argc, char *argv[]) {
     connected(&cgp,i,j,&con);
     if (con!=0) {
         printf("Deleting edge unsuccessful\n");
+        return 1;
     }
 
     // Fill out the graph some more
@@ -52,6 +55,7 @@ int main(int argc, char *argv[]) {
     graph_neighbors(&cgp,50,nbrs,4);
     if ( !((nbrs[0]==51 && nbrs[1]==49) || (nbrs[0]==49 && nbrs[1]==51)) ) {
         printf("Getting neighbors of a node unsuccessful\n");
+        return 1;
     }
 
     // Try compressing the graph to a more efficient format
@@ -60,6 +64,7 @@ int main(int argc, char *argv[]) {
     graph_neighbors(&cgp,50,nbrs,4);
     if ( !((nbrs[0]==51 && nbrs[1]==49) || (nbrs[0]==49 && nbrs[1]==51)) ) {
         printf("Getting neighbors of a node unsuccessful\n");
+        return 1;
     }
 
 
