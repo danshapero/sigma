@@ -12,8 +12,8 @@ implicit none
     real(dp), allocatable :: x(:,:)
     integer, allocatable :: ele(:,:), bnd(:)
 
-    integer :: nn, ne, n
-    integer, allocatable :: p(:), edges(:,:)
+    integer :: nn, ne, k, n, num_colors, min_nbr, max_nbr, bandwidth
+    integer, allocatable :: p(:), colors(:), ptrs(:), nbrs(:)
 
 
 !--------------------------------------------------------------------------!
@@ -26,7 +26,7 @@ implicit none
     nn = g%n
     ne = g%ne
 
-    allocate(p(nn))
+    allocate(p(nn), nbrs(g%max_degree))
 
 
 !--------------------------------------------------------------------------!
@@ -37,19 +37,43 @@ implicit none
     call g%right_permute(p)
     call g%left_permute(p)
 
+    bandwidth = 0
+    do n=1,g%n
+        call g%neighbors(n,nbrs)
 
-!--------------------------------------------------------------------------!
-! Write the result to a file                                               !
-!--------------------------------------------------------------------------!
-    allocate(edges(2,ne))
-    call g%dump_edges(edges)
+        min_nbr = g%n+1
+        max_nbr = 0
+        do k=1,g%max_degree
+            max_nbr = max(max_nbr,nbrs(k))
+            min_nbr = min(min_nbr,nbrs(k))
+        enddo
 
-    open(unit=10,file=trim(out_filename))
-    write(10,*) nn, ne
-    do n=1,ne
-        write(10,*) edges(:,n)
+        bandwidth = max(bandwidth,(max_nbr-min_nbr)/2)
     enddo
-    close(10)
+
+    print *, float(bandwidth)/g%max_degree
+
+    call g%write_to_file(trim(out_filename)//'_bfs.txt')
+
+
+
+!--------------------------------------------------------------------------!
+! Find the multicolor ordering of the graph                                !
+!--------------------------------------------------------------------------!
+    allocate(ptrs(g%max_degree+1))
+    call greedy_color_ordering(g,p,ptrs,num_colors)
+
+    call g%right_permute(p)
+    call g%left_permute(p)
+
+    allocate(colors(num_colors))
+    do n=1,num_colors
+        colors(n) = ptrs(n+1)-ptrs(n)
+    enddo
+    print *, float(minval(colors))/maxval(colors)
+
+    call g%write_to_file(trim(out_filename)//'_mc.txt')
+
 
 
 end program permutation

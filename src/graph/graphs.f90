@@ -8,7 +8,8 @@ implicit none
 type, abstract :: graph                                                    !
 !--------------------------------------------------------------------------!
     integer :: n,m,ne,max_degree
-    contains
+contains
+    ! core graph procedures
     procedure(init_graph_ifc), deferred     :: init
     procedure(neighbors_ifc), deferred      :: neighbors
     procedure(connected_ifc), deferred      :: connected
@@ -19,6 +20,8 @@ type, abstract :: graph                                                    !
     procedure(permute_graph_ifc), deferred  :: right_permute
     procedure(free_ifc), deferred           :: free
     procedure(dump_edges_ifc), deferred     :: dump_edges
+    ! procedures for testing, debugging and i/o
+    procedure :: write_to_file
 end type graph
 
 
@@ -92,6 +95,32 @@ type :: graph_pointer                                                      !
     class(graph), pointer :: g
 
 end type graph_pointer
+
+
+
+contains
+
+
+
+!--------------------------------------------------------------------------!
+subroutine write_to_file(g,filename)                                       !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(graph), intent(in) :: g
+    character(len=*), intent(in) :: filename
+    ! local variables
+    integer :: n,edges(2,g%ne)
+
+    call g%dump_edges(edges)
+
+    open(unit=10,file=trim(filename))
+    write(10,*) g%n, g%ne
+    do n=1,g%ne
+        write(10,*) edges(:,n)
+    enddo
+    close(10)
+
+end subroutine write_to_file
 
 
 
