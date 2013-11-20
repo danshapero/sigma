@@ -433,6 +433,7 @@ subroutine ellr_matvec(A,x,y)                                              !
     integer :: i,j,k
     real(dp) :: z
 
+    !$omp parallel do private(i,j,k,z)
     do i=1,A%g%n
         z = 0.0_dp
         do k=1,A%max_degree
@@ -441,6 +442,7 @@ subroutine ellr_matvec(A,x,y)                                              !
         enddo
         y(i) = y(i)+z
     enddo
+    !$omp end parallel do
 
 end subroutine ellr_matvec
 
@@ -457,6 +459,7 @@ subroutine ellc_matvec(A,x,y)                                              !
     integer :: i,j,k
     real(dp) :: z
 
+    !$omp parallel do private(i,j,k,z) reduction(+:y)
     do j=1,A%g%n
         z = x(j)
         do k=1,A%max_degree
@@ -464,6 +467,7 @@ subroutine ellc_matvec(A,x,y)                                              !
             if (i/=0) y(i) = y(i)+A%val(k,j)*z
         enddo
     enddo
+    !$omp end parallel do
 
 end subroutine ellc_matvec
 

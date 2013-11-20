@@ -447,6 +447,7 @@ subroutine llr_matvec(A,x,y)                                               !
     integer :: i,j,k
     real(dp) :: z,Aij
 
+    !$omp parallel do private(i,j,k,z,Aij)
     do i=1,A%g%n
         z = 0.0_dp
         do k=1,A%ptrs(i)%length
@@ -456,6 +457,7 @@ subroutine llr_matvec(A,x,y)                                               !
         enddo
         y(i) = y(i)+z
     enddo
+    !$omp end parallel do
 
 end subroutine llr_matvec
 
@@ -472,6 +474,7 @@ subroutine llc_matvec(A,x,y)                                               !
     integer :: i,j,k
     real(dp) :: z,Aij
 
+    !$omp parallel do private(i,j,k,z,Aij) reduction(+:y)
     do j=1,A%g%n
         z = x(j)
         do k=1,A%ptrs(j)%length
@@ -480,6 +483,7 @@ subroutine llc_matvec(A,x,y)                                               !
             y(i) = y(i)+Aij*z
         enddo
     enddo
+    !$omp end parallel do
 
 end subroutine llc_matvec
 

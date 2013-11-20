@@ -3,6 +3,8 @@ module cs_matrices
 use sparse_matrices
 use cs_graphs
 
+use omp_lib
+
 implicit none
 
 
@@ -466,6 +468,7 @@ subroutine csr_matvec(A,x,y)                                               !
     integer :: i,j,k
     real(dp) :: z
 
+    !$omp parallel do private(i,j,k,z)
     do i=1,A%g%n
         z = 0_dp
         do k=A%g%ptr(i),A%g%ptr(i+1)-1
@@ -474,6 +477,7 @@ subroutine csr_matvec(A,x,y)                                               !
         enddo
         y(i) = y(i)+z
     enddo
+    !$omp end parallel do
 
 end subroutine csr_matvec
 
@@ -490,6 +494,7 @@ subroutine csc_matvec(A,x,y)                                               !
     integer :: i,j,k
     real(dp) :: z
 
+    !$omp parallel do private(i,j,k,z) reduction(+:y)
     do j=1,A%g%n
         z = x(j)
         do k=A%g%ptr(j),A%g%ptr(j+1)-1
@@ -497,6 +502,7 @@ subroutine csc_matvec(A,x,y)                                               !
             y(i) = y(i)+A%val(k)*z
         enddo
     enddo
+    !$omp end parallel do
 
 end subroutine csc_matvec
 

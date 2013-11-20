@@ -2,11 +2,12 @@ program poisson
 
 use fempack
 use fem
+use omp_lib
 
 implicit none
 
-
     ! variables for constructing the computational mesh
+    character(len=64) :: filename
     class(graph), pointer :: g
     real(dp), allocatable :: x(:,:)
     integer, allocatable :: bnd(:), ele(:,:), mask(:)
@@ -27,7 +28,9 @@ implicit none
 !--------------------------------------------------------------------------!
 ! Read in the triangular mesh and assemble the matrices                    !
 !--------------------------------------------------------------------------!
-    call read_triangle_mesh(g,x,bnd,ele,'meshes/circle.1')
+    call get_environment_variable('FEMPACK',filename)
+    filename = trim(filename)//'/examples/meshes/circle.1'
+    call read_triangle_mesh(g,x,bnd,ele,filename)
 
     nn = g%n
     ne = g%ne
@@ -82,18 +85,9 @@ implicit none
     call pc%init(A)
 
     call solver%solve(A,u,f,pc)
-    print *, solver%iterations
+    print *, 'CG iterations to solve system:',solver%iterations
+    print *, 'Range of solution:',minval(u),maxval(u)
 
-    print *, minval(u),maxval(u)
 
-
-!--------------------------------------------------------------------------!
-! Write out the solution to a file                                         !
-!--------------------------------------------------------------------------!
-    open(unit=10,file='u.txt')
-    do n=1,nn
-        write(10,*) u(n)
-    enddo
-    close(10)
 
 end program
