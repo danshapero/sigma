@@ -1,6 +1,22 @@
-module block_matrices
+!==========================================================================!
+!==========================================================================!
+module block_matrices                                                      !
+!==========================================================================!
+!==========================================================================!
+!==== This module contains the definition of the block sparse matrix   ====!
+!==== data type. The block sparse matrix is not really a particular    ====!
+!==== matrix storage format like compressed row- or column-storage,    ====!
+!==== but rather a "matrix of matrices". This format is useful when    ====!
+!==== there are multiple different problems or fields coupled together ====!
+!==== with different connectivity structures. Rather than have to make ====!
+!==== one big matrix and keep track of the offsets for the numbering   ====!
+!==== of all the different fields, the user can make each matrix and   ====!
+!==== the coupling between them separately, then make a block_matrix   ====!
+!==== which points to all of the component matrices.                   ====!
+!==========================================================================!
+!==========================================================================!
 
-use types
+use types, only: dp
 use vectors
 use sparse_matrices
 

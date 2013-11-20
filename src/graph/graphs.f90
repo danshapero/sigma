@@ -1,4 +1,16 @@
-module graphs
+!==========================================================================!
+!==========================================================================!
+module graphs                                                              !
+!==========================================================================!
+!==========================================================================!
+!==== This module contains the definition of the abstract graph data   ====!
+!==== type, which is used as one of the key underlying data structures ====!
+!==== of sparse matrices. The graph data type is abstract, so this     ====!
+!==== module describes only the interface for graph objects; the       ====!
+!==== implementations of the graph interface are contained in all the  ====!
+!==== other files in this directory, e.g. cs_graphs.f90, etc.          ====!
+!==========================================================================!
+!==========================================================================!
 
 implicit none
 

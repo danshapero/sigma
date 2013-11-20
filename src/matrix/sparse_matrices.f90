@@ -1,6 +1,18 @@
-module sparse_matrices
+!==========================================================================!
+!==========================================================================!
+module sparse_matrices                                                     !
+!==========================================================================!
+!==========================================================================!
+!==== This module contains the definition of the base sparse matrix    ====!
+!==== data type used in all the computations in this package. The      ====!
+!==== sparse_matrix class is abstract, and thus serves only to define  ====!
+!==== an interface; the implementations of this interface are          ====!
+!==== contained in all the other files in this directory, e.g.         ====!
+!==== cs_matrices.f90, ellpack_matrices.f90, etc.                      ====!
+!==========================================================================!
+!==========================================================================!
 
-use types
+use types, only: dp
 use graphs
 
 implicit none
