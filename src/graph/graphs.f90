@@ -26,6 +26,7 @@ contains
     procedure(neighbors_ifc), deferred      :: neighbors
     procedure(connected_ifc), deferred      :: connected
     procedure(find_edge_ifc), deferred      :: find_edge
+    procedure(get_edges_ifc), deferred      :: get_edges
     procedure(add_edge_ifc), deferred       :: add_edge
     procedure(delete_edge_ifc), deferred    :: delete_edge
     procedure(permute_graph_ifc), deferred  :: left_permute
@@ -35,6 +36,15 @@ contains
     ! procedures for testing, debugging and i/o
     procedure :: write_to_file
 end type graph
+
+
+
+!--------------------------------------------------------------------------!
+type :: graph_edge_cursor                                                  !
+!--------------------------------------------------------------------------!
+    integer :: start, final, current, edge(2)
+end type graph_edge_cursor
+
 
 
 !--------------------------------------------------------------------------!
@@ -68,6 +78,15 @@ abstract interface                                                         !
         integer :: find_edge_ifc
     end function find_edge_ifc
 
+    function get_edges_ifc(g,cursor,num_edges,num_returned) result(edges)
+        import :: graph, graph_edge_cursor
+        class(graph), intent(in) :: g
+        type(graph_edge_cursor), intent(inout) :: cursor
+        integer, intent(in) :: num_edges
+        integer, intent(out) :: num_returned
+        integer :: edges(2,num_edges)
+    end function get_edges_ifc
+
     subroutine add_edge_ifc(g,i,j)
         import :: graph
         class(graph), intent(inout) :: g
@@ -96,7 +115,6 @@ abstract interface                                                         !
         class(graph), intent(in) :: g
         integer, intent(out) :: edges(:,:)
     end subroutine dump_edges_ifc
-
 end interface
 
 
@@ -105,7 +123,6 @@ end interface
 type :: graph_pointer                                                      !
 !--------------------------------------------------------------------------!
     class(graph), pointer :: g
-
 end type graph_pointer
 
 
