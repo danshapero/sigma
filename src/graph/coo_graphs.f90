@@ -17,13 +17,14 @@ contains
     procedure :: neighbors => coo_neighbors
     procedure :: connected => coo_connected
     procedure :: find_edge => coo_find_edge
+    procedure :: make_cursor => coo_make_cursor
+    procedure :: get_edges => coo_get_edges
     procedure :: add_edge => coo_add_edge
     procedure :: delete_edge => coo_delete_edge
     procedure :: left_permute => coo_graph_left_permute
     procedure :: right_permute => coo_graph_right_permute
     procedure :: free => coo_free
     procedure :: dump_edges => coo_dump_edges
-
 end type coo_graph
 
 
@@ -147,6 +148,53 @@ function coo_find_edge(g,i,j)                                              !
     enddo
 
 end function coo_find_edge
+
+
+
+!--------------------------------------------------------------------------!
+function coo_make_cursor(g,thread) result(cursor)                          !
+!--------------------------------------------------------------------------!
+    class(coo_graph), intent(in) :: g
+    integer, intent(in) :: thread
+    type(graph_edge_cursor) :: cursor
+
+    cursor%start = 1
+    cursor%final = g%ne
+    cursor%current = 0
+    cursor%edge = [g%edges(1)%get_entry(1), g%edges(2)%get_entry(1)]
+
+end function coo_make_cursor
+
+
+
+!--------------------------------------------------------------------------!
+function coo_get_edges(g,cursor,num_edges,num_returned) result(edges)      !
+!--------------------------------------------------------------------------!
+    class(coo_graph), intent(in) :: g
+    type(graph_edge_cursor), intent(inout) :: cursor
+    integer, intent(in) :: num_edges
+    integer, intent(out) :: num_returned
+    integer :: edges(2,num_edges)
+
+    ! Set up the returned edges to be 0
+    edges = 0
+
+    ! Count how many edges we're actually going to return; we'll either
+    ! return how many edges the user asked for, or, if that amount would
+    ! go beyond the final edge that the cursor is allowed to access, the
+    ! all of the remaining edges
+    num_returned = min(num_edges,cursor%final-cursor%current)
+
+    ! Fill the edges array with the right slice from the graph's edges
+    edges(1,1:num_returned) = &
+        & g%edges(1)%array(cursor%current+1:cursor%current+num_returned)
+    edges(2,1:num_returned) = &
+        & g%edges(2)%array(cursor%current+1:cursor%current+num_returned)
+
+    ! Move the cursor's current edge ahead to the last one we returned
+    cursor%current = cursor%current+num_returned
+
+end function coo_get_edges
 
 
 

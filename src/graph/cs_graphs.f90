@@ -16,6 +16,8 @@ contains
     procedure :: neighbors => cs_neighbors
     procedure :: connected => cs_connected
     procedure :: find_edge => cs_find_edge
+    procedure :: make_cursor => cs_make_cursor
+    procedure :: get_edges => cs_get_edges
     procedure :: add_edge  => cs_add_edge
     procedure :: delete_edge => cs_delete_edge
     procedure :: left_permute => cs_graph_left_permute
@@ -156,6 +158,77 @@ function cs_find_edge(g,i,j)                                               !
     enddo
 
 end function cs_find_edge
+
+
+
+!--------------------------------------------------------------------------!
+function cs_make_cursor(g,thread) result(cursor)                           !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(cs_graph), intent(in) :: g
+    integer, intent(in) :: thread
+    type(graph_edge_cursor) :: cursor
+    ! local variables
+    integer :: k
+
+    cursor%start = 1
+    cursor%final = g%ne
+    cursor%current = 0
+
+    k = 1
+    do while(g%ptr(k+1)-g%ptr(k)==0)
+        k = k+1
+    enddo
+
+    cursor%edge = [k, g%node(1)]
+
+end function cs_make_cursor
+
+
+
+!--------------------------------------------------------------------------!
+function cs_get_edges(g,cursor,num_edges,num_returned) result(edges)       !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(cs_graph), intent(in) :: g
+    type(graph_edge_cursor), intent(inout) :: cursor
+    integer, intent(in) :: num_edges
+    integer, intent(out) :: num_returned
+    integer :: edges(2,num_edges)
+    ! local variables
+    integer :: i, k
+
+    ! Set up the returned edges to be 0
+    edges = 0
+
+    ! Count how many edges we're actually going to return; we'll either
+    ! return how many edges the user asked for, or, if that amount would
+    ! go beyond the final edge that the cursor is allowed to access, all
+    ! of the remaining edges
+    num_returned = min(num_edges,cursor%final-cursor%current)
+
+    ! Fill the edges array's second row with the edge endpoints
+    edges(2,1:num_returned) = &
+        & g%node(cursor%current+1:cursor%current+num_returned)
+
+    ! Fill in the edges array's first row with the edge start points
+    i = cursor%edge(1)
+
+    do k=1,num_returned
+        !! This is going to produce code that cannot be analyzed and
+        !! optimized well by the compiler. Would be good to find something
+        !! more slick with a predictable access pattern.
+        do while(cursor%current >= g%ptr(i+1)-1)
+            i = i+1
+        enddo
+
+        edges(1,k) = i
+        cursor%current = cursor%current+1
+    enddo
+
+    cursor%edge = edges(:,num_returned)
+
+end function cs_get_edges
 
 
 

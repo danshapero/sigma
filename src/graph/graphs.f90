@@ -26,6 +26,7 @@ contains
     procedure(neighbors_ifc), deferred      :: neighbors
     procedure(connected_ifc), deferred      :: connected
     procedure(find_edge_ifc), deferred      :: find_edge
+    procedure(make_cursor_ifc), deferred    :: make_cursor
     procedure(get_edges_ifc), deferred      :: get_edges
     procedure(add_edge_ifc), deferred       :: add_edge
     procedure(delete_edge_ifc), deferred    :: delete_edge
@@ -77,6 +78,13 @@ abstract interface                                                         !
         integer, intent(in) :: i,j
         integer :: find_edge_ifc
     end function find_edge_ifc
+
+    function make_cursor_ifc(g,thread) result(cursor)
+        import :: graph, graph_edge_cursor
+        class(graph), intent(in) :: g
+        integer, intent(in) :: thread
+        type(graph_edge_cursor) :: cursor
+    end function make_cursor_ifc
 
     function get_edges_ifc(g,cursor,num_edges,num_returned) result(edges)
         import :: graph, graph_edge_cursor
