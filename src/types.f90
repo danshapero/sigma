@@ -342,7 +342,7 @@ subroutine dynamic_array_init(a,capacity,min_capacity)                     !
     a%capacity = 32
 
     if (present(capacity)) then
-        a%capacity = capacity
+        a%capacity = max(capacity,a%capacity)
     endif
 
     if (present(min_capacity)) then
@@ -413,7 +413,7 @@ function dynamic_array_pop(a) result(val)                                  !
     ! local variables
     integer, allocatable :: array(:)
 
-    if (a%length<a%capacity/2 .and. a%capacity/2>=a%min_capacity) then
+    if (a%length<a%capacity/4 .and. a%capacity/2>=a%min_capacity) then
         allocate(array(a%capacity/2))
         a%capacity = a%capacity/2
         array(1:a%length) = a%array(1:a%length)

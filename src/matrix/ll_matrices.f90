@@ -142,7 +142,7 @@ subroutine ll_matrix_init(A,nrow,ncol,orientation,g)                       !
     A%last = 1
     allocate(A%ptrs(g%n))
     do i=1,A%g%n
-        call A%ptrs(i)%init(capacity=A%g%lists(i)%length,min_capacity=2)
+        call A%ptrs(i)%init(capacity=A%g%lists(i)%length,min_capacity=4)
         do k=1,A%g%lists(i)%length
             call A%ptrs(i)%push(A%last)
             A%last = A%last+1
