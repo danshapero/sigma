@@ -719,6 +719,7 @@ subroutine circular_array_expand(a)                                        !
 
     array(1:num_before_end) = a%array(start:start+num_before_end-1)
     array(num_before_end+1:length) = a%array(1:num_after_end)
+    start = 1
 
     call move_alloc(from=array, to=a%array)
     a%capacity = 2*a%capacity
@@ -749,6 +750,7 @@ subroutine circular_array_contract(a)                                      !
 
     array(1:num_before_end) = a%array(start:start+num_before_end-1)
     array(num_before_end+1:length) = a%array(1:num_after_end)
+    start = 1
 
     call move_alloc(from=array, to=a%array)
     a%capacity = a%capacity/2

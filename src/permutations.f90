@@ -10,7 +10,7 @@ module permutations                                                        !
 !==========================================================================!
 
 use graphs
-use types, only: linked_list, dynamic_array
+use types, only: dynamic_array, circular_array
 
 implicit none
 
@@ -26,12 +26,13 @@ subroutine breadth_first_search(g,p)                                       !
     integer, intent(out) :: p(:)
     ! local variables
     integer :: i,j,k,num,nbrs(g%max_degree)
-    type(linked_list) :: queue
+    type(circular_array) :: queue
 
     num = 0
 
     ! Initialize a queue
-    call queue%append(1)
+    call queue%init(capacity=64,min_capacity=16)
+    call queue%enqueue(1)
 
     ! Mark all nodes as unvisited
     p = -1
@@ -41,8 +42,7 @@ subroutine breadth_first_search(g,p)                                       !
         num = num+1
 
         ! Pop the first value i off
-        i = queue%get_value(1)
-        call queue%delete_entry(1)
+        i = queue%pop()
 
         ! Label i according to the order in which it was visited
         p(i) = num
@@ -57,7 +57,7 @@ subroutine breadth_first_search(g,p)                                       !
                 ! if that neighbor has not been visited,
                 if (p(j)==-1) then
                     ! put it into the queue and label it as such.
-                    call queue%append(j)
+                    call queue%enqueue(j)
                     p(j) = 0
                 endif
             endif
@@ -77,10 +77,11 @@ subroutine greedy_coloring(g,colors)                                       !
     ! local variables
     integer :: i,j,k,nbrs(g%max_degree),nbrs_colors(g%max_degree+1), &
         & color_totals(g%max_degree+1), used_colors, color, min_occupancy
-    type(linked_list) :: queue
+    type(circular_array) :: queue
 
     ! Initialize a queue
-    call queue%append(1)
+    call queue%init(capacity=32,min_capacity=16)
+    call queue%enqueue(1)
 
     ! Set all colors to a negative value to indicate they have not been
     ! visited or enqueued yet, and set color(1) to 0 to show that it's been
@@ -97,8 +98,7 @@ subroutine greedy_coloring(g,colors)                                       !
         nbrs_colors = 0
 
         ! Pop the first value i off the queue
-        i = queue%get_value(1)
-        call queue%delete_entry(1)
+        i = queue%pop()
 
         ! Find all the neighbors of node i
         call g%neighbors(i,nbrs)
@@ -111,19 +111,7 @@ subroutine greedy_coloring(g,colors)                                       !
                 if (color>0) then
                     nbrs_colors(color) = nbrs_colors(color)+1
                 elseif (color==-1) then
-                    !!----------------------------------------------------!!
-                    !! When the queue grows large, this operation will be !!
-                    !! slow because there are so many pointer redirects   !!
-                    !! until we can find the end of the queue on which to !!
-                    !! append node j. How can we come up with a better    !!
-                    !! queue data structure than a linked list or DA?     !!
-                    !! Modify the linked_list type so that we also store  !!
-                    !! a tail pointer? Modify the DA type so that we can  !!
-                    !! remove from the front as well?                     !!
-                    !! Could we prepend it instead and do a depth-first   !!
-                    !! rather than breadth-first search?                  !!
-                    !!----------------------------------------------------!!
-                    call queue%append(j)
+                    call queue%enqueue(j)
                     colors(j) = 0
                 endif
             endif
@@ -166,7 +154,7 @@ subroutine greedy_color_ordering(g,p,ptrs,num_colors)                      !
     class(graph), intent(in) :: g
     integer, intent(out) :: p(:), ptrs(:), num_colors
     ! local variables
-    integer :: i,k,inc,color,added(g%max_degree+1)
+    integer :: i,k,color,added(g%max_degree+1)
 
     ! Assign colors to all the nodes and put them in the array p
     call greedy_coloring(g,p)
