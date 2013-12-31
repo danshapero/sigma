@@ -43,7 +43,7 @@ end type graph
 !--------------------------------------------------------------------------!
 type :: graph_edge_cursor                                                  !
 !--------------------------------------------------------------------------!
-    integer :: start, final, current, edge(2)
+    integer :: start, final, indx, current, edge(2)
 end type graph_edge_cursor
 
 

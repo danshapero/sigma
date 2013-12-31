@@ -368,6 +368,7 @@ subroutine dynamic_array_push(a,k)                                         !
     if (a%length==a%capacity) then
         allocate(array(2*a%capacity))
         a%capacity = 2*a%capacity
+        array = 0
         array(1:a%length) = a%array(1:a%length)
         call move_alloc(from=array, to=a%array)
     endif

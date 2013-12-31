@@ -15,13 +15,14 @@ contains
     procedure :: neighbors => ll_neighbors
     procedure :: connected => ll_connected
     procedure :: find_edge => ll_find_edge
+    procedure :: make_cursor => ll_make_cursor
+    procedure :: get_edges => ll_get_edges
     procedure :: add_edge => ll_add_edge
     procedure :: delete_edge => ll_delete_edge
     procedure :: left_permute => ll_graph_left_permute
     procedure :: right_permute => ll_graph_right_permute
     procedure :: free => ll_free
     procedure :: dump_edges => ll_dump_edges
-
 end type ll_graph
 
 
@@ -136,6 +137,81 @@ function ll_find_edge(g,i,j)                                               !
     enddo
 
 end function ll_find_edge
+
+
+
+!--------------------------------------------------------------------------!
+function ll_make_cursor(g,thread) result(cursor)                           !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(ll_graph), intent(in) :: g
+    integer, intent(in) :: thread
+    type(graph_edge_cursor) :: cursor
+    ! local variables
+    integer :: k
+
+    cursor%start = 1
+    cursor%final = g%ne
+    cursor%current = 0
+
+    k = 1
+    do while (g%lists(k)%length==0)
+        k = k+1
+    enddo
+
+    cursor%edge = [k, g%lists(k)%get_entry(1)]
+    cursor%indx = 0
+
+end function ll_make_cursor
+
+
+
+!--------------------------------------------------------------------------!
+function ll_get_edges(g,cursor,num_edges,num_returned) result(edges)       !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(ll_graph), intent(in) :: g
+    type(graph_edge_cursor), intent(inout) :: cursor
+    integer, intent(in) :: num_edges
+    integer, intent(out) :: num_returned
+    integer :: edges(2,num_edges)
+    ! local variables
+    integer :: i,j,k,indx,num_added,num_from_this_row
+
+    ! Set up the returned edges to be 0
+    edges = 0
+
+    ! Count how many edges we're actually going to return
+    num_returned = min(num_edges, cursor%final-cursor%current)
+
+    ! Find the last row we left off at
+    i = cursor%edge(1)
+
+    num_added = 0
+    do while(num_added<num_returned)
+        ! Either we are returning all the edges for the current node i,
+        ! or the current request doesn't call for so many edges and we are
+        ! returning fewer
+        num_from_this_row = min(g%lists(i)%length-cursor%indx, &
+                                & num_returned-num_added)
+
+        do k=1,num_from_this_row
+            edges(1,num_added+k) = i
+            edges(2,num_added+k) = g%lists(i)%get_entry(cursor%indx+k)
+        enddo
+
+        if (num_from_this_row == g%lists(i)%length-cursor%indx) then
+            i = i+1
+        endif
+        !! Check that this is right
+        cursor%indx = mod(cursor%indx+num_from_this_row,g%lists(i)%length)
+        num_added = num_added+num_from_this_row
+    enddo
+
+    cursor%current = cursor%current+num_returned
+    cursor%edge(1) = i
+
+end function ll_get_edges
 
 
 
