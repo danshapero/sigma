@@ -15,6 +15,8 @@ contains
     procedure :: neighbors => ellpack_neighbors
     procedure :: connected => ellpack_connected
     procedure :: find_edge => ellpack_find_edge
+    procedure :: make_cursor => ellpack_make_cursor
+    procedure :: get_edges => ellpack_get_edges
     procedure :: add_edge => ellpack_add_edge
     procedure :: delete_edge => ellpack_delete_edge
     procedure :: left_permute => ellpack_graph_left_permute
@@ -137,6 +139,76 @@ function ellpack_find_edge(g,i,j)                                          !
     enddo
 
 end function ellpack_find_edge
+
+
+
+!--------------------------------------------------------------------------!
+function ellpack_make_cursor(g,thread) result(cursor)                      !
+!--------------------------------------------------------------------------!
+    class(ellpack_graph), intent(in) :: g
+    integer, intent(in) :: thread
+    type(graph_edge_cursor) :: cursor
+
+    cursor%start = 1
+    cursor%final = g%ne
+    cursor%current = 0
+    cursor%edge = [1, g%node(1,1)]
+    cursor%indx = 0
+
+end function ellpack_make_cursor
+
+
+
+!--------------------------------------------------------------------------!
+function ellpack_get_edges(g,cursor,num_edges,num_returned) result(edges)  !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(ellpack_graph), intent(in) :: g
+    type(graph_edge_cursor), intent(inout) :: cursor
+    integer, intent(in) :: num_edges
+    integer, intent(out) :: num_returned
+    integer :: edges(2,num_edges)
+    ! local variables
+    integer :: i,k,degree,num_added,num_from_this_row
+
+    ! Set up the returned edges to be 0
+    edges = 0
+
+    ! Find out how many nodes' edges the current request encompasses
+    num_returned = min(num_edges,cursor%final-cursor%current)
+    i = cursor%edge(1)
+
+    ! Loop over each of those nodes
+    num_added = 0
+    do while(num_added<num_returned)
+        ! Compute the degree of node i
+        degree = g%max_degree
+        do k=g%max_degree,1,-1
+            if (g%node(k,i)==0) then
+                degree = k-1
+            endif
+        enddo
+
+        ! Find how many nodes to return from the current row
+        num_from_this_row = min(degree-cursor%indx, num_returned-num_added)
+
+        do k=1,num_from_this_row
+            edges(1,num_added+k) = i
+            edges(2,num_added+k) = g%node(cursor%indx+k,i)
+        enddo
+
+        if (cursor%indx+num_from_this_row == degree) then
+            i = i+1
+        endif
+
+        cursor%indx = mod(cursor%indx+num_from_this_row,degree)
+        num_added = num_added+num_from_this_row
+    enddo
+
+    cursor%current = cursor%current+num_returned
+    cursor%edge(1) = i
+
+end function ellpack_get_edges
 
 
 

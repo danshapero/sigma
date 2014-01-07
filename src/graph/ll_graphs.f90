@@ -176,7 +176,7 @@ function ll_get_edges(g,cursor,num_edges,num_returned) result(edges)       !
     integer, intent(out) :: num_returned
     integer :: edges(2,num_edges)
     ! local variables
-    integer :: i,j,k,indx,num_added,num_from_this_row
+    integer :: i,k,num_added,num_from_this_row
 
     ! Set up the returned edges to be 0
     edges = 0
