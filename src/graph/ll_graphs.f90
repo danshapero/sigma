@@ -126,12 +126,18 @@ function ll_find_edge(g,i,j)                                               !
     integer, intent(in) :: i,j
     integer :: ll_find_edge
     ! local variables
-    integer :: k
+    integer :: k,total
 
     ll_find_edge = -1
+
+    total = 0
+    do k=1,i-1
+        total = total+g%lists(k)%length
+    enddo
+
     do k=1,g%lists(i)%length
         if (g%lists(i)%get_entry(k)==j) then
-            ll_find_edge = k
+            ll_find_edge = total+k
             exit
         endif
     enddo
@@ -200,11 +206,15 @@ function ll_get_edges(g,cursor,num_edges,num_returned) result(edges)       !
             edges(2,num_added+k) = g%lists(i)%get_entry(cursor%indx+k)
         enddo
 
+        !! Check that this is right
+        cursor%indx = mod(cursor%indx+num_from_this_row,g%lists(i)%length)
+
+        ! If we returned all nodes from this row, increment the row
         if (num_from_this_row == g%lists(i)%length-cursor%indx) then
             i = i+1
         endif
-        !! Check that this is right
-        cursor%indx = mod(cursor%indx+num_from_this_row,g%lists(i)%length)
+
+        ! Increase the number of edges added
         num_added = num_added+num_from_this_row
     enddo
 
@@ -251,8 +261,11 @@ subroutine ll_delete_edge(g,i,j)                                           !
         ! If the vertex jt popped from i's neighbors is not vertex j,
         if (jt/=j) then
             ! find where vertex j was stored and put jt there.
-            k = g%find_edge(i,j)
-            call g%lists(i)%set_entry(k,jt)
+            do k=1,g%lists(i)%length
+                if (g%lists(i)%get_entry(k)==j) then
+                    call g%lists(i)%set_entry(k,jt)
+                endif
+            enddo
         endif
 
         ! If the degree of vertex i was the max degree of the graph, we

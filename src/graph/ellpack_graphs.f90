@@ -130,13 +130,29 @@ function ellpack_find_edge(g,i,j)                                          !
     integer, intent(in) :: i,j
     integer :: ellpack_find_edge
     ! local variables
-    integer :: k
+    integer :: k,l,total,degree
 
     ellpack_find_edge = -1
 
-    do k=1,g%max_degree
-        if (g%node(k,i)==j) ellpack_find_edge = k
+    total = 0
+    do l=1,i-1
+        degree = g%max_degree
+        do k=g%max_degree,1,-1
+            if (g%node(k,l)==0) then
+                degree = k-1
+            endif
+        enddo
+
+        total = total+degree
     enddo
+
+    do k=1,g%max_degree
+        if (g%node(k,i)==j) ellpack_find_edge = total+k
+    enddo
+
+    !! This approach is quite blunt and we need to do something else if we
+    !! we want to keep ellpack graphs as a performant rather than an easy
+    !! format.
 
 end function ellpack_find_edge
 
@@ -197,11 +213,14 @@ function ellpack_get_edges(g,cursor,num_edges,num_returned) result(edges)  !
             edges(2,num_added+k) = g%node(cursor%indx+k,i)
         enddo
 
-        if (cursor%indx+num_from_this_row == degree) then
+        cursor%indx = mod(cursor%indx+num_from_this_row,degree)
+
+        ! If we returned all nodes from this row, increment the row
+        if (num_from_this_row == degree-cursor%indx) then
             i = i+1
         endif
 
-        cursor%indx = mod(cursor%indx+num_from_this_row,degree)
+        ! Increase the number of edges added
         num_added = num_added+num_from_this_row
     enddo
 
