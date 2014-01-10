@@ -5,7 +5,7 @@ use fempack
 implicit none
 
     class(graph), pointer :: g
-    class(sparse_matrix), allocatable :: A
+    type(sparse_matrix) :: A
     class(iterative_solver), allocatable :: solver
     class(preconditioner), allocatable :: pc
     integer :: i,n,test
@@ -22,7 +22,6 @@ implicit none
     call g%add_edge(99,99)
     call convert(g,'coo')
 
-    allocate(coo_matrix::A)
     call A%init(99,99,'row',g)
 
     do i=1,98

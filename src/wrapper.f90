@@ -9,9 +9,6 @@ use cs_graphs
 use ellpack_graphs
 
 use sparse_matrices
-use coo_matrices
-use cs_matrices
-use ellpack_matrices
 
 use conversions
 
@@ -81,14 +78,7 @@ subroutine get_matrix(cmp,storage_format) bind(c)                          !
     allocate(mp)
     cmp = c_loc(mp)
 
-    select case(storage_format)
-        case(0)
-            allocate(coo_matrix::mp%A)
-        case(1)
-            allocate(cs_matrix::mp%A)
-        case(2)
-            allocate(ellpack_matrix::mp%A)
-    end select
+    allocate(sparse_matrix::mp%A)
 
 end subroutine get_matrix
 

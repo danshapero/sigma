@@ -4,16 +4,16 @@ use fempack
 
 implicit none
 
-    class(graph), pointer :: g, h
-    class(sparse_matrix), pointer :: A, B
-    integer :: i,j,k,degree,test
+    class(graph), pointer :: g
+    type(sparse_matrix) :: A
+    integer :: i,j,k,frmt,ordering
     real(dp) :: z
     logical :: correct
     integer, allocatable :: edges(:,:), nbrs(:), p(:)
     real(dp), allocatable :: x(:), y(:)
+    character(len=3) :: orientation
 
-    allocate(edges(2,24))
-
+    allocate(edges(2,31), x(7), y(7), nbrs(8))
     edges(:,1)  = [1, 2]
     edges(:,2)  = [1, 3]
     edges(:,3)  = [1, 4]
@@ -26,201 +26,90 @@ implicit none
     edges(:,10) = [5, 6]
     edges(:,11) = [6, 7]
     edges(:,12) = [7, 2]
-
-    do i=1,12
-        edges(1,i+12) = edges(2,i)
-        edges(2,i+12) = edges(1,i)
+    do k=1,12
+        edges(1,k+12) = edges(2,k)
+        edges(2,k+12) = edges(1,k)
+    enddo
+    do k=1,7
+        edges(:,k+24) = [k,k]
     enddo
 
-    allocate(nbrs(8),p(7))
-    allocate(x(7),y(7))
 
-    do i=1,7
-        p(i) = i-1
-    enddo
-    p(1) = 7
+    ! Loop through all formats
+    do frmt=1,4
+        do ordering=1,2
+            ! Choose whether the graph is to be stored in row- or column-
+            ! major ordering
+            if (ordering==1) then
+                orientation = 'row'
+            else
+                orientation = 'col'
+            endif
 
-    do test=1,7
-        ! Allocate the graph & matrix
-        select case(test)
-            case(1)
-                call new_graph(g,'cs',7,7,edges)
-                allocate(cs_matrix::A)
-                call A%init(7,7,'row',g)
+            ! Choose the matrix format
+            select case(frmt)
+                case(1)
+                    allocate(ll_graph::g)
+                case(2)
+                    allocate(coo_graph::g)
+                case(3)
+                    allocate(cs_graph::g)
+                case(4)
+                    allocate(ellpack_graph::g)
+            end select
+            call g%init(7,7,edges)
 
-                call new_graph(h,'cs',7,7)
-                allocate(cs_matrix::B)
-                call B%init(7,7,'row',h)
-            case(2)
-                call new_graph(g,'cs',7,7,edges)
-                allocate(cs_matrix::A)
-                call A%init(7,7,'col',g)
+            ! Build the matrix
+            call A%init(7,7,orientation,g)
 
-                call new_graph(h,'cs',7,7)
-                allocate(cs_matrix::B)
-                call B%init(7,7,'col',h)
-            case(3)
-                call new_graph(g,'coo',7,7,edges)
-                allocate(coo_matrix::A)
-                call A%init(7,7,'row',g)
+            do i=1,7
+                call A%g%neighbors(i,nbrs)
 
-                call new_graph(h,'coo',7,7)
-                allocate(coo_matrix::B)
-                call B%init(7,7,'row',h)
-            case(4)
-                call new_graph(g,'ll',7,7,edges)
-                allocate(ll_matrix::A)
-                call A%init(7,7,'row',g)
-
-                call new_graph(h,'ll',7,7)
-                allocate(ll_matrix::B)
-                call B%init(7,7,'row',h)
-            case(5)
-                call new_graph(g,'ll',7,7,edges)
-                allocate(ll_matrix::A)
-                call A%init(7,7,'col',g)
-
-                call new_graph(h,'ll',7,7)
-                allocate(ll_matrix::B)
-                call B%init(7,7,'col',h)
-            case(6)
-                call new_graph(g,'ellpack',7,7,edges)
-                allocate(ellpack_matrix::A)
-                call A%init(7,7,'row',g)
-
-                call new_graph(h,'ellpack',7,7)
-                allocate(ellpack_matrix::B)
-                call B%init(7,7,'row',h)
-            case(7)
-                call new_graph(g,'ellpack',7,7,edges)
-                allocate(ellpack_matrix::A)
-                call A%init(7,7,'col',g)
-
-                call new_graph(h,'ellpack',7,7)
-                allocate(ellpack_matrix::B)
-                call B%init(7,7,'col',h)
-        end select
-
-        ! Fill A to be the graph Laplacian
-        do i=1,7
-            call A%neighbors(i,nbrs)
-            degree = 0
-            do k=1,A%max_degree
-                if (nbrs(k)/=0 .and. nbrs(k)/=i) degree = degree+1
+                do k=1,A%max_degree
+                    j = nbrs(k)
+                    if (j/=0 .and. j/=i) then
+                        call A%set_value(i,j,-1.0_dp)
+                        call A%add_value(i,i,1.0_dp)
+                    endif
+                enddo
             enddo
 
-            do k=1,A%max_degree
-                j = nbrs(k)
-                if (j/=0) then
-                    call A%set_value(i,j,-1.0_dp)
-                    call A%add_value(i,i,1.0_dp)
-                endif
-            enddo
-            call B%set_value(i,i,1.0_dp)
+            ! Check that the matrix values were set right
+            z = A%get_value(1,2)
+            if (z/=-1.0_dp) then
+                print *, 'On matrix test',frmt,ordering
+                print *, 'A(1,2) should be = -1.0'
+                print *, 'Value found: ',z
+                call exit(1)
+            endif
+
+            z = A%get_value(1,1)
+            if (z/=6.0_dp) then
+                print *, 'On matrix test',frmt,ordering
+                print *, 'A(1,1) should be = 6.0'
+                print *, 'Value found: ',z
+                call exit(1)
+            endif
+
+            ! Test matrix multiplication
+            y = 2.0_dp
+            x = 1.0_dp
+
+            call A%matvec_add(x,y)
+            if (minval(dabs(y))/=2.0_dp .or. maxval(dabs(y))/=2.0_dp) then
+                print *, 'On matrix test',frmt,ordering
+                print *, 'Graph Laplacian * constant vector should = 0.0'
+                print *, 'Value found:',maxval(dabs(y))-2.0_dp
+            endif
+
+
+
+            ! Deallocate the graph and free the matrix
+            deallocate(g)
+            call A%destroy()
         enddo
-
-        ! Test matrix multiplications
-        z = A%get_value(1,1)
-        if (z/=6.0_dp) then
-            print *, 'On matrix test',test
-            print *, 'A(1,1) should be = 6.0 for A the graph Laplacian; '
-            print *, 'value found: ',z
-            call exit(1)
-        endif
-
-        x = 1.0_dp
-        y = 1.0_dp
-        call A%matvec(x,y)
-
-        if ( maxval(dabs(y))>1.0e-14 ) then
-            print *, 'On matrix test',test
-            print *, 'A*[1,...,1] should be = 0;'
-            print *, 'range(y) = ',minval(y),maxval(y)
-            call exit(1)
-        endif
-
-        ! Test adding two matrices
-        call A%sub_matrix_add(B)
-        y = 0.0_dp
-        call A%matvec(x,y)
-        if ( maxval(dabs(y-1.0))>1.0e-14 ) then
-            print *, 'On matrix test',test
-            print *, '(A+I)*[1,...,1] should be = 1;'
-            print *, 'range(y) = ',minval(y),maxval(y)
-            call exit(1)
-        endif
-
-        ! Test permuting the matrices
-        call A%right_permute(p)
-        call A%left_permute(p)
-        call A%neighbors(7,nbrs)
-        nbrs(1:7) = nbrs(order(nbrs(1:7)))
-        correct = .true.
-        do i=1,7
-            if (nbrs(i)/=i) correct = .false.
-        enddo
-        if (.not.correct) then
-            print *, 'On matrix test',test
-            print *, 'Permutation failed'
-            call exit(1)
-        endif
-
-        call A%matvec(x,y)
-
-        if ( maxval(dabs(y-1.0))>1.0e-14 ) then
-            print *, 'On matrix test',test
-            print *, 'permuted (A+I)*[1,...,1] should still be = 1'
-            print *, 'range(y) = ',minval(y),maxval(y)
-            call exit(1)
-        endif
-
-        ! Set all entries of A to zero
-        call A%zero()
-
-        ! Set A(i,j) = 1 if j>i and (i,j) are connected
-        do i=1,7
-            call A%neighbors(i,nbrs)
-            do k=1,A%max_degree
-                j = nbrs(k)
-                if (j/=0 .and. j>i) call A%set_value(i,j,1.0_dp)
-            enddo
-        enddo
-
-        x = 1.0_dp
-        call A%matvec(x,y)
-        x = [3.0_dp, 2.0_dp, 2.0_dp, 2.0_dp, 2.0_dp, 1.0_dp, 0.0_dp]
-        correct = .true.
-        do i=1,7
-            correct = correct .and. y(i)==x(i)
-        enddo
-        if (.not.correct) then
-            print *, 'Multiplying by non-symmetric matrix failed.'
-            print *, 'Should have gotten: '
-            print *, x
-            print *, 'Instead found: '
-            print *, y
-            call exit(1)
-        endif
-
-        x = 1.0_dp
-        call A%matvec_t(x,y)
-        x = [0.0_dp, 1.0_dp, 1.0_dp, 1.0_dp, 1.0_dp, 2.0_dp, 6.0_dp]
-        do i=1,7
-            correct = correct .and. y(i)==x(i)
-        enddo
-        if (.not.correct) then
-            print *, 'Multiplying by non-symmetric matrix failed.'
-            print *, 'Should have gotten: '
-            print *, x
-            print *, 'Instead found: '
-            print *, y
-            call exit(1)
-        endif
-
-        ! Free up the graphs and matrices for the next test
-        deallocate(g,A,h,B)
     enddo
 
-    deallocate(x,y,edges,nbrs)
+    deallocate(x,y,nbrs,edges)
 
 end program matrix_tests

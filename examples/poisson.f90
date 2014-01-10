@@ -13,7 +13,7 @@ implicit none
     integer, allocatable :: bnd(:), ele(:,:), mask(:)
 
     ! variables for the stiffness and mass matrices
-    class(sparse_matrix), pointer :: A, B
+    type(sparse_matrix) :: A, B
 
     ! variables for solving the linear system
     class(iterative_solver), allocatable :: solver
@@ -44,8 +44,6 @@ implicit none
         endif
     enddo
 
-    allocate(cs_matrix::A)
-    allocate(cs_matrix::B)
     call A%init(nn,nn,'row',g)
     call B%init(nn,nn,'row',g)
 
@@ -55,8 +53,6 @@ implicit none
 !--------------------------------------------------------------------------!
     call laplacian2d(A,x,ele)
     call mass2d(B,x,ele)
-
-    call A%sub_matrix_add(B)
 
     do n=1,size(mask)
         call A%add_value(mask(n),mask(n),1.0d8)

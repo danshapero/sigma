@@ -3,7 +3,7 @@ test/type_tests.f90
 test/util_tests.f90
 test/graph_tests.f90
 test/matrix_tests.f90
-test/block_matrix_tests.f90
+#test/block_matrix_tests.f90
 test/solver_tests.f90
 test/wrapper_tests.c
 )

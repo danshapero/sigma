@@ -9,13 +9,6 @@ use ellpack_graphs
 
 ! Use all the matrix modules
 use sparse_matrices
-use ll_matrices
-use coo_matrices
-use cs_matrices
-use ellpack_matrices
-
-! Use the block matrix module
-use block_matrices
 
 ! Use the solver and preconditioner modules
 use iterative_solvers

@@ -4,10 +4,16 @@ use fempack
 
 implicit none
 
+    ! variables for testing correctness of graph operations
     class(graph), allocatable :: g
-    integer :: i,test
+    integer :: i,j,k,l,test
     integer, allocatable :: edges(:,:), nbrs(:), p(:)
     logical :: correct
+    ! variables for testing graph edge iterator
+    type(graph_edge_cursor) :: cursor
+    integer, allocatable :: edg(:,:)
+    integer :: num_returned
+    logical, allocatable :: found_by_iterator(:)
 
     allocate(edges(2,12))
 
@@ -23,6 +29,8 @@ implicit none
     edges(:,10) = [5, 6]
     edges(:,11) = [6, 7]
     edges(:,12) = [7, 2]
+
+    allocate(edg(2,12), found_by_iterator(24))
 
 
     !----------------------------------------------------------------------!
@@ -103,6 +111,48 @@ implicit none
             call exit(1)
         endif
 
+        ! Check that iterating through a graph's edges works
+        cursor = g%make_cursor(0)
+        edg = g%get_edges(cursor,12,num_returned)
+
+        found_by_iterator = .false.
+        do k=1,12
+            i = edg(1,k)
+            j = edg(2,k)
+            do l=1,12
+                if (i==edges(1,l) .and. j==edges(2,l)) then
+                    found_by_iterator(l) = .true.
+                elseif (i==edges(2,l) .and. j==edges(1,l)) then
+                    found_by_iterator(l+12) = .true.
+                endif
+            enddo
+        enddo
+
+        edg = g%get_edges(cursor,12,num_returned)
+
+        do k=1,12
+            i = edg(1,k)
+            j = edg(2,k)
+            do l=1,12
+                if (i==edges(1,l) .and. j==edges(2,l)) then
+                    found_by_iterator(l) = .true.
+                elseif (i==edges(2,l) .and. j==edges(1,l)) then
+                    found_by_iterator(l+12) = .true.
+                endif
+            enddo
+        enddo
+
+        correct = .true.
+        do k=1,24
+            correct = correct .and. found_by_iterator(k)
+        enddo
+
+        if (.not.correct) then
+            print *, 'Iterating through graph edges failed'
+            call exit(1)
+        endif
+
+
         ! Check that permutation works properly
         allocate(p(7))
         do i=1,7
@@ -122,6 +172,7 @@ implicit none
         ! Check that edge deletion worked properly
         do i=2,6,2
             if (g%connected(1,i) .or. g%connected(i,1)) then
+                print *, 'Test',test
                 print *, 'All connections between 1 and even nodes were '
                 print *, 'deleted, and yet 1 is still connected '
                 print *, 'to node ',i

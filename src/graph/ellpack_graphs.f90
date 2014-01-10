@@ -283,7 +283,9 @@ subroutine ellpack_delete_edge(g,i,j)                                      !
     ! If nodes i,j are not connected to begin with, there is no edge to
     ! delete and thus nothing to do
     if (g%connected(i,j)) then
-        indx = g%find_edge(i,j)
+        do indx=1,g%max_degree
+            if (g%node(indx,i)==j) exit
+        enddo
 
         g%node(indx:g%max_degree-1,i) = g%node(indx+1:g%max_degree,i)
         g%node(g%max_degree,i) = 0
