@@ -20,19 +20,41 @@ subroutine convert(g,storage_format)                                       !
     character(len=*), intent(in), optional :: storage_format
     ! local variables
     class(graph), pointer :: gc
-    integer :: edges(2,g%ne)
+    type(graph_edge_cursor) :: cursor
+    integer :: num_nbrs(g%n),edges(2,64),i,j,k,n,num_returned,num_blocks
     character(len=3) :: str_fmt
 
+    ! Ascertain the right storage format for g
     if (present(storage_format)) then
         str_fmt = storage_format
     else
         str_fmt = 'cs '
     endif
 
+    ! Make a temporary pointer to g and nullify the original pointer to g
     gc => g
     nullify(g)
 
-    call gc%dump_edges(edges)
+    ! Determine how many neighbors each node has
+    num_nbrs = 0
+    edges = 0
+    cursor = gc%make_cursor(0)
+    num_blocks = (cursor%final-cursor%start+1)/64+1
+
+    do n=1,num_blocks
+        edges = gc%get_edges(cursor,64,num_returned)
+
+        do k=1,num_returned
+            i = edges(1,k)
+            j = edges(2,k)
+
+            if (i/=0 .and. j/=0) then
+                num_nbrs(i) = num_nbrs(i)+1
+            endif
+        enddo
+    enddo
+
+    ! Allocate and initialize the new format for g
     select case(trim(str_fmt))
         case('ll')
             allocate(ll_graph::g)
@@ -44,24 +66,27 @@ subroutine convert(g,storage_format)                                       !
             allocate(coo_graph::g)
     end select
 
-    call g%init(gc%n,gc%m,edges)
+    call g%init(gc%n,gc%m,num_nbrs)
 
+    ! Add in all the edges to the new format
+    cursor = gc%make_cursor(0)
+
+    do n=1,num_blocks
+        edges = gc%get_edges(cursor,64,num_returned)
+
+        do k=1,num_returned
+            i = edges(1,k)
+            j = edges(2,k)
+
+            if (i/=0 .and. j/=0) then
+                call g%add_edge(i,j)
+            endif
+        enddo
+    enddo
+
+    ! Free up the space used for the original graph format
     call gc%free()
     deallocate(gc)
-
-!    call g%dump_edges(edges)
-!    select case(trim(str_fmt))
-!        case('ll')
-!            allocate(ll_graph::gc)
-!        case('cs')
-!            allocate(cs_graph::gc)
-!        case('coo')
-!            allocate(coo_graph::gc)
-!    end select
-
-!    call gc%init(g%n,g%m,edges)
-
-!    g => gc
 
 end subroutine convert
 

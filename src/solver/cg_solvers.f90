@@ -39,6 +39,11 @@ subroutine cg_init(solver,nn,tolerance)                                    !
 
     allocate( solver%p(nn), solver%q(nn), solver%r(nn), solver%z(nn) )
 
+    solver%p = 0.0_dp
+    solver%q = 0.0_dp
+    solver%r = 0.0_dp
+    solver%z = 0.0_dp
+
 end subroutine cg_init
 
 

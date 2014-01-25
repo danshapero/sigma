@@ -34,20 +34,17 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine ll_init(g,n,m,edges)                                            !
+subroutine ll_init(g,n,m,num_neighbor_nodes)                               !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(ll_graph), intent(inout) :: g
     integer, intent(in) :: n
-    integer, intent(in), optional :: m, edges(:,:)
+    integer, intent(in), optional :: m, num_neighbor_nodes(:)
     ! local variables
     integer :: k,ne
 
     g%n = n
     allocate(g%lists(n))
-    do k=1,n
-        call g%lists(k)%init(capacity=4,min_capacity=2)
-    enddo
 
     if (present(m)) then
         g%m = m
@@ -55,23 +52,22 @@ subroutine ll_init(g,n,m,edges)                                            !
         g%m = n
     endif
 
-    if (present(edges)) then
-        ne = size(edges,2)
-        g%ne = ne
-
-        do k=1,ne
-            call g%lists(edges(1,k))%push(edges(2,k))
-        enddo
-
-        g%max_degree = 0
+    if (present(num_neighbor_nodes)) then
         do k=1,n
-            g%max_degree = max(g%max_degree,g%lists(k)%length)
+            call g%lists(k)%init(capacity=num_neighbor_nodes(k), &
+                & min_capacity=2)
         enddo
+        ne = sum(num_neighbor_nodes)
     else
-        ne = 0
-        g%ne = ne
-        g%max_degree = 0
+        do k=1,n
+            call g%lists(k)%init(capacity=4, min_capacity=2)
+        enddo
+        ne = 4*g%n
     endif
+
+    g%ne = 0
+    g%max_degree = 0
+    g%capacity = ne
 
 end subroutine ll_init
 
@@ -207,11 +203,14 @@ function ll_get_edges(g,cursor,num_edges,num_returned) result(edges)       !
         enddo
 
         !! Check that this is right
-        cursor%indx = mod(cursor%indx+num_from_this_row,g%lists(i)%length)
+        !cursor%indx = mod(cursor%indx+num_from_this_row,g%lists(i)%length)
 
         ! If we returned all nodes from this row, increment the row
         if (num_from_this_row == g%lists(i)%length-cursor%indx) then
             i = i+1
+            cursor%indx = 0
+        else
+            cursor%indx = cursor%indx+num_from_this_row
         endif
 
         ! Increase the number of edges added
@@ -230,14 +229,21 @@ subroutine ll_add_edge(g,i,j)                                              !
 !--------------------------------------------------------------------------!
     class(ll_graph), intent(inout) :: g
     integer, intent(in) :: i,j
+    integer :: cap
 
     if (.not.g%connected(i,j)) then
+        ! Record the old capacity of the list of i's neighbors
+        cap = g%lists(i)%capacity
+
+        ! Push the new neighbor node j onto the list of i's neighbors
         call g%lists(i)%push(j)
-        !!change this to g%max_degree = max(g%max_degree,g%lists(i)%length)
-        if (g%lists(i)%length>g%max_degree) then
-            g%max_degree = g%lists(i)%length
-        endif
+
+        ! Change the graph's max degree if need be
+        g%max_degree = max(g%max_degree,g%lists(i)%length)
+
+        ! Increment the number of edges and graph capacity
         g%ne = g%ne+1
+        g%capacity = g%capacity+g%lists(i)%capacity-cap
     endif
 
 end subroutine ll_add_edge
@@ -249,11 +255,12 @@ subroutine ll_delete_edge(g,i,j)                                           !
 !--------------------------------------------------------------------------!
     class(ll_graph), intent(inout) :: g
     integer, intent(in) :: i,j
-    integer :: k,jt,degree
+    integer :: k,jt,degree,cap
 
     if (g%connected(i,j)) then
-        ! Record the degree of vertex i
+        ! Record the degree of vertex i and capacity
         degree = g%lists(i)%length
+        cap = g%lists(i)%capacity
 
         ! Pop from the list of i's neighbors
         jt = g%lists(i)%pop()
@@ -278,8 +285,9 @@ subroutine ll_delete_edge(g,i,j)                                           !
             enddo
         endif
 
-        ! Decrement the total number of edges in the graph
+        ! Decrement the number of edges and capacity of the graph
         g%ne = g%ne-1
+        g%capacity = g%capacity+g%lists(i)%capacity-cap
     endif
 
 end subroutine ll_delete_edge

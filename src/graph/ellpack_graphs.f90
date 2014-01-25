@@ -10,6 +10,7 @@ implicit none
 type, extends(graph) :: ellpack_graph                                      !
 !--------------------------------------------------------------------------!
     integer, allocatable :: node(:,:)
+    integer :: max_neighbors
 contains
     procedure :: init => ellpack_graph_init
     procedure :: neighbors => ellpack_neighbors
@@ -37,14 +38,14 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine ellpack_graph_init(g,n,m,edges)                                 !
+subroutine ellpack_graph_init(g,n,m,num_neighbor_nodes)                    !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(ellpack_graph), intent(inout) :: g
     integer, intent(in) :: n
-    integer, intent(in), optional :: m, edges(:,:)
+    integer, intent(in), optional :: m, num_neighbor_nodes(:)
     ! local variables
-    integer :: i,j,k,ne,degree(n)
+    integer :: i,j,k
 
     g%n = n
 
@@ -54,36 +55,16 @@ subroutine ellpack_graph_init(g,n,m,edges)                                 !
         g%m = n
     endif
 
-    if (present(edges)) then
-        ne = size(edges,2)
-        g%ne = ne
-
-        degree = 0
-        do k=1,ne
-            i = edges(1,k)
-            degree(i) = degree(i)+1
-        enddo
-        g%max_degree = maxval(degree)
+    if (present(num_neighbor_nodes)) then
+        g%max_neighbors = maxval(num_neighbor_nodes)
     else
-        ne = 0
-        g%ne = ne
-        g%max_degree = 0
+        g%max_neighbors = 6
     endif
-
-    allocate( g%node(g%max_degree,g%n) )
+    allocate(g%node(g%max_neighbors,g%n))
     g%node = 0
-
-    if (present(edges)) then
-        degree = 0
-
-        do k=1,ne
-            i = edges(1,k)
-            j = edges(2,k)
-
-            degree(i) = degree(i)+1
-            g%node(degree(i),i) = j
-        enddo
-    endif
+    g%max_degree = 0
+    g%ne = 0
+    g%capacity = g%max_neighbors*g%n
 
 end subroutine ellpack_graph_init
 
@@ -96,6 +77,7 @@ subroutine ellpack_neighbors(g,i,nbrs)                                     !
     integer, intent(in) :: i
     integer, intent(out) :: nbrs(:)
 
+    nbrs = 0
     nbrs(1:g%max_degree) = g%node(:,i)
 
 end subroutine ellpack_neighbors
@@ -130,29 +112,13 @@ function ellpack_find_edge(g,i,j)                                          !
     integer, intent(in) :: i,j
     integer :: ellpack_find_edge
     ! local variables
-    integer :: k,l,total,degree
+    integer :: k
 
     ellpack_find_edge = -1
 
-    total = 0
-    do l=1,i-1
-        degree = g%max_degree
-        do k=g%max_degree,1,-1
-            if (g%node(k,l)==0) then
-                degree = k-1
-            endif
-        enddo
-
-        total = total+degree
+    do k=g%max_degree,1,-1
+        if (g%node(k,i)==j) ellpack_find_edge = (i-1)*g%max_degree+k
     enddo
-
-    do k=1,g%max_degree
-        if (g%node(k,i)==j) ellpack_find_edge = total+k
-    enddo
-
-    !! This approach is quite blunt and we need to do something else if we
-    !! we want to keep ellpack graphs as a performant rather than an easy
-    !! format.
 
 end function ellpack_find_edge
 
@@ -166,7 +132,7 @@ function ellpack_make_cursor(g,thread) result(cursor)                      !
     type(graph_edge_cursor) :: cursor
 
     cursor%start = 1
-    cursor%final = g%ne
+    cursor%final = g%capacity
     cursor%current = 0
     cursor%edge = [1, g%node(1,1)]
     cursor%indx = 0
@@ -185,47 +151,40 @@ function ellpack_get_edges(g,cursor,num_edges,num_returned) result(edges)  !
     integer, intent(out) :: num_returned
     integer :: edges(2,num_edges)
     ! local variables
-    integer :: i,k,degree,num_added,num_from_this_row
+    integer :: i,i1,i2,k,degree,num_added,num_from_this_row
 
     ! Set up the returned edges to be 0
     edges = 0
 
     ! Find out how many nodes' edges the current request encompasses
     num_returned = min(num_edges,cursor%final-cursor%current)
-    i = cursor%edge(1)
 
-    ! Loop over each of those nodes
+    ! Find the starting and ending nodes for this edge retrieval
+    i1 = cursor%current/g%max_neighbors+1
+    i2 = (cursor%current+num_returned-1)/g%max_neighbors+1
+
+    ! Set the number of edges added to 0
     num_added = 0
-    do while(num_added<num_returned)
-        ! Compute the degree of node i
-        degree = g%max_degree
-        do k=g%max_degree,1,-1
-            if (g%node(k,i)==0) then
-                degree = k-1
-            endif
-        enddo
 
-        ! Find how many nodes to return from the current row
-        num_from_this_row = min(degree-cursor%indx, num_returned-num_added)
+    ! Loop from the starting node to the ending node
+    do i=i1,i2
+        ! Find how many edges we're retrieving from this row
+        num_from_this_row = min(g%max_degree-cursor%indx, &
+                                & num_returned-num_added)
 
-        do k=1,num_from_this_row
-            edges(1,num_added+k) = i
-            edges(2,num_added+k) = g%node(cursor%indx+k,i)
-        enddo
+        ! Fill in the return array
+        edges(1,num_added+1:num_added+num_from_this_row) = i
+        edges(2,num_added+1:num_added+num_from_this_row) = &
+            & g%node(cursor%indx+1:cursor%indx+num_from_this_row,i)
 
-        cursor%indx = mod(cursor%indx+num_from_this_row,degree)
-
-        ! If we returned all nodes from this row, increment the row
-        if (num_from_this_row == degree-cursor%indx) then
-            i = i+1
-        endif
-
-        ! Increase the number of edges added
+        ! Increment the number of edges added
         num_added = num_added+num_from_this_row
+
+        ! Modify the index storing the place within the row that we left off
+        cursor%indx = mod(cursor%indx+num_from_this_row,g%max_degree)
     enddo
 
     cursor%current = cursor%current+num_returned
-    cursor%edge(1) = i
 
 end function ellpack_get_edges
 
@@ -245,25 +204,23 @@ subroutine ellpack_add_edge(g,i,j)                                         !
         ! Find the index in g%node(:,i) where we can add in node j
         indx = -1
 
-        do k=1,g%max_degree
+        do k=g%max_neighbors,1,-1
             if (g%node(k,i)==0) then
                 indx = k
-                exit
             endif
         enddo
 
         ! If there is room to add j, then do so
         if (indx/=-1) then
             g%node(indx,i) = j
-
+            g%ne = g%ne+1
         ! If there is no room, that means that degree(i) = max degree of g.
-        ! We then have to rebuild the array g%node to reflect the fact that
-        ! the graph has a higher max degree.
         else
-            call g%ellpack_add_edge_with_max_degree_increase(i,j)
+            print *, 'Not enough space to add edge',i,j
         endif
 
-        g%ne = g%ne+1
+        ! Increment the maximum degree of the graph if need be
+        g%max_degree = max(g%max_degree,indx)
     endif
 
 end subroutine ellpack_add_edge
@@ -278,29 +235,37 @@ subroutine ellpack_delete_edge(g,i,j)                                      !
     integer, intent(in) :: i,j
     ! local variables
     integer :: k,indx
-    logical :: decrease_max_degree
+    logical :: max_degree_decrease
 
     ! If nodes i,j are not connected to begin with, there is no edge to
     ! delete and thus nothing to do
     if (g%connected(i,j)) then
+        ! Set a boolean to be true if we're removing an edge from a node
+        ! of maximum degree
+        max_degree_decrease = (g%node(g%max_degree,i)/=0)
+
+        ! Find the location indx in memory where edge (i,j) is stored
         do indx=1,g%max_degree
             if (g%node(indx,i)==j) exit
         enddo
 
+        ! Overwrite indx with the other nodes connected to i
         g%node(indx:g%max_degree-1,i) = g%node(indx+1:g%max_degree,i)
+
+        ! Zero out the last node connected to i
         g%node(g%max_degree,i) = 0
 
-        decrease_max_degree = .true.
-        do k=1,g%n
-            if (g%node(g%max_degree,k)/=0) then
-                decrease_max_degree = .false.
-                exit
-            endif
-        enddo
-
-        if (decrease_max_degree) call g%ellpack_max_degree_decrease()
-
+        ! Decrement the number of edges
         g%ne = g%ne-1
+
+        ! If node i had maximum degree, check all the other nodes to see if
+        ! the max degree has decreased
+        if (max_degree_decrease) then
+            max_degree_decrease = (maxval(g%node(g%max_degree,:))==0)
+        endif
+
+        ! If so, decrement the max_degree member of g
+        if (max_degree_decrease) g%max_degree = g%max_degree-1
     endif
 
 end subroutine ellpack_delete_edge

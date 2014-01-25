@@ -36,17 +36,18 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine coo_init(g,n,m,edges)                                           !
+subroutine coo_init(g,n,m,num_neighbor_nodes)                              !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(coo_graph), intent(inout) :: g
     integer, intent(in) :: n
-    integer, intent(in), optional :: m, edges(:,:)
+    integer, intent(in), optional :: m, num_neighbor_nodes(:)
     ! local variables
     integer :: i,k,ne
 
     g%n = n
     allocate(g%degree(n))
+    g%degree = 0
 
     if (present(m)) then
         g%m = m
@@ -54,31 +55,18 @@ subroutine coo_init(g,n,m,edges)                                           !
         g%m = n
     endif
 
-    if (present(edges)) then
-        ne = size(edges,2)
-        g%ne = ne
-
-        g%degree = 0
-        do k=1,ne
-            i = edges(1,k)
-            g%degree(i) = g%degree(i)+1
-        enddo
-        g%max_degree = maxval(g%degree)
+    if (present(num_neighbor_nodes)) then
+        ne = sum(num_neighbor_nodes)
     else
-        ne = 0
-        g%ne = ne
-        g%max_degree = 0
+        ne = max(g%m,g%n)
     endif
 
-    call g%edges(1)%init()
-    call g%edges(2)%init()
+    call g%edges(1)%init(capacity=ne)
+    call g%edges(2)%init(capacity=ne)
 
-    if (present(edges)) then
-        do k=1,ne
-            call g%edges(1)%push( edges(1,k) )
-            call g%edges(2)%push( edges(2,k) )
-        enddo
-    endif
+    g%ne = 0
+    g%max_degree = 0
+    g%capacity = ne
     
 end subroutine coo_init
 
@@ -209,8 +197,9 @@ subroutine coo_add_edge(g,i,j)                                             !
         call g%edges(1)%push(i)
         call g%edges(2)%push(j)
 
-        ! Increase the number of edges
+        ! Increase the number of edges and the graph capacity
         g%ne = g%ne+1
+        g%capacity = g%edges(1)%capacity
 
         ! If the degree of node i is now the greatest of all nodes in the
         ! graph, update the degree accordingly
@@ -237,13 +226,14 @@ subroutine coo_delete_edge(g,i,j)                                          !
         it = g%edges(1)%pop()
         jt = g%edges(2)%pop()
 
-        if (k<g%ne) then
+        if (k<g%ne .and. g%ne>1) then
             call g%edges(1)%set_entry(k,it)
             call g%edges(2)%set_entry(k,jt)
         endif
 
-        ! Decrement the number of edges
+        ! Decrement the number of edges and the graph capacity
         g%ne = g%ne-1
+        g%capacity = g%edges(1)%capacity
 
         ! Evaluate the graph's new maximum degree
         g%degree(i) = g%degree(i)-1
@@ -261,10 +251,11 @@ subroutine coo_graph_left_permute(g,p)                                     !
     class(coo_graph), intent(inout) :: g
     integer, intent(in) :: p(:)
     ! local variables
-    integer :: k
+    integer :: i,k
 
     do k=1,g%ne
-        call g%edges(1)%set_entry(k,p(g%edges(1)%get_entry(k)))
+        i = g%edges(1)%get_entry(k)
+        call g%edges(1)%set_entry(k,p(i))
     enddo
 
 end subroutine coo_graph_left_permute
@@ -278,10 +269,11 @@ subroutine coo_graph_right_permute(g,p)                                    !
     class(coo_graph), intent(inout) :: g
     integer, intent(in) :: p(:)
     ! local variables
-    integer :: k
+    integer :: i,k
 
     do k=1,g%ne
-        call g%edges(2)%set_entry(k,p(g%edges(2)%get_entry(k)))
+        i = g%edges(2)%get_entry(k)
+        call g%edges(2)%set_entry(k,p(i))
     enddo
 
 end subroutine coo_graph_right_permute
@@ -293,11 +285,12 @@ subroutine coo_free(g)                                                     !
 !--------------------------------------------------------------------------!
     class(coo_graph), intent(inout) :: g
 
-    deallocate(g%edges(1)%array,g%edges(2)%array)
+    deallocate(g%edges(1)%array,g%edges(2)%array,g%degree)
 
     g%n = 0
     g%m = 0
     g%ne = 0
+    g%capacity = 0
     g%max_degree = 0
 
 end subroutine coo_free

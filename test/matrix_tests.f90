@@ -9,31 +9,11 @@ implicit none
     integer :: i,j,k,frmt,ordering
     real(dp) :: z
     logical :: correct
-    integer, allocatable :: edges(:,:), nbrs(:), p(:)
+    integer, allocatable :: edges(:,:), nbrs(:), p(:), num_nbrs(:)
     real(dp), allocatable :: x(:), y(:)
     character(len=3) :: orientation
 
     allocate(edges(2,31), x(7), y(7), nbrs(8))
-    edges(:,1)  = [1, 2]
-    edges(:,2)  = [1, 3]
-    edges(:,3)  = [1, 4]
-    edges(:,4)  = [1, 5]
-    edges(:,5)  = [1, 6]
-    edges(:,6)  = [1, 7]
-    edges(:,7)  = [2, 3]
-    edges(:,8)  = [3, 4]
-    edges(:,9)  = [4, 5]
-    edges(:,10) = [5, 6]
-    edges(:,11) = [6, 7]
-    edges(:,12) = [7, 2]
-    do k=1,12
-        edges(1,k+12) = edges(2,k)
-        edges(2,k+12) = edges(1,k)
-    enddo
-    do k=1,7
-        edges(:,k+24) = [k,k]
-    enddo
-
 
     ! Loop through all formats
     do frmt=1,4
@@ -57,7 +37,18 @@ implicit none
                 case(4)
                     allocate(ellpack_graph::g)
             end select
-            call g%init(7,7,edges)
+            call g%init(7,7,[7,4,4,4,4,4,4])
+
+            do i=1,6
+                call g%add_edge(i,i+1)
+                call g%add_edge(i+1,i)
+                call g%add_edge(1,i+1)
+                call g%add_edge(i+1,1)
+                call g%add_edge(i,i)
+            enddo
+            call g%add_edge(7,2)
+            call g%add_edge(2,7)
+            call g%add_edge(7,7)
 
             ! Build the matrix
             call A%init(7,7,orientation,g)

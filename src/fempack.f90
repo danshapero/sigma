@@ -34,12 +34,12 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine new_graph(g,graph_format,n,m,edges)                             !
+subroutine new_graph(g,graph_format,n,m,num_nbrs)                          !
 !--------------------------------------------------------------------------!
     class(graph), pointer, intent(inout) :: g
     character(len=*), intent(in) :: graph_format
     integer, intent(in) :: n
-    integer, intent(in), optional :: m, edges(:,:)
+    integer, intent(in), optional :: m, num_nbrs(:)
 
     select case(trim(graph_format))
         case('cs')
@@ -52,7 +52,7 @@ subroutine new_graph(g,graph_format,n,m,edges)                             !
             allocate(ellpack_graph::g)
     end select
 
-    call g%init(n,m,edges)
+    call g%init(n,m=m,num_neighbor_nodes=num_nbrs)
     
 end subroutine new_graph
 

@@ -16,10 +16,11 @@ implicit none
 
 
 
+
 !--------------------------------------------------------------------------!
 type, abstract :: graph                                                    !
 !--------------------------------------------------------------------------!
-    integer :: n,m,ne,max_degree
+    integer :: n,m,ne,capacity,max_degree
 contains
     ! core graph procedures
     procedure(init_graph_ifc), deferred     :: init
@@ -51,11 +52,11 @@ end type graph_edge_cursor
 !--------------------------------------------------------------------------!
 abstract interface                                                         !
 !--------------------------------------------------------------------------!
-    subroutine init_graph_ifc(g,n,m,edges)
+    subroutine init_graph_ifc(g,n,m,num_neighbor_nodes)
         import :: graph
         class(graph), intent(inout) :: g
         integer, intent(in) :: n
-        integer, intent(in), optional :: m, edges(:,:)
+        integer, intent(in), optional :: m, num_neighbor_nodes(:)
     end subroutine init_graph_ifc
 
     subroutine neighbors_ifc(g,i,nbrs)

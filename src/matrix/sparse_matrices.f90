@@ -101,7 +101,7 @@ subroutine sparse_mat_init(A,nrow,ncol,orientation,g)
     endif
 
     A%nnz = A%g%ne
-    allocate(A%val(A%nnz))
+    allocate(A%val(A%g%capacity))
     A%val = 0.0_dp
     A%max_degree = A%g%max_degree
 
@@ -306,7 +306,9 @@ subroutine sparse_mat_matvec_add(A,x,y,trans)                              !
             j = edges(order(2),k)
 
             ! Add A(i,j)*x(j) to y(i)
-            y(i) = y(i)+A%val(64*(n-1)+k)*x(j)
+            if (i/=0 .and. j/=0) then
+                y(i) = y(i)+A%val(64*(n-1)+k)*x(j)
+            endif
         enddo
     enddo
 

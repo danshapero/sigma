@@ -10,7 +10,7 @@ implicit none
 !--------------------------------------------------------------------------!
 type, extends(graph) :: cs_graph                                           !
 !--------------------------------------------------------------------------!
-    integer, allocatable :: ptr(:), node(:)
+    integer, allocatable :: ptr(:), node(:), degree(:)
 contains
     procedure :: init => cs_init
     procedure :: neighbors => cs_neighbors
@@ -26,6 +26,7 @@ contains
     procedure :: dump_edges => cs_dump_edges
     ! auxiliary routines
     procedure :: sort_node
+    procedure, private :: max_degree_update
 end type cs_graph
 
 
@@ -37,14 +38,14 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_init(g,n,m,edges)                                            !
+subroutine cs_init(g,n,m,num_neighbor_nodes)                               !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_graph), intent(inout) :: g
     integer, intent(in) :: n
-    integer, intent(in), optional :: m, edges(:,:)
+    integer, intent(in), optional :: m, num_neighbor_nodes(:)
     ! local variables
-    integer :: i,k,work(n),ne
+    integer :: k,ne
 
     ! Set the number of (left-)nodes in the graph and allocate the node
     ! pointer array ptr
@@ -60,41 +61,27 @@ subroutine cs_init(g,n,m,edges)                                            !
 
     ! If the graph is being initialized with a set of edges, set the number
     ! of edges and allocate space in the node array node
-    if (present(edges)) then
-        ne = size(edges,2)
-        g%ne = ne
+    if (present(num_neighbor_nodes)) then
+        ne = sum(num_neighbor_nodes)
     else
-        ne = 0
-        g%ne = ne
+        ne = g%n
     endif
+
     allocate( g%node(ne) )
+    g%node = 0
+    g%capacity = ne
 
-    if (present(edges)) then
-        work = 0
-        do k=1,ne
-            i = edges(1,k)
-            work(i) = work(i)+1
-        enddo
-
-        g%max_degree = maxval(work)
-
+    if (present(num_neighbor_nodes)) then
         g%ptr(1) = 1
-        do k=2,n+1
-            g%ptr(k) = g%ptr(k-1)+work(k-1)
+        do k=1,g%n
+            g%ptr(k+1) = g%ptr(k)+num_neighbor_nodes(k)
         enddo
-
-        work = 0
-        do k=1,ne
-            i = edges(1,k)
-            g%node( g%ptr(i)+work(i) ) = edges(2,k)
-            work(i) = work(i)+1
-        enddo
-
-        call g%sort_node()
     else
-        g%max_degree = 0
         g%ptr = 1
     endif
+
+    g%ne = 0
+    g%max_degree = 0
 
 end subroutine cs_init
 
@@ -172,7 +159,7 @@ function cs_make_cursor(g,thread) result(cursor)                           !
     integer :: k
 
     cursor%start = 1
-    cursor%final = g%ne
+    cursor%final = g%capacity
     cursor%current = 0
 
     k = 1
@@ -239,40 +226,29 @@ subroutine cs_add_edge(g,i,j)                                              !
     class(cs_graph), intent(inout) :: g
     integer, intent(in) :: i,j
     ! local variables
-    integer :: k,indx,node_temp(g%ne)
+    integer :: k
+    logical :: added
 
     if (.not.g%connected(i,j)) then
-        ! Find the index in the list of edges where the new edge is to be
-        ! inserted
-        indx = g%ptr(i)
+        ! Try to see if the new neighbor can be added without reallocating
+        ! memory
+        added = .false.
         do k=g%ptr(i),g%ptr(i+1)-1
-            if (g%node(k)<j) indx = indx+1
+            if (g%node(k)==0) then
+                g%node(k) = j
+                added = .true.
+                exit
+            endif
         enddo
 
-        ! Copy the current structure into a temporary one
-        node_temp = g%node
-
-        ! Deallocate the old structure and make a new one with extra room
-        deallocate(g%node)
-        allocate(g%node(g%ne+1))
-
-        ! Build the new array node
-        g%node(1:indx-1) = node_temp(1:indx-1)
-        g%node(indx) = j
-        g%node(indx+1:g%ne+1) = node_temp(indx:g%ne)
-
-        ! The number of edges in the graph is incremented by 1, and the
-        ! starting index in node is incremented for all nodes after the node
-        ! into which the new edge is to be inserted
         g%ne = g%ne+1
-        do k=i+1,g%n+1
-            g%ptr(k) = g%ptr(k)+1
-        enddo
 
-        ! If the degree of node i is now the greatest of all nodes in the
-        ! graph, update the degree accordingly
-        if (g%ptr(i+1)-g%ptr(i)>g%max_degree) then
-            g%max_degree = g%ptr(i+1)-g%ptr(i)
+        if (.not.added) then
+            print *, 'Not enough space to add edge',i,j
+        endif
+
+        if (k-g%ptr(i)+1>g%max_degree) then
+            g%max_degree = k-g%ptr(i)+1
         endif
     endif
 
@@ -287,49 +263,36 @@ subroutine cs_delete_edge(g,i,j)                                           !
     class(cs_graph), intent(inout) :: g
     integer, intent(in) :: i,j
     ! local variables
-    integer :: k,indx,degree,node_temp(g%ne)
+    integer :: jt,k,indx,degree
 
-    if (g%connected(i,j)) then
+    ! Find the index in the list of edges of the edge to be removed
+    indx = g%find_edge(i,j)
+
+    if (indx/=-1) then
         ! Record the degree of the node from which an edge is to be
-        ! removed; we use this later to check whether the maximum degree
-        ! of the graph has decreased
-        degree = g%ptr(i+1)-g%ptr(i)
-
-        ! Find the index in the list of edges of the edge to be removed
-        indx = g%find_edge(i,j)
-
-        node_temp = g%node
-
-        deallocate(g%node)
-        allocate(g%node(g%ne-1))
-
-        ! Build the new array node
-        g%node(1:indx-1) = node_temp(1:indx-1)
-        g%node(indx:g%ne-1) = node_temp(indx+1:g%ne)
-
-        ! The number of edges in the graph is decremented by 1, and the
-        ! starting index in node is decremented for all nodes after the node
-        ! from which the edge was removed
-        g%ne = g%ne-1
-        do k=i+1,g%n
-            g%ptr(k) = g%ptr(k)-1
+        ! removed, and find the last node that i is connected to
+        do k=g%ptr(i),g%ptr(i+1)-1
+            if (g%node(k)/=0) then
+                degree = k-g%ptr(i)+1
+                jt = g%node(k)
+            endif
         enddo
 
-        ! If the degree of node i was the greatest among all nodes in the
-        ! entire graph, check to see if max_degree needs to be decremented
-        if (degree==g%max_degree) then
-            ! Tentatively set the maximum degree of the graph to the (now 
-            ! smaller) degree of the node i from which the edge was removed.
-            g%max_degree = g%ptr(i+1)-g%ptr(i)
-
-            ! Iterate through all the nodes;
-            do k=1,g%n
-                ! if any node has a degree greater than the tentative
-                ! max_degree, then increment the maximum degree.
-                degree = g%ptr(k+1)-g%ptr(k)
-                if (degree>g%max_degree) g%max_degree = degree
-            enddo
+        ! If there were more than two edges connected to node i, then
+        ! replace the edge (i,j) with the removed edge (i,jt)
+        if (degree>1) then
+            g%node(indx) = jt
         endif
+
+        ! Remove the last edge (i,jt) connected to i
+        g%node( g%ptr(i)+degree-1 ) = 0
+
+        if (degree==g%max_degree) then
+            call g%max_degree_update()
+        endif
+
+        ! Decrement the number of edges in g
+        g%ne = g%ne-1
     endif
 
 end subroutine cs_delete_edge
@@ -343,7 +306,7 @@ subroutine cs_graph_left_permute(g,p)                                      !
     class(cs_graph), intent(inout) :: g
     integer, intent(in) :: p(:)
     ! local variables
-    integer :: i,k,ptr(g%n+1),node(g%ne)
+    integer :: i,k,ptr(g%n+1),node(g%capacity)
 
     do i=1,g%n
         ptr(p(i)+1) = g%ptr(i+1)-g%ptr(i)
@@ -374,10 +337,11 @@ subroutine cs_graph_right_permute(g,p)                                     !
     class(cs_graph), intent(inout) :: g
     integer, intent(in) :: p(:)
     ! local variables
-    integer :: k
+    integer :: j,k
 
-    do k=1,g%ne
-        g%node(k) = p( g%node(k) )
+    do k=1,g%capacity
+        j = g%node(k)
+        if (j/=0) g%node(k) = p(j)
     enddo
 
 end subroutine cs_graph_right_permute
@@ -438,6 +402,67 @@ subroutine sort_node(g)                                                    !
 
 end subroutine sort_node
 
+
+
+!--------------------------------------------------------------------------!
+subroutine max_degree_update(g)                                            !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(cs_graph), intent(inout) :: g
+    ! local variables
+    integer :: i,k,degree,max_d
+
+    max_d = 0
+
+    ! loop through all the nodes
+    do i=1,g%n
+        ! set the degree of i to be 0
+        degree = 0
+
+        ! check how many neighbors i has
+        do k=g%ptr(i),g%ptr(i+1)-1
+            if (g%node(k)/=0) degree = k-g%ptr(i)+1
+        enddo
+
+        ! update the max degree of g if node i has a greater degree
+        max_d = max(max_d,degree)
+    enddo
+
+    g%max_degree = max_d
+
+end subroutine max_degree_update
+
+
+
+!--------------------------------------------------------------------------!
+subroutine cs_compress(g)                                                  !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(cs_graph), intent(inout) :: g
+    ! local variables
+    integer :: i,j,k,ptr(g%n+1),node(g%capacity)
+
+    ptr = g%ptr
+    node = g%node
+
+    g%ptr = 0
+    g%ptr(1) = 1
+    g%ne = 0
+
+    do i=1,g%n
+        do k=ptr(i),ptr(i+1)-1
+            j = node(k)
+            if (j/=0) then
+                g%ptr(i+1) = g%ptr(i+1)+1
+                g%ne = g%ne+1
+                g%node(g%ne) = j
+            endif
+        enddo
+
+        g%ptr(i+1) = g%ptr(i)+g%ptr(i+1)
+    enddo
+
+end subroutine cs_compress
 
 
 end module cs_graphs
