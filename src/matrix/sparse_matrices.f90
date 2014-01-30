@@ -27,6 +27,8 @@ type :: sparse_matrix                                                      !
     character(len=3) :: orientation
     logical :: pos_def
     logical :: assembled
+    procedure(sparse_mat_perm_ifc), pointer :: left_perm_impl
+    procedure(sparse_mat_perm_ifc), pointer :: right_perm_impl
 contains
     procedure :: init => sparse_mat_init
 !    Do we need this method at all?
@@ -47,6 +49,18 @@ end type sparse_matrix
 
 
 !--------------------------------------------------------------------------!
+abstract interface                                                         !
+!--------------------------------------------------------------------------!
+    subroutine sparse_mat_perm_ifc(A,p)
+        import :: sparse_matrix
+        class(sparse_matrix), intent(inout) :: A
+        integer, intent(in) :: p(:)
+    end subroutine sparse_mat_perm_ifc
+end interface
+
+
+
+!--------------------------------------------------------------------------!
 type :: sparse_matrix_pointer                                              !
 !--------------------------------------------------------------------------!
     class(sparse_matrix), pointer :: A
@@ -58,6 +72,13 @@ end type sparse_matrix_pointer
 
 
 contains
+
+
+
+
+
+
+
 
 
 
@@ -111,8 +132,12 @@ subroutine sparse_mat_init(A,nrow,ncol,orientation,g)
     select case(orientation)
         case('row')
             A%order = [1, 2]
+            A%left_perm_impl => sparse_mat_graph_leftperm
+            A%right_perm_impl => sparse_mat_graph_rightperm
         case('col')
             A%order = [2, 1]
+            A%left_perm_impl => sparse_mat_graph_rightperm
+            A%right_perm_impl => sparse_mat_graph_leftperm
     end select
 
 end subroutine sparse_mat_init
@@ -227,13 +252,10 @@ end subroutine sparse_mat_zero
 !--------------------------------------------------------------------------!
 subroutine sparse_mat_leftperm(A,p)                                        !
 !--------------------------------------------------------------------------!
-    ! input/output variables
     class(sparse_matrix), intent(inout) :: A
     integer, intent(in) :: p(:)
-    ! local variables
-    integer :: i,j,k,ind(2)
 
-    ! Uh...
+    call A%left_perm_impl(p)
 
 end subroutine sparse_mat_leftperm
 
@@ -242,13 +264,89 @@ end subroutine sparse_mat_leftperm
 !--------------------------------------------------------------------------!
 subroutine sparse_mat_rightperm(A,p)                                       !
 !--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(inout) :: A
+    integer, intent(in) :: p(:)
+
+    call A%right_perm_impl(p)
+
+end subroutine sparse_mat_rightperm
+
+
+
+!--------------------------------------------------------------------------!
+subroutine sparse_mat_graph_leftperm(A,p)                                  !
+!--------------------------------------------------------------------------!
     ! input/output variables
     class(sparse_matrix), intent(inout) :: A
     integer, intent(in) :: p(:)
     ! local variables
-    integer :: i,j,k,ind(2)
+    integer :: i, source, dest, num_nodes
+    integer, allocatable :: edge_p(:,:)
+    real(dp), allocatable :: val(:)
 
-end subroutine sparse_mat_rightperm
+    ! Permute the graph and get an array edge_p describing the permutation
+    ! of the edges
+    call A%g%left_permute_edge_reorder(p,edge_p)
+
+    ! If the edges require permutation,
+    if (size(edge_p,2)>0) then
+        ! Make a temporary array for the matrix values
+        allocate(val(A%g%capacity))
+        val = 0.0_dp
+
+        ! Make an array of the re-arranged matrix values
+        do i=1,size(edge_p,2)
+            source = edge_p(1,i)
+            dest = edge_p(2,i)
+            num_nodes = edge_p(3,i)
+
+            val(dest:dest+num_nodes-1) = A%val(source:source+num_nodes-1)
+        enddo
+
+        ! Transfer the allocation of the temporary array to the array
+        ! of A's matrix entries
+        call move_alloc(from=val, to=A%val)
+    endif
+
+    ! Deallocate the array describing the edge permutation
+    deallocate(edge_p)
+
+end subroutine sparse_mat_graph_leftperm
+
+
+
+!--------------------------------------------------------------------------!
+subroutine sparse_mat_graph_rightperm(A,p)                                 !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(inout) :: A
+    integer, intent(in) :: p(:)
+    ! local variables
+    integer :: i, source, dest, num_nodes
+    integer, allocatable :: edge_p(:,:)
+    real(dp), allocatable :: val(:)
+
+    call A%g%right_permute_edge_reorder(p,edge_p)
+
+    if (size(edge_p,2)>0) then
+        allocate(val(A%g%capacity))
+        val = 0.0_dp
+
+        do i=1,size(edge_p,2)
+            source = edge_p(1,i)
+            dest = edge_p(2,i)
+            num_nodes = edge_p(3,i)
+
+            val(dest:dest+num_nodes-1) = A%val(source:source+num_nodes-1)
+        enddo
+
+        call move_alloc(from=val, to=A%val)
+    endif
+
+    deallocate(edge_p)
+
+
+end subroutine sparse_mat_graph_rightperm
 
 
 

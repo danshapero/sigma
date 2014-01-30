@@ -33,6 +33,10 @@ contains
     procedure(delete_edge_ifc), deferred    :: delete_edge
     procedure(permute_graph_ifc), deferred  :: left_permute
     procedure(permute_graph_ifc), deferred  :: right_permute
+    procedure(permute_graph_edge_reorder_ifc), deferred &
+                                          & :: left_permute_edge_reorder
+    procedure(permute_graph_edge_reorder_ifc), deferred &
+                                          & :: right_permute_edge_reorder
     procedure(free_ifc), deferred           :: free
     procedure(dump_edges_ifc), deferred     :: dump_edges
     ! procedures for testing, debugging and i/o
@@ -113,6 +117,13 @@ abstract interface                                                         !
         class(graph), intent(inout) :: g
         integer, intent(in) :: p(:)
     end subroutine permute_graph_ifc
+
+    subroutine permute_graph_edge_reorder_ifc(g,p,edge_p)
+        import :: graph
+        class(graph), intent(inout) :: g
+        integer, intent(in) :: p(:)
+        integer, allocatable, intent(out) :: edge_p(:,:)
+    end subroutine permute_graph_edge_reorder_ifc
 
     subroutine free_ifc(g)
         import :: graph

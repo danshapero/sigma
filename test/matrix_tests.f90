@@ -12,8 +12,9 @@ implicit none
     integer, allocatable :: edges(:,:), nbrs(:), p(:), num_nbrs(:)
     real(dp), allocatable :: x(:), y(:)
     character(len=3) :: orientation
+    real(dp), allocatable :: B(:,:)
 
-    allocate(edges(2,31), x(7), y(7), nbrs(8))
+    allocate(edges(2,31), x(7), y(7), nbrs(8), B(7,7))
 
     ! Loop through all formats
     do frmt=1,4
@@ -93,10 +94,60 @@ implicit none
                 print *, 'Value found:',maxval(dabs(y))-2.0_dp
             endif
 
+            ! Set all the matrix entries so it's easiest to tell if we've
+            ! permuted everything right, and set up an equivalent dense
+            ! matrix to check against
+            B = 0.0_dp
+            do i=1,7
+                call A%g%neighbors(i,nbrs)
+                do k=1,A%max_degree
+                    j = nbrs(k)
+                    if (j/=0) then
+                        call A%set_value(i,j,1.0_dp*(7*(i-1)+j))
+                        B(i,j) = 1.0_dp*(7*(i-1)+j)
+                    endif
+                enddo
+            enddo
 
+            ! Make a permutation (7 1 2 3 4 5 6)
+            allocate(p(7))
+            p(1) = 7
+            do i=2,7
+                p(i) = i-1
+            enddo
+
+            ! Check that right-permutation works correctly
+            B(:,p) = B(:,:)
+            call A%right_permute(p)
+            correct = .true.
+            do j=1,7
+                do i=1,7
+                    correct = correct .and. (A%get_value(i,j)==B(i,j))
+                enddo
+            enddo
+            if (.not.correct) then
+                print *, 'On matrix test',frmt,ordering
+                print *, 'Permuting the columns of the matrix failed'
+                call exit(1)
+            endif
+
+            ! Check that left-permutation works properly
+            B(p,:) = B(:,:)
+            call A%left_permute(p)
+            correct = .true.
+            do j=1,7
+                do i=1,7
+                    correct = correct .and. (A%get_value(i,j)==B(i,j))
+                enddo
+            enddo
+            if (.not.correct) then
+                print *, 'On matrix test',frmt,ordering
+                print *, 'Permuting the rows of the matrix failed'
+                call exit(1)
+            endif
 
             ! Deallocate the graph and free the matrix
-            deallocate(g)
+            deallocate(g,p)
             call A%destroy()
         enddo
     enddo

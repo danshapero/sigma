@@ -21,6 +21,8 @@ contains
     procedure :: delete_edge => ll_delete_edge
     procedure :: left_permute => ll_graph_left_permute
     procedure :: right_permute => ll_graph_right_permute
+    procedure :: left_permute_edge_reorder => ll_left_perm_edge_reorder
+    procedure :: right_permute_edge_reorder => ll_right_perm_edge_reorder
     procedure :: free => ll_free
     procedure :: dump_edges => ll_dump_edges
 end type ll_graph
@@ -338,11 +340,63 @@ subroutine ll_graph_right_permute(g,p)                                     !
     do i=1,g%n
         do k=1,g%lists(i)%length
             j = g%lists(i)%get_entry(k)
-            call g%lists(i)%set_entry(k,p(j))
+            if (j/=0) call g%lists(i)%set_entry(k,p(j))
         enddo
     enddo
 
 end subroutine ll_graph_right_permute
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ll_left_perm_edge_reorder(g,p,edge_p)                           !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(ll_graph), intent(inout) :: g
+    integer, intent(in) :: p(:)
+    integer, allocatable, intent(out) :: edge_p(:,:)
+    ! local variables
+    integer :: i
+
+    ! Initialize the list describing the permutation of the edges
+    allocate(edge_p(3,g%n))
+    edge_p(1,1) = 1
+    do i=1,g%n-1
+        edge_p(1,i+1) = edge_p(1,i)+g%lists(i)%length
+    enddo
+
+    ! Permute the edges
+    call g%left_permute(p)
+
+    ! Finish the list describing the edge permutation
+    edge_p(3,1) = 1
+    do i=1,g%n-1
+        edge_p(3,i+1) = edge_p(3,i)+g%lists(i)%length
+    enddo
+
+    do i=1,g%n
+        edge_p(2,i) = edge_p(3,p(i))
+    enddo
+
+    do i=1,g%n
+        edge_p(3,i) = g%lists(p(i))%length
+    enddo
+
+end subroutine ll_left_perm_edge_reorder
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ll_right_perm_edge_reorder(g,p,edge_p)                          !
+!--------------------------------------------------------------------------!
+    class(ll_graph), intent(inout) :: g
+    integer, intent(in) :: p(:)
+    integer, allocatable, intent(out) :: edge_p(:,:)
+
+    call g%right_permute(p)
+    allocate(edge_p(0,0))
+
+end subroutine ll_right_perm_edge_reorder
 
 
 

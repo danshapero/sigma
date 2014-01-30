@@ -22,6 +22,9 @@ contains
     procedure :: delete_edge => ellpack_delete_edge
     procedure :: left_permute => ellpack_graph_left_permute
     procedure :: right_permute => ellpack_graph_right_permute
+    procedure :: left_permute_edge_reorder => ellpack_left_perm_edge_reorder
+    procedure :: right_permute_edge_reorder &
+                                        & => ellpack_right_perm_edge_reorder
     procedure :: free => ellpack_free
     procedure :: dump_edges => ellpack_dump_edges
     ! auxiliary routines
@@ -40,12 +43,9 @@ contains
 !--------------------------------------------------------------------------!
 subroutine ellpack_graph_init(g,n,m,num_neighbor_nodes)                    !
 !--------------------------------------------------------------------------!
-    ! input/output variables
     class(ellpack_graph), intent(inout) :: g
     integer, intent(in) :: n
     integer, intent(in), optional :: m, num_neighbor_nodes(:)
-    ! local variables
-    integer :: i,j,k
 
     g%n = n
 
@@ -151,7 +151,7 @@ function ellpack_get_edges(g,cursor,num_edges,num_returned) result(edges)  !
     integer, intent(out) :: num_returned
     integer :: edges(2,num_edges)
     ! local variables
-    integer :: i,i1,i2,k,degree,num_added,num_from_this_row
+    integer :: i,i1,i2,num_added,num_from_this_row
 
     ! Set up the returned edges to be 0
     edges = 0
@@ -234,7 +234,7 @@ subroutine ellpack_delete_edge(g,i,j)                                      !
     class(ellpack_graph), intent(inout) :: g
     integer, intent(in) :: i,j
     ! local variables
-    integer :: k,indx
+    integer :: indx
     logical :: max_degree_decrease
 
     ! If nodes i,j are not connected to begin with, there is no edge to
@@ -279,7 +279,7 @@ subroutine ellpack_graph_left_permute(g,p)                                 !
     class(ellpack_graph), intent(inout) :: g
     integer, intent(in) :: p(:)
     ! local variables
-    integer :: i,node(g%max_degree,g%n)
+    integer :: i,node(g%max_neighbors,g%n)
 
     do i=1,g%n
         node(:,p(i)) = g%node(:,i)
@@ -308,6 +308,46 @@ subroutine ellpack_graph_right_permute(g,p)                                !
     enddo
 
 end subroutine ellpack_graph_right_permute
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ellpack_left_perm_edge_reorder(g,p,edge_p)                      !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(ellpack_graph), intent(inout) :: g
+    integer, intent(in) :: p(:)
+    integer, allocatable, intent(out) :: edge_p(:,:)
+    ! local variables
+    integer :: i
+
+    ! Permute the graph
+    call g%left_permute(p)
+
+    ! Report the resulting edge permutation
+    allocate(edge_p(3,g%n))
+
+    do i=1,g%n
+        edge_p(1,i) = g%max_neighbors*(i-1)+1
+        edge_p(2,i) = g%max_neighbors*(p(i)-1)+1
+        edge_p(3,i) = g%max_neighbors
+    enddo
+
+end subroutine ellpack_left_perm_edge_reorder
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ellpack_right_perm_edge_reorder(g,p,edge_p)                     !
+!--------------------------------------------------------------------------!
+    class(ellpack_graph), intent(inout) :: g
+    integer, intent(in) :: p(:)
+    integer, allocatable, intent(out) :: edge_p(:,:)
+
+    call g%right_permute(p)
+    allocate(edge_p(0,0))
+
+end subroutine ellpack_right_perm_edge_reorder
 
 
 
