@@ -286,7 +286,7 @@ subroutine sparse_mat_graph_leftperm(A,p)                                  !
 
     ! Permute the graph and get an array edge_p describing the permutation
     ! of the edges
-    call A%g%left_permute_edge_reorder(p,edge_p)
+    call A%g%left_permute(p,edge_p)
 
     ! If the edges require permutation,
     if (size(edge_p,2)>0) then
@@ -326,7 +326,7 @@ subroutine sparse_mat_graph_rightperm(A,p)                                 !
     integer, allocatable :: edge_p(:,:)
     real(dp), allocatable :: val(:)
 
-    call A%g%right_permute_edge_reorder(p,edge_p)
+    call A%g%right_permute(p,edge_p)
 
     if (size(edge_p,2)>0) then
         allocate(val(A%g%capacity))

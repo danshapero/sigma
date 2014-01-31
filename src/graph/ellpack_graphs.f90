@@ -22,9 +22,6 @@ contains
     procedure :: delete_edge => ellpack_delete_edge
     procedure :: left_permute => ellpack_graph_left_permute
     procedure :: right_permute => ellpack_graph_right_permute
-    procedure :: left_permute_edge_reorder => ellpack_left_perm_edge_reorder
-    procedure :: right_permute_edge_reorder &
-                                        & => ellpack_right_perm_edge_reorder
     procedure :: free => ellpack_free
     procedure :: dump_edges => ellpack_dump_edges
     ! auxiliary routines
@@ -273,11 +270,12 @@ end subroutine ellpack_delete_edge
 
 
 !--------------------------------------------------------------------------!
-subroutine ellpack_graph_left_permute(g,p)                                 !
+subroutine ellpack_graph_left_permute(g,p,edge_p)                          !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(ellpack_graph), intent(inout) :: g
     integer, intent(in) :: p(:)
+    integer, allocatable, intent(out), optional :: edge_p(:,:)
     ! local variables
     integer :: i,node(g%max_neighbors,g%n)
 
@@ -287,16 +285,28 @@ subroutine ellpack_graph_left_permute(g,p)                                 !
 
     g%node = node
 
+    if (present(edge_p)) then
+        ! Report the resulting edge permutation
+        allocate(edge_p(3,g%n))
+
+        do i=1,g%n
+            edge_p(1,i) = g%max_neighbors*(i-1)+1
+            edge_p(2,i) = g%max_neighbors*(p(i)-1)+1
+            edge_p(3,i) = g%max_neighbors
+        enddo
+    endif
+
 end subroutine ellpack_graph_left_permute
 
 
 
 !--------------------------------------------------------------------------!
-subroutine ellpack_graph_right_permute(g,p)                                !
+subroutine ellpack_graph_right_permute(g,p,edge_p)                         !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(ellpack_graph), intent(inout) :: g
     integer, intent(in) :: p(:)
+    integer, allocatable, intent(out), optional :: edge_p(:,:)
     ! local variables
     integer :: i,j,k
 
@@ -307,47 +317,9 @@ subroutine ellpack_graph_right_permute(g,p)                                !
         enddo
     enddo
 
+    if (present(edge_p)) allocate(edge_p(0,0))
+
 end subroutine ellpack_graph_right_permute
-
-
-
-!--------------------------------------------------------------------------!
-subroutine ellpack_left_perm_edge_reorder(g,p,edge_p)                      !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(ellpack_graph), intent(inout) :: g
-    integer, intent(in) :: p(:)
-    integer, allocatable, intent(out) :: edge_p(:,:)
-    ! local variables
-    integer :: i
-
-    ! Permute the graph
-    call g%left_permute(p)
-
-    ! Report the resulting edge permutation
-    allocate(edge_p(3,g%n))
-
-    do i=1,g%n
-        edge_p(1,i) = g%max_neighbors*(i-1)+1
-        edge_p(2,i) = g%max_neighbors*(p(i)-1)+1
-        edge_p(3,i) = g%max_neighbors
-    enddo
-
-end subroutine ellpack_left_perm_edge_reorder
-
-
-
-!--------------------------------------------------------------------------!
-subroutine ellpack_right_perm_edge_reorder(g,p,edge_p)                     !
-!--------------------------------------------------------------------------!
-    class(ellpack_graph), intent(inout) :: g
-    integer, intent(in) :: p(:)
-    integer, allocatable, intent(out) :: edge_p(:,:)
-
-    call g%right_permute(p)
-    allocate(edge_p(0,0))
-
-end subroutine ellpack_right_perm_edge_reorder
 
 
 

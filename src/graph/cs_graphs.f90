@@ -22,8 +22,6 @@ contains
     procedure :: delete_edge => cs_delete_edge
     procedure :: left_permute => cs_graph_left_permute
     procedure :: right_permute => cs_graph_right_permute
-    procedure :: left_permute_edge_reorder => cs_left_perm_edge_reorder
-    procedure :: right_permute_edge_reorder => cs_right_perm_edge_reorder
     procedure :: free => cs_free
     procedure :: dump_edges => cs_dump_edges
     ! auxiliary routines
@@ -302,42 +300,67 @@ end subroutine cs_delete_edge
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_graph_left_permute(g,p)                                      !
+subroutine cs_graph_left_permute(g,p,edge_p)                               !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_graph), intent(inout) :: g
     integer, intent(in) :: p(:)
+    integer, allocatable, intent(out), optional :: edge_p(:,:)
     ! local variables
     integer :: i,k,ptr(g%n+1),node(g%capacity)
 
+    ! If the user has asked to see the edge permutation, fill the
+    ! first and last constituent arrays
+    if (present(edge_p)) then
+        allocate(edge_p(3,g%n))
+        do i=1,g%n
+            edge_p(1,i) = g%ptr(i)
+            edge_p(3,i) = g%ptr(i+1)-g%ptr(i)
+        enddo
+    endif
+
+    ! Find the number of edges for each node under the new ordering
     do i=1,g%n
         ptr(p(i)+1) = g%ptr(i+1)-g%ptr(i)
     enddo
 
+    ! Knowing how many edges each node has in the new ordering, we can
+    ! prepare the ptr array
     ptr(1) = 1
     do i=1,g%n
         ptr(i+1) = ptr(i+1)+ptr(i)
     enddo
 
+    ! Shuffle the node array
     do i=1,g%n
         do k=0,g%ptr(i+1)-g%ptr(i)-1
             node( ptr(p(i))+k ) = g%node( g%ptr(i)+k )
         enddo
     enddo
 
+    ! Replace g's versions of ptr and node with the reordered versions
     g%ptr = ptr
     g%node = node
+
+    ! If the user has asked to see the edge permutation, fill the second
+    ! constituent array
+    if (present(edge_p)) then
+        do i=1,g%n
+            edge_p(2,i) = g%ptr(p(i))
+        enddo
+    endif
 
 end subroutine cs_graph_left_permute
 
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_graph_right_permute(g,p)                                     !
+subroutine cs_graph_right_permute(g,p,edge_p)                              !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_graph), intent(inout) :: g
     integer, intent(in) :: p(:)
+    integer, allocatable, intent(out), optional :: edge_p(:,:)
     ! local variables
     integer :: j,k
 
@@ -346,50 +369,9 @@ subroutine cs_graph_right_permute(g,p)                                     !
         if (j/=0) g%node(k) = p(j)
     enddo
 
+    if (present(edge_p)) allocate(edge_p(0,0))
+
 end subroutine cs_graph_right_permute
-
-
-
-!--------------------------------------------------------------------------!
-subroutine cs_left_perm_edge_reorder(g,p,edge_p)                           !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(cs_graph), intent(inout) :: g
-    integer, intent(in) :: p(:)
-    integer, allocatable, intent(out) :: edge_p(:,:)
-    ! local variables
-    integer :: i
-
-    ! Initialize the list describing the permutation of the edges
-    allocate(edge_p(3,g%n))
-    do i=1,g%n
-        edge_p(1,i) = g%ptr(i)
-        edge_p(3,i) = g%ptr(i+1)-g%ptr(i)
-    enddo
-
-    ! Permute the graph
-    call g%left_permute(p)
-
-    ! Finish the list describing the edge permutation
-    do i=1,g%n
-        edge_p(2,i) = g%ptr(p(i))
-    enddo
-
-end subroutine cs_left_perm_edge_reorder
-
-
-
-!--------------------------------------------------------------------------!
-subroutine cs_right_perm_edge_reorder(g,p,edge_p)                          !
-!--------------------------------------------------------------------------!
-    class(cs_graph), intent(inout) :: g
-    integer, intent(in) :: p(:)
-    integer, allocatable, intent(out) :: edge_p(:,:)
-
-    call g%right_permute(p)
-    allocate(edge_p(0,0))
-
-end subroutine cs_right_perm_edge_reorder
 
 
 

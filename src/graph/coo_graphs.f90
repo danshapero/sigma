@@ -23,8 +23,6 @@ contains
     procedure :: delete_edge => coo_delete_edge
     procedure :: left_permute => coo_graph_left_permute
     procedure :: right_permute => coo_graph_right_permute
-    procedure :: left_permute_edge_reorder => coo_left_perm_edge_reorder
-    procedure :: right_permute_edge_reorder => coo_right_perm_edge_reorder
     procedure :: free => coo_free
     procedure :: dump_edges => coo_dump_edges
 end type coo_graph
@@ -247,11 +245,12 @@ end subroutine coo_delete_edge
 
 
 !--------------------------------------------------------------------------!
-subroutine coo_graph_left_permute(g,p)                                     !
+subroutine coo_graph_left_permute(g,p,edge_p)                              !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(coo_graph), intent(inout) :: g
     integer, intent(in) :: p(:)
+    integer, allocatable, intent(out), optional :: edge_p(:,:)
     ! local variables
     integer :: i,k
 
@@ -266,16 +265,19 @@ subroutine coo_graph_left_permute(g,p)                                     !
         g%degree(i) = g%degree(i)+1
     enddo
 
+    if (present(edge_p)) allocate(edge_p(0,0))
+
 end subroutine coo_graph_left_permute
 
 
 
 !--------------------------------------------------------------------------!
-subroutine coo_graph_right_permute(g,p)                                    !
+subroutine coo_graph_right_permute(g,p,edge_p)                             !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(coo_graph), intent(inout) :: g
     integer, intent(in) :: p(:)
+    integer, allocatable, intent(out), optional :: edge_p(:,:)
     ! local variables
     integer :: i,k
 
@@ -284,36 +286,9 @@ subroutine coo_graph_right_permute(g,p)                                    !
         if (i/=0) call g%edges(2)%set_entry(k,p(i))
     enddo
 
+    if (present(edge_p)) allocate(edge_p(0,0))
+
 end subroutine coo_graph_right_permute
-
-
-
-!--------------------------------------------------------------------------!
-subroutine coo_left_perm_edge_reorder(g,p,edge_p)                          !
-!--------------------------------------------------------------------------!
-    class(coo_graph), intent(inout) :: g
-    integer, intent(in) :: p(:)
-    integer, allocatable, intent(out) :: edge_p(:,:)
-
-    call g%left_permute(p)
-    allocate(edge_p(0,0))
-
-end subroutine coo_left_perm_edge_reorder
-
-
-
-!--------------------------------------------------------------------------!
-subroutine coo_right_perm_edge_reorder(g,p,edge_p)                         !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(coo_graph), intent(inout) :: g
-    integer, intent(in) :: p(:)
-    integer, allocatable, intent(out) :: edge_p(:,:)
-
-    call g%right_permute(p)
-    allocate(edge_p(0,0))
-
-end subroutine coo_right_perm_edge_reorder
 
 
 
