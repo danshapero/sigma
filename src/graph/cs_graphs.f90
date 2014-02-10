@@ -10,7 +10,7 @@ implicit none
 !--------------------------------------------------------------------------!
 type, extends(graph) :: cs_graph                                           !
 !--------------------------------------------------------------------------!
-    integer, allocatable :: ptr(:), node(:), degree(:)
+    integer, allocatable :: ptr(:), node(:)
 contains
     procedure :: init => cs_init
     procedure :: neighbors => cs_neighbors
@@ -22,6 +22,7 @@ contains
     procedure :: delete_edge => cs_delete_edge
     procedure :: left_permute => cs_graph_left_permute
     procedure :: right_permute => cs_graph_right_permute
+    procedure :: copy => cs_graph_copy
     procedure :: free => cs_free
     procedure :: dump_edges => cs_dump_edges
     ! auxiliary routines
@@ -84,6 +85,77 @@ subroutine cs_init(g,n,m,num_neighbor_nodes)                               !
     g%max_degree = 0
 
 end subroutine cs_init
+
+
+
+!--------------------------------------------------------------------------!
+subroutine cs_graph_copy(g,h)                                              !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(cs_graph), intent(inout) :: g
+    class(graph), intent(in)       :: h
+    ! local variables
+    integer :: i,j,k,n,num_blocks,num_returned,edges(2,64)
+    type(graph_edge_cursor) :: cursor
+
+    ! Copy all of h's attributes to g
+    g%n = h%n
+    g%m = h%m
+    g%ne = h%ne
+    g%max_degree = h%max_degree
+
+    ! Allocate g's ptr and node arrays
+    allocate(g%ptr(g%n+1),g%node(g%ne))
+
+    ! Get a cursor from h with which to iterate through its edges
+    cursor = h%make_cursor(0)
+    num_blocks = (cursor%final-cursor%start+1)/64+1
+
+    ! Fill out the ptr array
+    g%ptr = 0
+
+    ! Iterate through the edges of h first to fill out the ptr array of g
+    do n=1,num_blocks
+        ! Get a chunk of edges from h
+        edges = h%get_edges(cursor,64,num_returned)
+
+        ! For each edge,
+        do k=1,num_returned
+            i = edges(1,k)
+            j = edges(2,k)
+
+            ! If that edge isn't null
+            if (i/=0 .and. j/=0) then
+                ! Increment a counter
+                g%ptr(i+1) = g%ptr(i+1)+1
+            endif
+        enddo
+    enddo
+
+    g%ptr(1) = 1
+    do i=1,g%n
+        g%ptr(i+1) = g%ptr(i)+g%ptr(i+1)
+    enddo
+
+    ! Iterate through the edges of h again to fill the node array of g
+    cursor = h%make_cursor(0)
+
+    g%node = 0
+
+    do n=1,num_blocks
+        edges = h%get_edges(cursor,64,num_returned)
+
+        do k=1,num_returned
+            i = edges(1,k)
+            j = edges(2,k)
+
+            if (i/=0 .and. j/=0) then
+                call g%add_edge(i,j)
+            endif
+        enddo
+    enddo
+
+end subroutine cs_graph_copy
 
 
 

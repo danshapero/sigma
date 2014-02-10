@@ -14,6 +14,7 @@ type, extends(graph) :: coo_graph                                          !
     integer, allocatable :: degree(:)
 contains
     procedure :: init => coo_init
+    procedure :: copy => coo_graph_copy
     procedure :: neighbors => coo_neighbors
     procedure :: connected => coo_connected
     procedure :: find_edge => coo_find_edge
@@ -69,6 +70,50 @@ subroutine coo_init(g,n,m,num_neighbor_nodes)                              !
     g%capacity = ne
     
 end subroutine coo_init
+
+
+
+!--------------------------------------------------------------------------!
+subroutine coo_graph_copy(g,h)                                             !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(coo_graph), intent(inout) :: g
+    class(graph), intent(in)        :: h
+    ! local variables
+    integer :: i,j,k,n,num_blocks,num_returned,edges(2,64)
+    type(graph_edge_cursor) :: cursor
+
+    g%n = h%n
+    g%m = h%m
+    g%ne = h%ne
+    allocate(g%degree(g%n))
+
+    call g%edges(1)%init(capacity=g%ne)
+    call g%edges(2)%init(capacity=g%ne)
+
+    g%max_degree = h%max_degree
+    g%capacity = g%ne
+
+    cursor = h%make_cursor(0)
+    num_blocks = (cursor%final-cursor%start+1)/64+1
+
+    do n=1,num_blocks
+        edges = h%get_edges(cursor,64,num_returned)
+
+        do k=1,num_returned
+            i = edges(1,k)
+            j = edges(2,k)
+
+            if (i/=0 .and. j/=0) then
+                call g%edges(1)%push(i)
+                call g%edges(2)%push(j)
+
+                g%degree(i) = g%degree(i)+1
+            endif
+        enddo
+    enddo
+
+end subroutine coo_graph_copy
 
 
 

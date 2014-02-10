@@ -4,7 +4,7 @@ use fempack
 
 implicit none
 
-    ! variables for testing correctness of graph operations
+    ! variables for testing correctness of sundry graph operations
     class(graph), allocatable :: g
     integer :: i,j,k,l,n,test
     integer, allocatable :: edges(:,:), nbrs(:), p(:)
@@ -14,10 +14,15 @@ implicit none
     integer, allocatable :: reference_edges(:,:)
     integer :: num_blocks,num_returned
     logical, allocatable :: found_by_iterator(:)
+    ! variables for testing correctness of graph permutation
+    logical :: found(6)
+    integer, allocatable :: edge_p(:,:)
     ! command-line arguments
     character(len=16) :: arg
     logical :: verbose
 
+
+    ! Get command line arguments to see if we're running in verbose mode
     verbose = .false.
     call getarg(1,arg)
     if (trim(arg)=="-v" .or. trim(arg)=="--verbose") then
@@ -66,7 +71,7 @@ implicit none
         call g%init(7,7,[6,3,3,3,3,3,3])
 
         ! Check that the initialization routine has correctly entered the
-        ! capacity of the graph
+        ! capacity & number of nodes of the graph
         if (g%capacity < 24) then
             print *, 'Graph capacity should be >= 24'
             print *, 'Value found:',g%capacity
@@ -81,6 +86,7 @@ implicit none
             call exit(1)
         endif
 
+        ! Add some edges
         do i=1,6
             call g%add_edge(i,i+1)
             call g%add_edge(1,i+1)
@@ -149,8 +155,8 @@ implicit none
         enddo
         if (.not.correct) then
             print *, 'Node 1 should neighbor all other nodes'
+            print *, 'Test',test
             call exit(1)
-            print *, test
         endif
 
         ! Check that iterating through a graph's edges works
@@ -196,17 +202,70 @@ implicit none
             call exit(1)
         endif
 
-        ! Check that permutation works properly
-        !allocate(p(7))
-        !do i=1,7
-        !    p(i) = i-1
-        !enddo
-        !p(1) = 7
-        !call g%right_permute(p)
-        !call g%left_permute(p)
-        !deallocate(p)
+        ! Permute the graph
+        if (verbose) print *, 'Checking permutation (7 1 2 3 4 5 6)'
+        allocate(p(7))
+        do i=1,7
+            p(i) = i-1
+        enddo
+        p(1) = 7
+        call g%right_permute(p)
+        call g%left_permute(p)
+
+        ! Check that permutation works properly; node 7 should neighbor
+        ! all other nodes
+        call g%neighbors(7,nbrs)
+        found = .false.
+        do k=1,g%max_degree
+            i = nbrs(k)
+            if (i/=0) found(i) = .true.
+        enddo
+
+        correct = .true.
+        do k=1,g%max_degree
+            correct = correct .and. found(i)
+        enddo
+
+        if (.not.correct) then
+            print *, 'Permutation failed; should have node 7 neighboring'
+            print *, 'all other nodes now. We have node 7 connected to: '
+            print *, found
+            print *, 'Test',test
+            call exit(1)
+        endif
+
+        ! Permute the graph back to its original ordering and report the
+        ! resulting edge permutation
+        p(7) = 1
+        do i=1,6
+            p(i) = i+1
+        enddo
+
+        call g%left_permute(p,edge_p)
+        if (size(edge_p,2)/=0) then
+            if (sum(edge_p(3,:))/=g%capacity) then
+                print *, 'Test',test
+                print *, 'Left edge permutation returned does not'
+                print *, 'actually permute all graph edges'
+                call exit(1)
+            endif
+        endif
+        deallocate(edge_p)
+
+        call g%right_permute(p,edge_p)
+        if (size(edge_p,2)/=0) then
+            if (sum(edge_p(3,:))/=g%capacity) then
+                print *, 'Test',test
+                print *, 'Right edge permutation returned does not'
+                print *, 'actually permute all graph edges'
+                call exit(1)
+            endif
+        endif
+        deallocate(edge_p)
+
 
         ! Delete all connections between node 1 and any even nodes
+        if (verbose) print *, 'Deleting edges (1,2), (1,4), (1,6) & v.v.'
         do i=2,6,2
             call g%delete_edge(1,i)
             call g%delete_edge(i,1)
@@ -215,10 +274,10 @@ implicit none
         ! Check that edge deletion worked properly
         do i=2,6,2
             if (g%connected(1,i) .or. g%connected(i,1)) then
-                print *, 'Test',test
                 print *, 'All connections between 1 and even nodes were '
                 print *, 'deleted, and yet 1 is still connected '
                 print *, 'to node ',i
+                print *, 'Test',test
                 call exit(1)
             endif
         enddo
@@ -227,11 +286,12 @@ implicit none
             print *, 'Test',test
             print *, 'Max degree was not properly decremented;'
             print *, 'should be 3, value found:',g%max_degree
+            call exit(1)
         endif
 
         call g%free()
 
-        deallocate(g,nbrs)
+        deallocate(g,nbrs,p)
 
         if (verbose) print *, ' '
 

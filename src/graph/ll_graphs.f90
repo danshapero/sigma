@@ -21,6 +21,8 @@ contains
     procedure :: delete_edge => ll_delete_edge
     procedure :: left_permute => ll_graph_left_permute
     procedure :: right_permute => ll_graph_right_permute
+    procedure :: copy => ll_graph_copy
+!    procedure :: add => ll_graph_add
     procedure :: free => ll_free
     procedure :: dump_edges => ll_dump_edges
 end type ll_graph
@@ -70,6 +72,47 @@ subroutine ll_init(g,n,m,num_neighbor_nodes)                               !
     g%capacity = ne
 
 end subroutine ll_init
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ll_graph_copy(g,h)                                              !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(ll_graph), intent(inout) :: g
+    class(graph), intent(in)       :: h
+    ! local variables
+    integer :: i,j,k,n,num_returned,num_blocks,edges(2,64)
+    type(graph_edge_cursor) :: cursor
+
+    ! Initialize g to have the same number of left- and right-nodes as h
+    call g%init(h%n,h%m)
+
+    ! Get a cursor from h with which to iterate through its edges
+    cursor = h%make_cursor(0)
+
+    ! Find the number of chunks into which we're dividing the edges of h
+    num_blocks = (cursor%final-cursor%start+1)/64+1
+
+    ! Iterate through all the chunks
+    do n=1,num_blocks
+        ! Get a chunk of edges from h
+        edges = h%get_edges(cursor,64,num_returned)
+
+        ! For each edge,
+        do k=1,num_returned
+            i = edges(1,k)
+            j = edges(2,k)
+
+            ! If that edge isn't null,
+            if (i/=0 .and. j/=0) then
+                ! Add it to g
+                call g%lists(i)%push(j)
+            endif
+        enddo
+    enddo
+
+end subroutine ll_graph_copy
 
 
 

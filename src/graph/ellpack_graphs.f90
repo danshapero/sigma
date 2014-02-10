@@ -13,6 +13,7 @@ type, extends(graph) :: ellpack_graph                                      !
     integer :: max_neighbors
 contains
     procedure :: init => ellpack_graph_init
+    procedure :: copy => ellpack_graph_copy
     procedure :: neighbors => ellpack_neighbors
     procedure :: connected => ellpack_connected
     procedure :: find_edge => ellpack_find_edge
@@ -64,6 +65,46 @@ subroutine ellpack_graph_init(g,n,m,num_neighbor_nodes)                    !
     g%capacity = g%max_neighbors*g%n
 
 end subroutine ellpack_graph_init
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ellpack_graph_copy(g,h)                                         !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(ellpack_graph), intent(inout) :: g
+    class(graph), intent(in)            :: h
+    ! local variables
+    integer :: i,j,k,n,num_blocks,num_returned,edges(2,64)
+    type(graph_edge_cursor) :: cursor
+
+    g%n = h%n
+    g%m = h%m
+    g%ne = h%ne
+    g%max_degree = h%max_degree
+    g%max_neighbors = g%max_degree
+    g%capacity = g%max_degree * g%n
+
+    allocate(g%node(g%max_degree,g%n))
+    g%node = 0
+
+    cursor = h%make_cursor(0)
+    num_blocks = (cursor%final-cursor%current+1)/64+1
+
+    do n=1,num_blocks
+        edges = h%get_edges(cursor,64,num_returned)
+
+        do k=1,num_returned
+            i = edges(1,k)
+            j = edges(2,k)
+
+            if (i/=0 .and. j/=0) then
+                call g%add_edge(i,j)
+            endif
+        enddo
+    enddo
+
+end subroutine ellpack_graph_copy
 
 
 

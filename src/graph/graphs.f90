@@ -24,6 +24,7 @@ type, abstract :: graph                                                    !
 contains
     ! core graph procedures
     procedure(init_graph_ifc), deferred     :: init
+    procedure(copy_graph_ifc), deferred     :: copy
     procedure(neighbors_ifc), deferred      :: neighbors
     procedure(connected_ifc), deferred      :: connected
     procedure(find_edge_ifc), deferred      :: find_edge
@@ -33,6 +34,7 @@ contains
     procedure(delete_edge_ifc), deferred    :: delete_edge
     procedure(permute_graph_ifc), deferred  :: left_permute
     procedure(permute_graph_ifc), deferred  :: right_permute
+!    procedure(add_graph_ifc), deferred      :: add
     procedure(free_ifc), deferred           :: free
     procedure(dump_edges_ifc), deferred     :: dump_edges
     ! procedures for testing, debugging and i/o
@@ -114,6 +116,18 @@ abstract interface                                                         !
         integer, intent(in) :: p(:)
         integer, allocatable, intent(out), optional :: edge_p(:,:)
     end subroutine permute_graph_ifc
+
+    subroutine copy_graph_ifc(g,h)
+        import :: graph
+        class(graph), intent(inout) :: g
+        class(graph), intent(in)    :: h
+    end subroutine copy_graph_ifc
+
+    subroutine add_graph_ifc(g,g1,g2)
+        import :: graph
+        class(graph), intent(inout) :: g
+        class(graph), intent(in)    :: g1, g2
+    end subroutine add_graph_ifc
 
     subroutine free_ifc(g)
         import :: graph
