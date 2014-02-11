@@ -1,4 +1,4 @@
-program graph_tests
+program graph_tests_1
 
 use fempack
 
@@ -300,4 +300,4 @@ implicit none
 
 
 
-end program graph_tests
+end program graph_tests_1

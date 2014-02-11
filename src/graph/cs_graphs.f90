@@ -102,6 +102,7 @@ subroutine cs_graph_copy(g,h)                                              !
     g%n = h%n
     g%m = h%m
     g%ne = h%ne
+    g%capacity = g%ne
     g%max_degree = h%max_degree
 
     ! Allocate g's ptr and node arrays
