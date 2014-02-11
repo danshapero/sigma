@@ -12,6 +12,8 @@ type, extends(graph) :: ll_graph                                           !
     type(dynamic_array), allocatable :: lists(:)
 contains
     procedure :: init => ll_init
+    procedure :: copy => ll_graph_copy
+    procedure :: degree => ll_degree
     procedure :: neighbors => ll_neighbors
     procedure :: connected => ll_connected
     procedure :: find_edge => ll_find_edge
@@ -21,7 +23,6 @@ contains
     procedure :: delete_edge => ll_delete_edge
     procedure :: left_permute => ll_graph_left_permute
     procedure :: right_permute => ll_graph_right_permute
-    procedure :: copy => ll_graph_copy
 !    procedure :: add => ll_graph_add
     procedure :: free => ll_free
     procedure :: dump_edges => ll_dump_edges
@@ -113,6 +114,19 @@ subroutine ll_graph_copy(g,h)                                              !
     enddo
 
 end subroutine ll_graph_copy
+
+
+
+!--------------------------------------------------------------------------!
+function ll_degree(g,i) result(d)                                          !
+!--------------------------------------------------------------------------!
+    class(ll_graph), intent(in) :: g
+    integer, intent(in) :: i
+    integer :: d
+
+    d = g%lists(i)%length
+
+end function ll_degree
 
 
 

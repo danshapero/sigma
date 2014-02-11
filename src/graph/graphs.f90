@@ -21,10 +21,12 @@ implicit none
 type, abstract :: graph                                                    !
 !--------------------------------------------------------------------------!
     integer :: n,m,ne,capacity,max_degree
+    logical :: mutable
 contains
     ! core graph procedures
     procedure(init_graph_ifc), deferred     :: init
     procedure(copy_graph_ifc), deferred     :: copy
+    procedure(degree_ifc), deferred         :: degree
     procedure(neighbors_ifc), deferred      :: neighbors
     procedure(connected_ifc), deferred      :: connected
     procedure(find_edge_ifc), deferred      :: find_edge
@@ -34,6 +36,7 @@ contains
     procedure(delete_edge_ifc), deferred    :: delete_edge
     procedure(permute_graph_ifc), deferred  :: left_permute
     procedure(permute_graph_ifc), deferred  :: right_permute
+!    procedure(compress_graph_ifc), deferred :: compress
 !    procedure(add_graph_ifc), deferred      :: add
     procedure(free_ifc), deferred           :: free
     procedure(dump_edges_ifc), deferred     :: dump_edges
@@ -60,6 +63,19 @@ abstract interface                                                         !
         integer, intent(in) :: n
         integer, intent(in), optional :: m, num_neighbor_nodes(:)
     end subroutine init_graph_ifc
+
+    subroutine copy_graph_ifc(g,h)
+        import :: graph
+        class(graph), intent(inout) :: g
+        class(graph), intent(in)    :: h
+    end subroutine copy_graph_ifc
+
+    function degree_ifc(g,i) result(d)
+        import :: graph
+        class(graph), intent(in) :: g
+        integer, intent(in) :: i
+        integer :: d
+    end function degree_ifc
 
     subroutine neighbors_ifc(g,i,nbrs)
         import :: graph
@@ -117,11 +133,10 @@ abstract interface                                                         !
         integer, allocatable, intent(out), optional :: edge_p(:,:)
     end subroutine permute_graph_ifc
 
-    subroutine copy_graph_ifc(g,h)
+    subroutine compress_graph_ifc(g)
         import :: graph
         class(graph), intent(inout) :: g
-        class(graph), intent(in)    :: h
-    end subroutine copy_graph_ifc
+    end subroutine compress_graph_ifc
 
     subroutine add_graph_ifc(g,g1,g2)
         import :: graph

@@ -145,6 +145,18 @@ implicit none
             call exit(1)
         endif
 
+        ! Check that the degrees of all the vertices are correct
+        correct = .true.
+        if (g%degree(1)/=6) correct = .false.
+        do i=2,7
+            if (g%degree(i)/=3) correct = .false.
+        enddo
+        if (.not.correct) then
+            print *, 'On test',test
+            print *, 'Degree gives wrong result'
+            call exit(1)
+        endif
+
         allocate(nbrs(g%max_degree))
 
         ! Check that finding all neighbors of a given edge works

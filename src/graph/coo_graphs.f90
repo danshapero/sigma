@@ -11,10 +11,11 @@ implicit none
 type, extends(graph) :: coo_graph                                          !
 !--------------------------------------------------------------------------!
     type(dynamic_array) :: edges(2)
-    integer, allocatable :: degree(:)
+    integer, allocatable, private :: degrees(:)
 contains
     procedure :: init => coo_init
     procedure :: copy => coo_graph_copy
+    procedure :: degree => coo_degree
     procedure :: neighbors => coo_neighbors
     procedure :: connected => coo_connected
     procedure :: find_edge => coo_find_edge
@@ -47,8 +48,8 @@ subroutine coo_init(g,n,m,num_neighbor_nodes)                              !
     integer :: ne
 
     g%n = n
-    allocate(g%degree(n))
-    g%degree = 0
+    allocate(g%degrees(n))
+    g%degrees = 0
 
     if (present(m)) then
         g%m = m
@@ -86,7 +87,7 @@ subroutine coo_graph_copy(g,h)                                             !
     g%n = h%n
     g%m = h%m
     g%ne = h%ne
-    allocate(g%degree(g%n))
+    allocate(g%degrees(g%n))
 
     call g%edges(1)%init(capacity=g%ne)
     call g%edges(2)%init(capacity=g%ne)
@@ -108,12 +109,25 @@ subroutine coo_graph_copy(g,h)                                             !
                 call g%edges(1)%push(i)
                 call g%edges(2)%push(j)
 
-                g%degree(i) = g%degree(i)+1
+                g%degrees(i) = g%degrees(i)+1
             endif
         enddo
     enddo
 
 end subroutine coo_graph_copy
+
+
+
+!--------------------------------------------------------------------------!
+function coo_degree(g,i) result(d)                                         !
+!--------------------------------------------------------------------------!
+    class(coo_graph), intent(in) :: g
+    integer, intent(in) :: i
+    integer :: d
+
+    d = g%degrees(i)
+
+end function coo_degree
 
 
 
@@ -248,8 +262,8 @@ subroutine coo_add_edge(g,i,j)                                             !
 
         ! If the degree of node i is now the greatest of all nodes in the
         ! graph, update the degree accordingly
-        g%degree(i) = g%degree(i)+1
-        if (g%degree(i) > g%max_degree) g%max_degree = g%degree(i)
+        g%degrees(i) = g%degrees(i)+1
+        g%max_degree = max(g%max_degree,g%degrees(i))
     endif
 
 end subroutine coo_add_edge
@@ -281,8 +295,8 @@ subroutine coo_delete_edge(g,i,j)                                          !
         g%capacity = g%edges(1)%capacity
 
         ! Evaluate the graph's new maximum degree
-        g%degree(i) = g%degree(i)-1
-        if (g%degree(i)+1==g%max_degree) g%max_degree = maxval(g%degree)
+        g%degrees(i) = g%degrees(i)-1
+        if (g%degrees(i)+1==g%max_degree) g%max_degree = maxval(g%degrees)
     endif
 
 end subroutine coo_delete_edge
@@ -304,10 +318,10 @@ subroutine coo_graph_left_permute(g,p,edge_p)                              !
         if (i/=0) call g%edges(1)%set_entry(k,p(i))
     enddo
 
-    g%degree = 0
+    g%degrees = 0
     do k=1,g%ne
         i = g%edges(1)%get_entry(k)
-        g%degree(i) = g%degree(i)+1
+        g%degrees(i) = g%degrees(i)+1
     enddo
 
     if (present(edge_p)) allocate(edge_p(0,0))
@@ -342,7 +356,7 @@ subroutine coo_free(g)                                                     !
 !--------------------------------------------------------------------------!
     class(coo_graph), intent(inout) :: g
 
-    deallocate(g%edges(1)%array,g%edges(2)%array,g%degree)
+    deallocate(g%edges(1)%array,g%edges(2)%array,g%degrees)
 
     g%n = 0
     g%m = 0

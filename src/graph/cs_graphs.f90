@@ -13,6 +13,8 @@ type, extends(graph) :: cs_graph                                           !
     integer, allocatable :: ptr(:), node(:)
 contains
     procedure :: init => cs_init
+    procedure :: copy => cs_graph_copy
+    procedure :: degree => cs_degree
     procedure :: neighbors => cs_neighbors
     procedure :: connected => cs_connected
     procedure :: find_edge => cs_find_edge
@@ -22,7 +24,6 @@ contains
     procedure :: delete_edge => cs_delete_edge
     procedure :: left_permute => cs_graph_left_permute
     procedure :: right_permute => cs_graph_right_permute
-    procedure :: copy => cs_graph_copy
     procedure :: free => cs_free
     procedure :: dump_edges => cs_dump_edges
     ! auxiliary routines
@@ -157,6 +158,26 @@ subroutine cs_graph_copy(g,h)                                              !
     enddo
 
 end subroutine cs_graph_copy
+
+
+
+!--------------------------------------------------------------------------!
+function cs_degree(g,i) result(d)                                          !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(cs_graph), intent(in) :: g
+    integer, intent(in) :: i
+    integer :: d
+    ! local variables
+    integer :: j,k
+
+    d = 0
+    do k=g%ptr(i),g%ptr(i+1)-1
+        j = g%node(k)
+        if (j/=0) d = k-g%ptr(i)+1
+    enddo
+
+end function cs_degree
 
 
 

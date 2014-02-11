@@ -14,6 +14,7 @@ type, extends(graph) :: ellpack_graph                                      !
 contains
     procedure :: init => ellpack_graph_init
     procedure :: copy => ellpack_graph_copy
+    procedure :: degree => ellpack_degree
     procedure :: neighbors => ellpack_neighbors
     procedure :: connected => ellpack_connected
     procedure :: find_edge => ellpack_find_edge
@@ -105,6 +106,26 @@ subroutine ellpack_graph_copy(g,h)                                         !
     enddo
 
 end subroutine ellpack_graph_copy
+
+
+
+!--------------------------------------------------------------------------!
+function ellpack_degree(g,i) result(d)                                     !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(ellpack_graph), intent(in) :: g
+    integer, intent(in) :: i
+    integer :: d
+    ! local variables
+    integer :: j, k
+
+    d = 0
+    do k=1,g%max_degree
+        j = g%node(k,i)
+        if (j/=0) d = k
+    enddo
+
+end function ellpack_degree
 
 
 
