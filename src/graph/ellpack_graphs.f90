@@ -12,21 +12,40 @@ type, extends(graph) :: ellpack_graph                                      !
     integer, allocatable :: node(:,:)
     integer :: max_neighbors
 contains
+    !--------------
+    ! Constructors
     procedure :: init => ellpack_graph_init
     procedure :: copy => ellpack_graph_copy
+
+    !-----------
+    ! Accessors
     procedure :: degree => ellpack_degree
     procedure :: neighbors => ellpack_neighbors
     procedure :: connected => ellpack_connected
     procedure :: find_edge => ellpack_find_edge
+
+    !---------------
+    ! Edge iterator
     procedure :: make_cursor => ellpack_make_cursor
     procedure :: get_edges => ellpack_get_edges
+
+    !----------
+    ! Mutators
     procedure :: add_edge => ellpack_add_edge
     procedure :: delete_edge => ellpack_delete_edge
     procedure :: left_permute => ellpack_graph_left_permute
     procedure :: right_permute => ellpack_graph_right_permute
+
+    !-------------
+    ! Destructors
     procedure :: free => ellpack_free
+
+    !--------------------------
+    ! Testing, debugging & I/O
     procedure :: dump_edges => ellpack_dump_edges
-    ! auxiliary routines
+
+    !--------------------
+    ! Auxiliary routines
     procedure :: ellpack_add_edge_with_max_degree_increase
     procedure :: ellpack_max_degree_decrease
 end type ellpack_graph

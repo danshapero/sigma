@@ -11,20 +11,37 @@ type, extends(graph) :: ll_graph                                           !
 !--------------------------------------------------------------------------!
     type(dynamic_array), allocatable :: lists(:)
 contains
+    !--------------
+    ! Constructors
     procedure :: init => ll_init
     procedure :: copy => ll_graph_copy
+
+    !-----------
+    ! Accessors
     procedure :: degree => ll_degree
     procedure :: neighbors => ll_neighbors
     procedure :: connected => ll_connected
     procedure :: find_edge => ll_find_edge
+
+    !---------------
+    ! Edge iterator
     procedure :: make_cursor => ll_make_cursor
     procedure :: get_edges => ll_get_edges
+
+    !----------
+    ! Mutators
     procedure :: add_edge => ll_add_edge
     procedure :: delete_edge => ll_delete_edge
     procedure :: left_permute => ll_graph_left_permute
     procedure :: right_permute => ll_graph_right_permute
 !    procedure :: add => ll_graph_add
+
+    !-------------
+    ! Destructors
     procedure :: free => ll_free
+
+    !--------------------------
+    ! Testing, debugging & I/O
     procedure :: dump_edges => ll_dump_edges
 end type ll_graph
 

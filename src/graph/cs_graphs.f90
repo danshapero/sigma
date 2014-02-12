@@ -12,21 +12,40 @@ type, extends(graph) :: cs_graph                                           !
 !--------------------------------------------------------------------------!
     integer, allocatable :: ptr(:), node(:)
 contains
+    !--------------
+    ! Constructors
     procedure :: init => cs_init
     procedure :: copy => cs_graph_copy
+
+    !-----------
+    ! Accessors
     procedure :: degree => cs_degree
     procedure :: neighbors => cs_neighbors
     procedure :: connected => cs_connected
     procedure :: find_edge => cs_find_edge
+
+    !---------------
+    ! Edge iterator
     procedure :: make_cursor => cs_make_cursor
     procedure :: get_edges => cs_get_edges
+
+    !----------
+    ! Mutators
     procedure :: add_edge  => cs_add_edge
     procedure :: delete_edge => cs_delete_edge
     procedure :: left_permute => cs_graph_left_permute
     procedure :: right_permute => cs_graph_right_permute
+
+    !-------------
+    ! Destructors
     procedure :: free => cs_free
+
+    !--------------------------
+    ! Testing, debugging & I/O
     procedure :: dump_edges => cs_dump_edges
-    ! auxiliary routines
+
+    !--------------------
+    ! Auxiliary routines
     procedure :: sort_node
     procedure, private :: max_degree_update
 end type cs_graph

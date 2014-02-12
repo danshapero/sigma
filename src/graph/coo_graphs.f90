@@ -13,19 +13,36 @@ type, extends(graph) :: coo_graph                                          !
     type(dynamic_array) :: edges(2)
     integer, allocatable, private :: degrees(:)
 contains
+    !--------------
+    ! Constructors
     procedure :: init => coo_init
     procedure :: copy => coo_graph_copy
+
+    !-----------
+    ! Accessors
     procedure :: degree => coo_degree
     procedure :: neighbors => coo_neighbors
     procedure :: connected => coo_connected
     procedure :: find_edge => coo_find_edge
+
+    !---------------
+    ! Edge iterator
     procedure :: make_cursor => coo_make_cursor
     procedure :: get_edges => coo_get_edges
+
+    !----------
+    ! Mutators
     procedure :: add_edge => coo_add_edge
     procedure :: delete_edge => coo_delete_edge
     procedure :: left_permute => coo_graph_left_permute
     procedure :: right_permute => coo_graph_right_permute
+
+    !-------------
+    ! Destructors
     procedure :: free => coo_free
+
+    !--------------------------
+    ! Testing, debugging & I/O
     procedure :: dump_edges => coo_dump_edges
 end type coo_graph
 

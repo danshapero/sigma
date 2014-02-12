@@ -23,25 +23,99 @@ type, abstract :: graph                                                    !
     integer :: n,m,ne,capacity,max_degree
     logical :: mutable
 contains
-    ! core graph procedures
-    procedure(init_graph_ifc), deferred     :: init
-    procedure(copy_graph_ifc), deferred     :: copy
-    procedure(degree_ifc), deferred         :: degree
-    procedure(neighbors_ifc), deferred      :: neighbors
-    procedure(connected_ifc), deferred      :: connected
-    procedure(find_edge_ifc), deferred      :: find_edge
-    procedure(make_cursor_ifc), deferred    :: make_cursor
-    procedure(get_edges_ifc), deferred      :: get_edges
-    procedure(add_edge_ifc), deferred       :: add_edge
-    procedure(delete_edge_ifc), deferred    :: delete_edge
-    procedure(permute_graph_ifc), deferred  :: left_permute
-    procedure(permute_graph_ifc), deferred  :: right_permute
+    !--------------
+    ! Constructors
+    !--------------
+    procedure(init_graph_ifc), deferred :: init
+    ! Initialize a graph based on the number of left- and right-
+    ! vertices, and optionally the maximum number of neighbors for each
+    ! vertex.
+
+    procedure(copy_graph_ifc), deferred :: copy
+    ! Copy the connectivity structure of another graph, which may well
+    ! be of a different type.
+
+
+    !-----------
+    ! Accessors
+    !-----------
+    procedure(degree_ifc), deferred    :: degree
+    ! Return the degree of a given vertex
+
+    procedure(neighbors_ifc), deferred :: neighbors
+    ! Return all neighbors of a given vertex
+
+    procedure(connected_ifc), deferred :: connected
+    ! Return true if two vertices i, j are connected, false otherwise.
+
+    procedure(find_edge_ifc), deferred :: find_edge
+    ! Find the index of the edge between the two vertices (i,j), if it
+    ! exists; return -1 if it does not.
+
+
+    !---------------
+    ! Edge iterator
+    !---------------
+    procedure(make_cursor_ifc), deferred :: make_cursor
+    ! Make a cursor which stores some placeholder information needed
+    ! for iterating through all of a graph's edges.
+
+    procedure(get_edges_ifc), deferred   :: get_edges
+    ! Return a fixed number of edges of the graph and update the graph
+    ! edge cursor to reflect our new position with the graph's edges.
+
+
+    !----------
+    ! Mutators
+    !----------
+    procedure(add_edge_ifc), deferred      :: add_edge
+    ! Add in a new edge if it does not already exist.
+    ! The behavior of this procedure will change depending on the graph's
+    ! mutability state; if the graph has been compressed, it will be
+    ! rendered immutable, and attemting to add an edge will instead
+    ! yield an error.
+
+    procedure(delete_edge_ifc), deferred   :: delete_edge
+    ! Delete an edge if it does exist.
+    ! Will result in an error if invoked when the graph is immutable.
+
+    procedure(permute_graph_ifc), deferred :: left_permute
+    ! Apply a permutation to the graph's left-vertices.
+    ! Optionally return an array which describes, in compact form, the
+    ! resulting permutation to the graph's edges. This optional argument
+    ! is necessary when permuting matrices, which need to know how to
+    ! rearrange their non-zero entries after changing the underlying
+    ! structure.
+
+    procedure(permute_graph_ifc), deferred :: right_permute
+    ! Apply a permutation to the graph's right-vertices.
+    ! Optionally return compact array describing edge permutation.
+
 !    procedure(compress_graph_ifc), deferred :: compress
+    ! Compress the graph. This eliminates any extra space which has been
+    ! pre-allocated for adding edges. Reduces memory usage and branching
+    ! but renders the graph immutable.
+
 !    procedure(add_graph_ifc), deferred      :: add
-    procedure(free_ifc), deferred           :: free
-    procedure(dump_edges_ifc), deferred     :: dump_edges
-    ! procedures for testing, debugging and i/o
+
+
+    !-------------
+    ! Destructors
+    !-------------
+    procedure(free_ifc), deferred :: free
+    ! Set all graph attributes to 0 and deallocate any internal data.
+
+
+    !--------------------------
+    ! Testing, debugging & I/O
+    !--------------------------
+    procedure(dump_edges_ifc), deferred :: dump_edges
+    ! Write all of the graph's edges to an array.
+
     procedure :: write_to_file
+    ! Write to a file the number of left- and right-vertices of the
+    ! graph, the number of edges, and then all of the edges.
+
 end type graph
 
 
