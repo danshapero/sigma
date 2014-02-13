@@ -11,12 +11,6 @@ implicit none
 type, extends(graph) :: cs_graph                                           !
 !--------------------------------------------------------------------------!
     integer, allocatable :: ptr(:), node(:)
-
-    !------------------------
-    ! Method implementations
-    procedure(cs_change_edge_ifc), pointer, private :: add_edge_impl
-    procedure(cs_change_edge_ifc), pointer, private :: delete_edge_impl
-
 contains
     !--------------
     ! Constructors
@@ -56,18 +50,6 @@ contains
     procedure :: sort_node
     procedure, private :: max_degree_update
 end type cs_graph
-
-
-
-!--------------------------------------------------------------------------!
-abstract interface                                                         !
-!--------------------------------------------------------------------------!
-    subroutine cs_change_edge_ifc(g,i,j)
-        import :: cs_graph
-        class(cs_graph), intent(inout) :: g
-        integer, intent(in) :: i,j
-    end subroutine cs_change_edge_ifc
-end interface
 
 
 
@@ -134,12 +116,8 @@ subroutine cs_init(g,n,m,num_neighbor_nodes)                               !
     g%ne = 0
     g%max_degree = 0
 
-    ! Make all the function pointers for implementations of graph
-    ! operations refer to the right methods, which, for a graph that has
-    ! just been initialized, are methods for *mutable* graphs.
+    ! Mark the graph as mutable
     g%mutable = .true.
-    g%add_edge_impl => cs_add_edge_mutable
-    g%delete_edge_impl => cs_delete_edge_mutable
 
 end subroutine cs_init
 
@@ -155,12 +133,8 @@ subroutine cs_graph_copy(g,h)                                              !
     integer :: i,j,k,n,num_blocks,num_returned,edges(2,64)
     type(graph_edge_cursor) :: cursor
 
-    ! Make all the function pointers for implementations of graph
-    ! operations refer to the right methods, which, for a graph that has
-    ! just been initialized, are methods for *mutable* graphs.
+    ! Mark the graph as mutable
     g%mutable = .true.
-    g%add_edge_impl => cs_add_edge_mutable
-    g%delete_edge_impl => cs_delete_edge_mutable
 
     ! Copy all of h's attributes to g
     g%n = h%n
@@ -394,10 +368,41 @@ end function cs_get_edges
 !--------------------------------------------------------------------------!
 subroutine cs_add_edge(g,i,j)                                              !
 !--------------------------------------------------------------------------!
+    ! input/output variables
     class(cs_graph), intent(inout) :: g
     integer, intent(in) :: i,j
+    ! local variables
+    integer :: k
+    logical :: added
 
-    call g%add_edge_impl(i,j)
+    if (.not.g%mutable) then
+        print *, 'Attempted to add an edge to an immutable CS graph'
+        print *, 'Terminating.'
+        call exit(1)
+    else
+        if (.not.g%connected(i,j)) then
+            ! Try to see if the new neighbor can be added without
+            ! reallocating memory
+            added = .false.
+            do k=g%ptr(i),g%ptr(i+1)-1
+                if (g%node(k)==0) then
+                    g%node(k) = j
+                    added = .true.
+                    exit
+                endif
+            enddo
+
+            g%ne = g%ne+1
+
+            if (.not.added) then
+                print *, 'Not enough space to add edge',i,j
+            endif
+
+            if (k-g%ptr(i)+1>g%max_degree) then
+                g%max_degree = k-g%ptr(i)+1
+            endif
+        endif
+    endif
 
 end subroutine cs_add_edge
 
@@ -406,107 +411,49 @@ end subroutine cs_add_edge
 !--------------------------------------------------------------------------!
 subroutine cs_delete_edge(g,i,j)                                           !
 !--------------------------------------------------------------------------!
-    class(cs_graph), intent(inout) :: g
-    integer, intent(in) :: i,j
-
-    call g%delete_edge_impl(i,j)
-
-end subroutine cs_delete_edge
-
-
-
-!--------------------------------------------------------------------------!
-subroutine cs_add_edge_mutable(g,i,j)                                      !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(cs_graph), intent(inout) :: g
-    integer, intent(in) :: i,j
-    ! local variables
-    integer :: k
-    logical :: added
-
-    if (.not.g%connected(i,j)) then
-        ! Try to see if the new neighbor can be added without reallocating
-        ! memory
-        added = .false.
-        do k=g%ptr(i),g%ptr(i+1)-1
-            if (g%node(k)==0) then
-                g%node(k) = j
-                added = .true.
-                exit
-            endif
-        enddo
-
-        g%ne = g%ne+1
-
-        if (.not.added) then
-            print *, 'Not enough space to add edge',i,j
-        endif
-
-        if (k-g%ptr(i)+1>g%max_degree) then
-            g%max_degree = k-g%ptr(i)+1
-        endif
-    endif
-
-end subroutine cs_add_edge_mutable
-
-
-
-!--------------------------------------------------------------------------!
-subroutine cs_delete_edge_mutable(g,i,j)                                   !
-!--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_graph), intent(inout) :: g
     integer, intent(in) :: i,j
     ! local variables
     integer :: jt,k,indx,degree
 
-    ! Find the index in the list of edges of the edge to be removed
-    indx = g%find_edge(i,j)
+    if (.not.g%mutable) then
+        print *, 'Attempted to delete an edge from an immutable CS graph'
+        print *, 'Terminating.'
+        call exit(1)
+    else
+        ! Find the index in the list of edges of the edge to be removed
+        indx = g%find_edge(i,j)
 
-    if (indx/=-1) then
-        ! Record the degree of the node from which an edge is to be
-        ! removed, and find the last node that i is connected to
-        do k=g%ptr(i),g%ptr(i+1)-1
-            if (g%node(k)/=0) then
-                degree = k-g%ptr(i)+1
-                jt = g%node(k)
+        if (indx/=-1) then
+            ! Record the degree of the node from which an edge is to be
+            ! removed, and find the last node that i is connected to
+            do k=g%ptr(i),g%ptr(i+1)-1
+                if (g%node(k)/=0) then
+                    degree = k-g%ptr(i)+1
+                    jt = g%node(k)
+                endif
+            enddo
+
+            ! If there were more than two edges connected to node i, then
+            ! replace the edge (i,j) with the removed edge (i,jt)
+            if (degree>1) then
+                g%node(indx) = jt
             endif
-        enddo
 
-        ! If there were more than two edges connected to node i, then
-        ! replace the edge (i,j) with the removed edge (i,jt)
-        if (degree>1) then
-            g%node(indx) = jt
+            ! Remove the last edge (i,jt) connected to i
+            g%node( g%ptr(i)+degree-1 ) = 0
+
+            if (degree==g%max_degree) then
+                call g%max_degree_update()
+            endif
+
+            ! Decrement the number of edges in g
+            g%ne = g%ne-1
         endif
-
-        ! Remove the last edge (i,jt) connected to i
-        g%node( g%ptr(i)+degree-1 ) = 0
-
-        if (degree==g%max_degree) then
-            call g%max_degree_update()
-        endif
-
-        ! Decrement the number of edges in g
-        g%ne = g%ne-1
     endif
 
-end subroutine cs_delete_edge_mutable
-
-
-
-!--------------------------------------------------------------------------!
-subroutine cs_change_edge_error(g,i,j)                                     !
-!--------------------------------------------------------------------------!
-    class(cs_graph), intent(inout) :: g
-    integer, intent(in) :: i,j
-
-    print *, 'Attempted to alter edge',i,j,'of a CS graph'
-    print *, 'Graph is mutable:',g%mutable
-    print *, 'Terminating'
-    call exit(1)
-
-end subroutine cs_change_edge_error
+end subroutine cs_delete_edge
 
 
 
@@ -640,11 +587,8 @@ subroutine cs_graph_compress(g,edge_p)                                     !
         call move_alloc(from=node, to=g%node)
     endif
 
-    ! Redirect all the function pointers for implementations of graph
-    ! operations to methods for *immutable* graphs
+    ! Mark the graph as immutable
     g%mutable = .false.
-    g%add_edge_impl => cs_change_edge_error
-    g%delete_edge_impl => cs_change_edge_error
 
 end subroutine cs_graph_compress
 
@@ -665,9 +609,6 @@ subroutine cs_free(g)                                                      !
     g%m = 0
     g%ne = 0
     g%max_degree = 0
-
-    g%add_edge_impl => null()
-    g%delete_edge_impl => null()
 
     g%mutable = .true.
 

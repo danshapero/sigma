@@ -12,11 +12,6 @@ type, extends(graph) :: coo_graph                                          !
 !--------------------------------------------------------------------------!
     type(dynamic_array) :: edges(2)
     integer, allocatable, private :: degrees(:)
-
-    !------------------------
-    ! Method implementations
-    procedure(coo_change_edge_ifc), pointer, private :: add_edge_impl   
-    procedure(coo_change_edge_ifc), pointer, private :: delete_edge_impl
 contains
     !--------------
     ! Constructors
@@ -51,18 +46,6 @@ contains
     ! Testing, debugging & I/O
     procedure :: dump_edges => coo_dump_edges
 end type coo_graph
-
-
-
-!--------------------------------------------------------------------------!
-abstract interface                                                         !
-!--------------------------------------------------------------------------!
-    subroutine coo_change_edge_ifc(g,i,j)
-        import :: coo_graph
-        class(coo_graph), intent(inout) :: g
-        integer, intent(in) :: i,j
-    end subroutine coo_change_edge_ifc
-end interface
 
 
 
@@ -113,12 +96,8 @@ subroutine coo_init(g,n,m,num_neighbor_nodes)                              !
     g%max_degree = 0
     g%capacity = ne
 
-    ! Make all the function pointers for implementations of graph
-    ! operations refer to the right methods, which, for a graph that has
-    ! just been initialized, are methods for *mutable* graphs.
+    ! Mark the graph as mutable
     g%mutable = .true.
-    g%add_edge_impl => coo_add_edge_mutable
-    g%delete_edge_impl => coo_delete_edge_mutable
 
 end subroutine coo_init
 
@@ -134,12 +113,8 @@ subroutine coo_graph_copy(g,h)                                             !
     integer :: i,j,k,n,num_blocks,num_returned,edges(2,64)
     type(graph_edge_cursor) :: cursor
 
-    ! Make all the function pointers for implementations of graph
-    ! operations refer to the right methods, which, for a graph that has
-    ! just been initialized, are methods for *mutable* graphs.
+    ! Mark the graph as mutable
     g%mutable = .true.
-    g%add_edge_impl => coo_add_edge_mutable
-    g%delete_edge_impl => coo_delete_edge_mutable
 
     ! Copy all the attributes of h to g
     g%n = h%n
@@ -330,7 +305,26 @@ subroutine coo_add_edge(g,i,j)                                             !
     class(coo_graph), intent(inout) :: g
     integer, intent(in) :: i,j
 
-    call g%add_edge_impl(i,j)
+    if (.not.g%mutable) then
+        print *, 'Attempted to add an edge to an immutable COO graph'
+        print *, 'Terminating.'
+        call exit(1)
+    else
+        if (.not.g%connected(i,j)) then
+            ! Add in the new edge
+            call g%edges(1)%push(i)
+            call g%edges(2)%push(j)
+
+            ! Increase the number of edges and the graph capacity
+            g%ne = g%ne+1
+            g%capacity = g%edges(1)%capacity
+
+            ! If the degree of node i is now the greatest of all nodes in the
+            ! graph, update the degree accordingly
+            g%degrees(i) = g%degrees(i)+1
+            g%max_degree = max(g%max_degree,g%degrees(i))
+        endif
+    endif
 
 end subroutine coo_add_edge
 
@@ -339,85 +333,44 @@ end subroutine coo_add_edge
 !--------------------------------------------------------------------------!
 subroutine coo_delete_edge(g,i,j)                                          !
 !--------------------------------------------------------------------------!
-    class(coo_graph), intent(inout) :: g
-    integer, intent(in) :: i,j
-
-    call g%delete_edge_impl(i,j)
-
-end subroutine coo_delete_edge
-
-
-
-!--------------------------------------------------------------------------!
-subroutine coo_add_edge_mutable(g,i,j)                                     !
-!--------------------------------------------------------------------------!
-    class(coo_graph), intent(inout) :: g
-    integer, intent(in) :: i,j
-
-    if (.not.g%connected(i,j)) then
-        ! Add in the new edge
-        call g%edges(1)%push(i)
-        call g%edges(2)%push(j)
-
-        ! Increase the number of edges and the graph capacity
-        g%ne = g%ne+1
-        g%capacity = g%edges(1)%capacity
-
-        ! If the degree of node i is now the greatest of all nodes in the
-        ! graph, update the degree accordingly
-        g%degrees(i) = g%degrees(i)+1
-        g%max_degree = max(g%max_degree,g%degrees(i))
-    endif
-
-end subroutine coo_add_edge_mutable
-
-
-
-!--------------------------------------------------------------------------!
-subroutine coo_delete_edge_mutable(g,i,j)                                  !
-!--------------------------------------------------------------------------!
     ! input/output variables
     class(coo_graph), intent(inout) :: g
     integer, intent(in) :: i,j
     ! local variables
     integer :: k,it,jt
 
-    k = g%find_edge(i,j)
+    if (.not.g%mutable) then
+        print *, 'Attempted to delete an edge from an immutable COO graph'
+        print *, 'Terminating.'
+        call exit(1)
+    else
+        k = g%find_edge(i,j)
 
-    if (k/=-1) then
-        it = g%edges(1)%pop()
-        jt = g%edges(2)%pop()
+        if (k/=-1) then
+            it = g%edges(1)%pop()
+            jt = g%edges(2)%pop()
 
-        if (k<g%ne .and. g%ne>1) then
-            call g%edges(1)%set_entry(k,it)
-            call g%edges(2)%set_entry(k,jt)
+            if (k<g%ne .and. g%ne>1) then
+                call g%edges(1)%set_entry(k,it)
+                call g%edges(2)%set_entry(k,jt)
+            endif
+
+            ! Decrement the number of edges and the graph capacity
+            g%ne = g%ne-1
+            g%capacity = g%edges(1)%capacity
+
+            ! Change the degree of vertex i
+            g%degrees(i) = g%degrees(i)-1
+
+            ! If vertex i had the greatest degree in the graph, check to
+            ! make sure the max degree hasn't decreased
+            if (g%degrees(i)+1==g%max_degree) then
+                g%max_degree = maxval(g%degrees)
+            endif
         endif
-
-        ! Decrement the number of edges and the graph capacity
-        g%ne = g%ne-1
-        g%capacity = g%edges(1)%capacity
-
-        ! Evaluate the graph's new maximum degree
-        g%degrees(i) = g%degrees(i)-1
-        if (g%degrees(i)+1==g%max_degree) g%max_degree = maxval(g%degrees)
     endif
 
-end subroutine coo_delete_edge_mutable
-
-
-
-!--------------------------------------------------------------------------!
-subroutine coo_change_edge_error(g,i,j)                                    !
-!--------------------------------------------------------------------------!
-    class(coo_graph), intent(inout) :: g
-    integer, intent(in) :: i,j
-
-    print *, 'Attempted to alter edge',i,j,'of a COO graph'
-    print *, 'Graph is mutable:',g%mutable
-    print *, 'Terminating.'
-    call exit(1)
-
-end subroutine coo_change_edge_error
+end subroutine coo_delete_edge
 
 
 
@@ -477,13 +430,10 @@ subroutine coo_graph_compress(g,edge_p)                                    !
 
     if (present(edge_p)) allocate(edge_p(0,0))
 
-    ! COO graphs cannot be compressed.
+    ! COO graphs cannot have their storage compressed.
 
-    ! Redirect all the function pointers for implementations of graph
-    ! mutators to methods for *immutable* graphs
+    ! Mark the graph as immutable.
     g%mutable = .false.
-    g%add_edge_impl => coo_change_edge_error
-    g%delete_edge_impl => coo_change_edge_error
 
 end subroutine coo_graph_compress
 

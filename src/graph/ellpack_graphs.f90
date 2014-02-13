@@ -11,12 +11,6 @@ type, extends(graph) :: ellpack_graph                                      !
 !--------------------------------------------------------------------------!
     integer, allocatable :: node(:,:)
     integer :: max_neighbors
-
-    !------------------------
-    ! Method implementations
-    procedure(ell_change_edge_ifc), pointer, private :: add_edge_impl
-    procedure(ell_change_edge_ifc), pointer, private :: delete_edge_impl
-
 contains
     !--------------
     ! Constructors
@@ -59,18 +53,6 @@ end type ellpack_graph
 
 
 
-!--------------------------------------------------------------------------!
-abstract interface                                                         !
-!--------------------------------------------------------------------------!
-    subroutine ell_change_edge_ifc(g,i,j)
-        import :: ellpack_graph
-        class(ellpack_graph), intent(inout) :: g
-        integer, intent(in) :: i,j
-    end subroutine ell_change_edge_ifc
-end interface
-
-
-
 
 
 contains
@@ -108,12 +90,8 @@ subroutine ellpack_graph_init(g,n,m,num_neighbor_nodes)                    !
     g%ne = 0
     g%capacity = g%max_neighbors*g%n
 
-    ! Make all the function pointers for implementations of graph
-    ! operations refer to the right methods, which, for a graph that has
-    ! just been initialized, are methods for *mutable* graphs.
+    ! Mark the graph as mutable
     g%mutable = .true.
-    g%add_edge_impl => ellpack_add_edge_mutable
-    g%delete_edge_impl => ellpack_delete_edge_mutable
 
 end subroutine ellpack_graph_init
 
@@ -129,12 +107,8 @@ subroutine ellpack_graph_copy(g,h)                                         !
     integer :: i,j,k,n,num_blocks,num_returned,edges(2,64)
     type(graph_edge_cursor) :: cursor
 
-    ! Make all the function pointers for implementations of graph
-    ! operations refer to the right methods, which, for a graph that has
-    ! just been initialized, are methods for *mutable* graphs.
+    ! Mark the graph as mutable
     g%mutable = .true.
-    g%add_edge_impl => ellpack_add_edge_mutable
-    g%delete_edge_impl => ellpack_delete_edge_mutable
 
     ! Copy all the attributes of g from those of h
     g%n = h%n
@@ -330,10 +304,41 @@ end function ellpack_get_edges
 !--------------------------------------------------------------------------!
 subroutine ellpack_add_edge(g,i,j)                                         !
 !--------------------------------------------------------------------------!
+    ! input/output variables
     class(ellpack_graph), intent(inout) :: g
     integer, intent(in) :: i,j
+    ! local variables
+    integer :: k,indx
 
-    call g%add_edge_impl(i,j)
+    if (.not.g%mutable) then
+        print *, 'Attempting to add edge to an immutable ellpack graph'
+        print *, 'Terminating.'
+        call exit(1)
+    else
+        ! If vertices i,j are already connected, we needn't add the edge
+        if (.not.g%connected(i,j)) then
+            ! Find the index in g%node(:,i) where we can add in node j
+            indx = -1
+
+            do k=g%max_neighbors,1,-1
+                if (g%node(k,i)==0) then
+                    indx = k
+                endif
+            enddo
+
+            ! If there is room to add j, then do so
+            if (indx/=-1) then
+                g%node(indx,i) = j
+                g%ne = g%ne+1
+            ! If there is no room, then degree(i) = max degree of g.
+            else
+                print *, 'Not enough space to add edge',i,j
+            endif
+
+            ! Increment the maximum degree of the graph if need be
+            g%max_degree = max(g%max_degree,indx)
+        endif
+    endif
 
 end subroutine ellpack_add_edge
 
@@ -342,55 +347,6 @@ end subroutine ellpack_add_edge
 !--------------------------------------------------------------------------!
 subroutine ellpack_delete_edge(g,i,j)                                      !
 !--------------------------------------------------------------------------!
-    class(ellpack_graph), intent(inout) :: g
-    integer, intent(in) :: i,j
-
-    call g%delete_edge_impl(i,j)
-
-end subroutine ellpack_delete_edge
-
-
-
-!--------------------------------------------------------------------------!
-subroutine ellpack_add_edge_mutable(g,i,j)                                 !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(ellpack_graph), intent(inout) :: g
-    integer, intent(in) :: i,j
-    ! local variables
-    integer :: k,indx
-
-    ! If the two nodes i,j are already connected, we needn't add the edge
-    if (.not.g%connected(i,j)) then
-        ! Find the index in g%node(:,i) where we can add in node j
-        indx = -1
-
-        do k=g%max_neighbors,1,-1
-            if (g%node(k,i)==0) then
-                indx = k
-            endif
-        enddo
-
-        ! If there is room to add j, then do so
-        if (indx/=-1) then
-            g%node(indx,i) = j
-            g%ne = g%ne+1
-        ! If there is no room, that means that degree(i) = max degree of g.
-        else
-            print *, 'Not enough space to add edge',i,j
-        endif
-
-        ! Increment the maximum degree of the graph if need be
-        g%max_degree = max(g%max_degree,indx)
-    endif
-
-end subroutine ellpack_add_edge_mutable
-
-
-
-!--------------------------------------------------------------------------!
-subroutine ellpack_delete_edge_mutable(g,i,j)                              !
-!--------------------------------------------------------------------------!
     ! input/output variables
     class(ellpack_graph), intent(inout) :: g
     integer, intent(in) :: i,j
@@ -398,53 +354,44 @@ subroutine ellpack_delete_edge_mutable(g,i,j)                              !
     integer :: indx
     logical :: max_degree_decrease
 
-    ! If nodes i,j are not connected to begin with, there is no edge to
-    ! delete and thus nothing to do
-    if (g%connected(i,j)) then
-        ! Set a boolean to be true if we're removing an edge from a node
-        ! of maximum degree
-        max_degree_decrease = (g%node(g%max_degree,i)/=0)
+    if (.not.g%mutable) then
+        print *, 'Attempted to delete edge from immutable ellpack graph'
+        print *, 'Terminating.'
+        call exit(1)
+    else
+        ! If nodes i,j are not connected to begin with, there is no edge to
+        ! delete and thus nothing to do
+        if (g%connected(i,j)) then
+            ! Set a boolean to be true if we're removing an edge from a node
+            ! of maximum degree
+            max_degree_decrease = (g%node(g%max_degree,i)/=0)
 
-        ! Find the location indx in memory where edge (i,j) is stored
-        do indx=1,g%max_degree
-            if (g%node(indx,i)==j) exit
-        enddo
+            ! Find the location indx in memory where edge (i,j) is stored
+            do indx=1,g%max_degree
+                if (g%node(indx,i)==j) exit
+            enddo
 
-        ! Overwrite indx with the other nodes connected to i
-        g%node(indx:g%max_degree-1,i) = g%node(indx+1:g%max_degree,i)
+            ! Overwrite indx with the other nodes connected to i
+            g%node(indx:g%max_degree-1,i) = g%node(indx+1:g%max_degree,i)
 
-        ! Zero out the last node connected to i
-        g%node(g%max_degree,i) = 0
+            ! Zero out the last node connected to i
+            g%node(g%max_degree,i) = 0
 
-        ! Decrement the number of edges
-        g%ne = g%ne-1
+            ! Decrement the number of edges
+            g%ne = g%ne-1
 
-        ! If node i had maximum degree, check all the other nodes to see if
-        ! the max degree has decreased
-        if (max_degree_decrease) then
-            max_degree_decrease = (maxval(g%node(g%max_degree,:))==0)
+            ! If node i had max degree, check all the other nodes to see if
+            ! the max degree has decreased
+            if (max_degree_decrease) then
+                max_degree_decrease = (maxval(g%node(g%max_degree,:))==0)
+            endif
+
+            ! If so, decrement the max_degree member of g
+            if (max_degree_decrease) g%max_degree = g%max_degree-1
         endif
-
-        ! If so, decrement the max_degree member of g
-        if (max_degree_decrease) g%max_degree = g%max_degree-1
     endif
 
-end subroutine ellpack_delete_edge_mutable
-
-
-
-!--------------------------------------------------------------------------!
-subroutine ellpack_change_edge_error(g,i,j)                                !
-!--------------------------------------------------------------------------!
-    class(ellpack_graph), intent(inout) :: g
-    integer, intent(in) :: i,j
-
-    print *, 'Attempted to alter edge',i,j,'of an ellpack graph'
-    print *, 'Graph is mutable:',g%mutable
-    print *, 'Terminating.'
-    call exit(1)
-
-end subroutine ellpack_change_edge_error
+end subroutine ellpack_delete_edge
 
 
 
@@ -554,11 +501,8 @@ subroutine ellpack_graph_compress(g,edge_p)                                !
         enddo
     enddo
 
-    ! Redirect all the function pointers for implementations of graph
-    ! operations to methods for *immutable* graphs
+    ! Mark the graph as immutable
     g%mutable = .false.
-    g%add_edge_impl => ellpack_change_edge_error
-    g%delete_edge_impl => ellpack_change_edge_error
 
 end subroutine ellpack_graph_compress
 
@@ -579,9 +523,6 @@ subroutine ellpack_free(g)                                                 !
     g%m = 0
     g%ne = 0
     g%max_degree = 0
-
-    g%add_edge_impl => null()
-    g%delete_edge_impl => null()
 
     g%mutable = .true.
 

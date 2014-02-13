@@ -10,11 +10,6 @@ implicit none
 type, extends(graph) :: ll_graph                                           !
 !--------------------------------------------------------------------------!
     type(dynamic_array), allocatable :: lists(:)
-
-    !------------------------
-    ! Method implementations
-    procedure(ll_change_edge_ifc), pointer, private :: add_edge_impl    
-    procedure(ll_change_edge_ifc), pointer, private :: delete_edge_impl
 contains
     !--------------
     ! Constructors
@@ -49,18 +44,6 @@ contains
     ! Testing, debugging & I/O
     procedure :: dump_edges => ll_dump_edges
 end type ll_graph
-
-
-
-!--------------------------------------------------------------------------!
-abstract interface                                                         !
-!--------------------------------------------------------------------------!
-    subroutine ll_change_edge_ifc(g,i,j)
-        import :: ll_graph
-        class(ll_graph), intent(inout) :: g
-        integer, intent(in) :: i,j
-    end subroutine ll_change_edge_ifc
-end interface
 
 
 
@@ -114,12 +97,8 @@ subroutine ll_init(g,n,m,num_neighbor_nodes)                               !
     g%max_degree = 0
     g%capacity = ne
 
-    ! Make all the function pointers for implementations of graph
-    ! operations refer to the right methods, which, for a graph that has
-    ! just been initialized, are methods for *mutable* graphs.
+    ! Mark the graph as mutable
     g%mutable = .true.
-    g%add_edge_impl => ll_add_edge_mutable
-    g%delete_edge_impl => ll_delete_edge_mutable
 
 end subroutine ll_init
 
@@ -135,12 +114,8 @@ subroutine ll_graph_copy(g,h)                                              !
     integer :: i,j,k,n,num_returned,num_blocks,edges(2,64)
     type(graph_edge_cursor) :: cursor
 
-    ! Make all the function pointers for implementations of graph
-    ! operations refer to the right methods, which, for a graph that has
-    ! just been initialized, are methods for *mutable* graphs.
+    ! Mark the graph as mutable
     g%mutable = .true.
-    g%add_edge_impl => ll_add_edge_mutable
-    g%delete_edge_impl => ll_delete_edge_mutable
 
     ! Initialize g to have the same number of left- and right-nodes as h
     call g%init(h%n,h%m)
@@ -357,8 +332,28 @@ subroutine ll_add_edge(g,i,j)                                              !
 !--------------------------------------------------------------------------!
     class(ll_graph), intent(inout) :: g
     integer, intent(in) :: i,j
+    integer :: cap
 
-    call g%add_edge_impl(i,j)
+    if (.not.g%mutable) then
+        print *, 'Attempted to add an edge to an immutable LL graph'
+        print *, 'Terminating.'
+        call exit(1)
+    else
+        if (.not.g%connected(i,j)) then
+            ! Record the old capacity of the list of i's neighbors
+            cap = g%lists(i)%capacity
+
+            ! Push the new neighbor node j onto the list of i's neighbors
+            call g%lists(i)%push(j)
+
+            ! Change the graph's max degree if need be
+            g%max_degree = max(g%max_degree,g%lists(i)%length)
+
+            ! Increment the number of edges and graph capacity
+            g%ne = g%ne+1
+            g%capacity = g%capacity+g%lists(i)%capacity-cap
+        endif
+    endif
 
 end subroutine ll_add_edge
 
@@ -369,95 +364,48 @@ subroutine ll_delete_edge(g,i,j)                                           !
 !--------------------------------------------------------------------------!
     class(ll_graph), intent(inout) :: g
     integer, intent(in) :: i,j
-
-    call g%delete_edge_impl(i,j)
-
-end subroutine ll_delete_edge
-
-
-
-!--------------------------------------------------------------------------!
-subroutine ll_add_edge_mutable(g,i,j)                                      !
-!--------------------------------------------------------------------------!
-    class(ll_graph), intent(inout) :: g
-    integer, intent(in) :: i,j
-    integer :: cap
-
-    if (.not.g%connected(i,j)) then
-        ! Record the old capacity of the list of i's neighbors
-        cap = g%lists(i)%capacity
-
-        ! Push the new neighbor node j onto the list of i's neighbors
-        call g%lists(i)%push(j)
-
-        ! Change the graph's max degree if need be
-        g%max_degree = max(g%max_degree,g%lists(i)%length)
-
-        ! Increment the number of edges and graph capacity
-        g%ne = g%ne+1
-        g%capacity = g%capacity+g%lists(i)%capacity-cap
-    endif
-
-end subroutine ll_add_edge_mutable
-
-
-
-!--------------------------------------------------------------------------!
-subroutine ll_delete_edge_mutable(g,i,j)                                   !
-!--------------------------------------------------------------------------!
-    class(ll_graph), intent(inout) :: g
-    integer, intent(in) :: i,j
     integer :: k,jt,degree,cap
 
-    if (g%connected(i,j)) then
-        ! Record the degree of vertex i and capacity
-        degree = g%lists(i)%length
-        cap = g%lists(i)%capacity
+    if (.not.g%mutable) then
+        print *, 'Attempted to delete an edge from an immutable LL graph'
+        print *, 'Terminating.'
+        call exit(1)
+    else
+        if (g%connected(i,j)) then
+            ! Record the degree of vertex i and capacity
+            degree = g%lists(i)%length
+            cap = g%lists(i)%capacity
 
-        ! Pop from the list of i's neighbors
-        jt = g%lists(i)%pop()
+            ! Pop from the list of i's neighbors
+            jt = g%lists(i)%pop()
 
-        ! If the vertex jt popped from i's neighbors is not vertex j,
-        if (jt/=j) then
-            ! find where vertex j was stored and put jt there.
-            do k=1,g%lists(i)%length
-                if (g%lists(i)%get_entry(k)==j) then
-                    call g%lists(i)%set_entry(k,jt)
-                endif
-            enddo
+            ! If the vertex jt popped from i's neighbors is not vertex j,
+            if (jt/=j) then
+                ! find where vertex j was stored and put jt there.
+                do k=1,g%lists(i)%length
+                    if (g%lists(i)%get_entry(k)==j) then
+                        call g%lists(i)%set_entry(k,jt)
+                    endif
+                enddo
+            endif
+
+            ! If the degree of vertex i was the max degree of the graph,
+            ! check that the max degree of the graph hasn't decreased.
+            !!Make this a guaranteed O(1) operation somehow
+            if (degree==g%max_degree) then
+                g%max_degree = 0
+                do k=1,g%n
+                    g%max_degree = max(g%max_degree,g%lists(k)%length)
+                enddo
+            endif
+
+            ! Decrement the number of edges and capacity of the graph
+            g%ne = g%ne-1
+            g%capacity = g%capacity+g%lists(i)%capacity-cap
         endif
-
-        ! If the degree of vertex i was the max degree of the graph, we
-        ! need to check that the max degree of the graph hasn't decreased.
-        !!Make this a guaranteed O(1) operation somehow
-        if (degree==g%max_degree) then
-            g%max_degree = 0
-            do k=1,g%n
-                g%max_degree = max(g%max_degree,g%lists(k)%length)
-            enddo
-        endif
-
-        ! Decrement the number of edges and capacity of the graph
-        g%ne = g%ne-1
-        g%capacity = g%capacity+g%lists(i)%capacity-cap
     endif
 
-end subroutine ll_delete_edge_mutable
-
-
-
-!--------------------------------------------------------------------------!
-subroutine ll_change_edge_error(g,i,j)                                     !
-!--------------------------------------------------------------------------!
-    class(ll_graph), intent(inout) :: g
-    integer, intent(in) :: i,j
-
-    print *, 'Attempted to alter edge',i,j,'of a LL graph'
-    print *, 'Graph is mutable:',g%mutable
-    print *, 'Terminating'
-    call exit(1)
-
-end subroutine ll_change_edge_error
+end subroutine ll_delete_edge
 
 
 
@@ -556,11 +504,8 @@ subroutine ll_graph_compress(g,edge_p)                                     !
 
     ! LL graphs cannot have their storage compressed.
 
-    ! Redirect all the function pointers for implementations of graph
-    ! operations to methods for *immutable* graphs
+    ! Mark the graph as immutable
     g%mutable = .false.
-    g%add_edge_impl => ll_change_edge_error
-    g%delete_edge_impl => ll_change_edge_error
 
 end subroutine ll_graph_compress
 
@@ -587,9 +532,6 @@ subroutine ll_free(g)                                                      !
     g%m = 0
     g%ne = 0
     g%max_degree = 0
-
-    g%add_edge_impl => null()
-    g%delete_edge_impl => null()
 
     g%mutable = .true.
 
