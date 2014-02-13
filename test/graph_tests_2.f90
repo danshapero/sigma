@@ -7,8 +7,6 @@ implicit none
     class(graph), allocatable :: g, h
     integer :: i, j, k, l, n, degree, test, min_degree
     real(dp) :: z(16)
-    logical :: correct
-    logical, allocatable :: edge_found(:)
     ! variables for graph edge iteration
     integer :: num_blocks, num_returned, edges(2,64)
     type(graph_edge_cursor) :: cursor

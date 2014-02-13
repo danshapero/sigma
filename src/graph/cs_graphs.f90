@@ -11,6 +11,12 @@ implicit none
 type, extends(graph) :: cs_graph                                           !
 !--------------------------------------------------------------------------!
     integer, allocatable :: ptr(:), node(:)
+
+    !------------------------
+    ! Method implementations
+    procedure(cs_change_edge_ifc), pointer, private :: add_edge_impl
+    procedure(cs_change_edge_ifc), pointer, private :: delete_edge_impl
+
 contains
     !--------------
     ! Constructors
@@ -35,6 +41,7 @@ contains
     procedure :: delete_edge => cs_delete_edge
     procedure :: left_permute => cs_graph_left_permute
     procedure :: right_permute => cs_graph_right_permute
+    procedure :: compress => cs_graph_compress
 
     !-------------
     ! Destructors
@@ -52,11 +59,28 @@ end type cs_graph
 
 
 
+!--------------------------------------------------------------------------!
+abstract interface                                                         !
+!--------------------------------------------------------------------------!
+    subroutine cs_change_edge_ifc(g,i,j)
+        import :: cs_graph
+        class(cs_graph), intent(inout) :: g
+        integer, intent(in) :: i,j
+    end subroutine cs_change_edge_ifc
+end interface
+
+
+
 
 
 contains
 
 
+
+
+!==========================================================================!
+!==== Constructors                                                     ====!
+!==========================================================================!
 
 !--------------------------------------------------------------------------!
 subroutine cs_init(g,n,m,num_neighbor_nodes)                               !
@@ -88,21 +112,34 @@ subroutine cs_init(g,n,m,num_neighbor_nodes)                               !
         ne = g%n
     endif
 
+    ! Allocate the node array to be the number of edges, whether we actually
+    ! have an upper bound on what that is or we've set it to some default
     allocate( g%node(ne) )
     g%node = 0
     g%capacity = ne
 
+    ! If we know how many neighbors each vertex has, fill in the ptr
+    ! array accordingly
     if (present(num_neighbor_nodes)) then
         g%ptr(1) = 1
         do k=1,g%n
             g%ptr(k+1) = g%ptr(k)+num_neighbor_nodes(k)
         enddo
+    ! Otherwise, ptr is all 1s
     else
         g%ptr = 1
     endif
 
+    ! The total number of edges and max degree at initialization is zero
     g%ne = 0
     g%max_degree = 0
+
+    ! Make all the function pointers for implementations of graph
+    ! operations refer to the right methods, which, for a graph that has
+    ! just been initialized, are methods for *mutable* graphs.
+    g%mutable = .true.
+    g%add_edge_impl => cs_add_edge_mutable
+    g%delete_edge_impl => cs_delete_edge_mutable
 
 end subroutine cs_init
 
@@ -117,6 +154,13 @@ subroutine cs_graph_copy(g,h)                                              !
     ! local variables
     integer :: i,j,k,n,num_blocks,num_returned,edges(2,64)
     type(graph_edge_cursor) :: cursor
+
+    ! Make all the function pointers for implementations of graph
+    ! operations refer to the right methods, which, for a graph that has
+    ! just been initialized, are methods for *mutable* graphs.
+    g%mutable = .true.
+    g%add_edge_impl => cs_add_edge_mutable
+    g%delete_edge_impl => cs_delete_edge_mutable
 
     ! Copy all of h's attributes to g
     g%n = h%n
@@ -179,6 +223,11 @@ subroutine cs_graph_copy(g,h)                                              !
 end subroutine cs_graph_copy
 
 
+
+
+!==========================================================================!
+!==== Accessors                                                        ====!
+!==========================================================================!
 
 !--------------------------------------------------------------------------!
 function cs_degree(g,i) result(d)                                          !
@@ -261,6 +310,11 @@ end function cs_find_edge
 
 
 
+
+!==========================================================================!
+!==== Edge iterator                                                    ====!
+!==========================================================================!
+
 !--------------------------------------------------------------------------!
 function cs_make_cursor(g,thread) result(cursor)                           !
 !--------------------------------------------------------------------------!
@@ -332,8 +386,37 @@ end function cs_get_edges
 
 
 
+
+!==========================================================================!
+!==== Mutators                                                         ====!
+!==========================================================================!
+
 !--------------------------------------------------------------------------!
 subroutine cs_add_edge(g,i,j)                                              !
+!--------------------------------------------------------------------------!
+    class(cs_graph), intent(inout) :: g
+    integer, intent(in) :: i,j
+
+    call g%add_edge_impl(i,j)
+
+end subroutine cs_add_edge
+
+
+
+!--------------------------------------------------------------------------!
+subroutine cs_delete_edge(g,i,j)                                           !
+!--------------------------------------------------------------------------!
+    class(cs_graph), intent(inout) :: g
+    integer, intent(in) :: i,j
+
+    call g%delete_edge_impl(i,j)
+
+end subroutine cs_delete_edge
+
+
+
+!--------------------------------------------------------------------------!
+subroutine cs_add_edge_mutable(g,i,j)                                      !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_graph), intent(inout) :: g
@@ -365,12 +448,12 @@ subroutine cs_add_edge(g,i,j)                                              !
         endif
     endif
 
-end subroutine cs_add_edge
+end subroutine cs_add_edge_mutable
 
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_delete_edge(g,i,j)                                           !
+subroutine cs_delete_edge_mutable(g,i,j)                                   !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_graph), intent(inout) :: g
@@ -408,7 +491,22 @@ subroutine cs_delete_edge(g,i,j)                                           !
         g%ne = g%ne-1
     endif
 
-end subroutine cs_delete_edge
+end subroutine cs_delete_edge_mutable
+
+
+
+!--------------------------------------------------------------------------!
+subroutine cs_change_edge_error(g,i,j)                                     !
+!--------------------------------------------------------------------------!
+    class(cs_graph), intent(inout) :: g
+    integer, intent(in) :: i,j
+
+    print *, 'Attempted to alter edge',i,j,'of a CS graph'
+    print *, 'Graph is mutable:',g%mutable
+    print *, 'Terminating'
+    call exit(1)
+
+end subroutine cs_change_edge_error
 
 
 
@@ -489,6 +587,75 @@ end subroutine cs_graph_right_permute
 
 
 !--------------------------------------------------------------------------!
+subroutine cs_graph_compress(g,edge_p)                                     !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(cs_graph), intent(inout) :: g
+    integer, allocatable, intent(inout), optional :: edge_p(:,:)
+    ! local variables
+    integer :: i,j,k,n
+    integer, allocatable :: ptr(:), node(:)
+
+    ! If there are no null nodes stored in g, we don't need to compress
+    ! the graph at all
+    if (minval(g%node)/=0) then
+        if (present(edge_p)) allocate(edge_p(0,0))
+    else
+        ! Allocate the ptr array
+        allocate(ptr(g%n+1),node(g%ne))
+        ptr = 0
+        ptr(1) = 1
+        n = 0
+
+        ! Fill out the ptr array to reflect the number of non-null edges
+        ! and copy endpoints of the non-null edges into the node array
+        do i=1,g%n
+            do k=g%ptr(i),g%ptr(i+1)-1
+                j = g%node(k)
+
+                if (j/=0) then
+                    ptr(i+1) = ptr(i+1)+1
+                    n = n+1
+                    node(n) = j
+                endif
+            enddo
+
+            ptr(i+1) = ptr(i)+ptr(i+1)
+        enddo
+
+        if (present(edge_p)) then
+            allocate(edge_p(3,g%n))
+
+            ! Fill the edge permutation array
+            do i=1,g%n
+                edge_p(1,i) = g%ptr(i)
+                edge_p(2,i) = ptr(i)
+                edge_p(3,i) = ptr(i+1)-ptr(i)
+            enddo
+        endif
+
+        ! Move the allocation status from the ptr and node arrays to those
+        ! owned by the graph
+        call move_alloc(from=ptr, to=g%ptr)
+        call move_alloc(from=node, to=g%node)
+    endif
+
+    ! Redirect all the function pointers for implementations of graph
+    ! operations to methods for *immutable* graphs
+    g%mutable = .false.
+    g%add_edge_impl => cs_change_edge_error
+    g%delete_edge_impl => cs_change_edge_error
+
+end subroutine cs_graph_compress
+
+
+
+
+!==========================================================================!
+!==== Destructors                                                      ====!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
 subroutine cs_free(g)                                                      !
 !--------------------------------------------------------------------------!
     class(cs_graph), intent(inout) :: g
@@ -499,9 +666,19 @@ subroutine cs_free(g)                                                      !
     g%ne = 0
     g%max_degree = 0
 
+    g%add_edge_impl => null()
+    g%delete_edge_impl => null()
+
+    g%mutable = .true.
+
 end subroutine cs_free
 
 
+
+
+!==========================================================================!
+!==== Testing, debugging & I/O                                         ====!
+!==========================================================================!
 
 !--------------------------------------------------------------------------!
 subroutine cs_dump_edges(g,edges)                                          !
@@ -572,37 +749,6 @@ subroutine max_degree_update(g)                                            !
 
 end subroutine max_degree_update
 
-
-
-!--------------------------------------------------------------------------!
-subroutine cs_compress(g)                                                  !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(cs_graph), intent(inout) :: g
-    ! local variables
-    integer :: i,j,k,ptr(g%n+1),node(g%capacity)
-
-    ptr = g%ptr
-    node = g%node
-
-    g%ptr = 0
-    g%ptr(1) = 1
-    g%ne = 0
-
-    do i=1,g%n
-        do k=ptr(i),ptr(i+1)-1
-            j = node(k)
-            if (j/=0) then
-                g%ptr(i+1) = g%ptr(i+1)+1
-                g%ne = g%ne+1
-                g%node(g%ne) = j
-            endif
-        enddo
-
-        g%ptr(i+1) = g%ptr(i)+g%ptr(i+1)
-    enddo
-
-end subroutine cs_compress
 
 
 end module cs_graphs

@@ -10,6 +10,11 @@ implicit none
 type, extends(graph) :: ll_graph                                           !
 !--------------------------------------------------------------------------!
     type(dynamic_array), allocatable :: lists(:)
+
+    !------------------------
+    ! Method implementations
+    procedure(ll_change_edge_ifc), pointer, private :: add_edge_impl    
+    procedure(ll_change_edge_ifc), pointer, private :: delete_edge_impl
 contains
     !--------------
     ! Constructors
@@ -34,7 +39,7 @@ contains
     procedure :: delete_edge => ll_delete_edge
     procedure :: left_permute => ll_graph_left_permute
     procedure :: right_permute => ll_graph_right_permute
-!    procedure :: add => ll_graph_add
+    procedure :: compress => ll_graph_compress
 
     !-------------
     ! Destructors
@@ -47,11 +52,28 @@ end type ll_graph
 
 
 
+!--------------------------------------------------------------------------!
+abstract interface                                                         !
+!--------------------------------------------------------------------------!
+    subroutine ll_change_edge_ifc(g,i,j)
+        import :: ll_graph
+        class(ll_graph), intent(inout) :: g
+        integer, intent(in) :: i,j
+    end subroutine ll_change_edge_ifc
+end interface
+
+
+
 
 
 contains
 
 
+
+
+!==========================================================================!
+!==== Constructors                                                     ====!
+!==========================================================================!
 
 !--------------------------------------------------------------------------!
 subroutine ll_init(g,n,m,num_neighbor_nodes)                               !
@@ -72,6 +94,8 @@ subroutine ll_init(g,n,m,num_neighbor_nodes)                               !
         g%m = n
     endif
 
+    ! If we know how many neighbors each vertex has, initialize each
+    ! dynamic array with the requisite amount of storage.
     if (present(num_neighbor_nodes)) then
         do k=1,n
             call g%lists(k)%init(capacity=num_neighbor_nodes(k), &
@@ -85,9 +109,17 @@ subroutine ll_init(g,n,m,num_neighbor_nodes)                               !
         ne = 4*g%n
     endif
 
+    ! The total number of edges and max degree at initialization is zero
     g%ne = 0
     g%max_degree = 0
     g%capacity = ne
+
+    ! Make all the function pointers for implementations of graph
+    ! operations refer to the right methods, which, for a graph that has
+    ! just been initialized, are methods for *mutable* graphs.
+    g%mutable = .true.
+    g%add_edge_impl => ll_add_edge_mutable
+    g%delete_edge_impl => ll_delete_edge_mutable
 
 end subroutine ll_init
 
@@ -102,6 +134,13 @@ subroutine ll_graph_copy(g,h)                                              !
     ! local variables
     integer :: i,j,k,n,num_returned,num_blocks,edges(2,64)
     type(graph_edge_cursor) :: cursor
+
+    ! Make all the function pointers for implementations of graph
+    ! operations refer to the right methods, which, for a graph that has
+    ! just been initialized, are methods for *mutable* graphs.
+    g%mutable = .true.
+    g%add_edge_impl => ll_add_edge_mutable
+    g%delete_edge_impl => ll_delete_edge_mutable
 
     ! Initialize g to have the same number of left- and right-nodes as h
     call g%init(h%n,h%m)
@@ -133,6 +172,11 @@ subroutine ll_graph_copy(g,h)                                              !
 end subroutine ll_graph_copy
 
 
+
+
+!==========================================================================!
+!==== Accessors                                                        ====!
+!==========================================================================!
 
 !--------------------------------------------------------------------------!
 function ll_degree(g,i) result(d)                                          !
@@ -216,6 +260,11 @@ end function ll_find_edge
 
 
 
+
+!==========================================================================!
+!==== Edge iterator                                                    ====!
+!==========================================================================!
+
 !--------------------------------------------------------------------------!
 function ll_make_cursor(g,thread) result(cursor)                           !
 !--------------------------------------------------------------------------!
@@ -298,8 +347,37 @@ end function ll_get_edges
 
 
 
+
+!==========================================================================!
+!==== Mutators                                                         ====!
+!==========================================================================!
+
 !--------------------------------------------------------------------------!
 subroutine ll_add_edge(g,i,j)                                              !
+!--------------------------------------------------------------------------!
+    class(ll_graph), intent(inout) :: g
+    integer, intent(in) :: i,j
+
+    call g%add_edge_impl(i,j)
+
+end subroutine ll_add_edge
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ll_delete_edge(g,i,j)                                           !
+!--------------------------------------------------------------------------!
+    class(ll_graph), intent(inout) :: g
+    integer, intent(in) :: i,j
+
+    call g%delete_edge_impl(i,j)
+
+end subroutine ll_delete_edge
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ll_add_edge_mutable(g,i,j)                                      !
 !--------------------------------------------------------------------------!
     class(ll_graph), intent(inout) :: g
     integer, intent(in) :: i,j
@@ -320,12 +398,12 @@ subroutine ll_add_edge(g,i,j)                                              !
         g%capacity = g%capacity+g%lists(i)%capacity-cap
     endif
 
-end subroutine ll_add_edge
+end subroutine ll_add_edge_mutable
 
 
 
 !--------------------------------------------------------------------------!
-subroutine ll_delete_edge(g,i,j)                                           !
+subroutine ll_delete_edge_mutable(g,i,j)                                   !
 !--------------------------------------------------------------------------!
     class(ll_graph), intent(inout) :: g
     integer, intent(in) :: i,j
@@ -364,7 +442,22 @@ subroutine ll_delete_edge(g,i,j)                                           !
         g%capacity = g%capacity+g%lists(i)%capacity-cap
     endif
 
-end subroutine ll_delete_edge
+end subroutine ll_delete_edge_mutable
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ll_change_edge_error(g,i,j)                                     !
+!--------------------------------------------------------------------------!
+    class(ll_graph), intent(inout) :: g
+    integer, intent(in) :: i,j
+
+    print *, 'Attempted to alter edge',i,j,'of a LL graph'
+    print *, 'Graph is mutable:',g%mutable
+    print *, 'Terminating'
+    call exit(1)
+
+end subroutine ll_change_edge_error
 
 
 
@@ -454,6 +547,31 @@ end subroutine ll_graph_right_permute
 
 
 !--------------------------------------------------------------------------!
+subroutine ll_graph_compress(g,edge_p)                                     !
+!--------------------------------------------------------------------------!
+    class(ll_graph), intent(inout) :: g
+    integer, allocatable, intent(inout), optional :: edge_p(:,:)
+
+    if (present(edge_p)) allocate(edge_p(0,0))
+
+    ! LL graphs cannot have their storage compressed.
+
+    ! Redirect all the function pointers for implementations of graph
+    ! operations to methods for *immutable* graphs
+    g%mutable = .false.
+    g%add_edge_impl => ll_change_edge_error
+    g%delete_edge_impl => ll_change_edge_error
+
+end subroutine ll_graph_compress
+
+
+
+
+!==========================================================================!
+!==== Destructors                                                      ====!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
 subroutine ll_free(g)                                                      !
 !--------------------------------------------------------------------------!
     class(ll_graph), intent(inout) :: g
@@ -470,9 +588,19 @@ subroutine ll_free(g)                                                      !
     g%ne = 0
     g%max_degree = 0
 
+    g%add_edge_impl => null()
+    g%delete_edge_impl => null()
+
+    g%mutable = .true.
+
 end subroutine ll_free
 
 
+
+
+!==========================================================================!
+!==== Testing, debugging & I/O                                         ====!
+!==========================================================================!
 
 !--------------------------------------------------------------------------!
 subroutine ll_dump_edges(g,edges)                                          !

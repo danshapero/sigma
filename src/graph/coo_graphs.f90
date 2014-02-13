@@ -12,6 +12,11 @@ type, extends(graph) :: coo_graph                                          !
 !--------------------------------------------------------------------------!
     type(dynamic_array) :: edges(2)
     integer, allocatable, private :: degrees(:)
+
+    !------------------------
+    ! Method implementations
+    procedure(coo_change_edge_ifc), pointer, private :: add_edge_impl   
+    procedure(coo_change_edge_ifc), pointer, private :: delete_edge_impl
 contains
     !--------------
     ! Constructors
@@ -36,6 +41,7 @@ contains
     procedure :: delete_edge => coo_delete_edge
     procedure :: left_permute => coo_graph_left_permute
     procedure :: right_permute => coo_graph_right_permute
+    procedure :: compress => coo_graph_compress
 
     !-------------
     ! Destructors
@@ -48,11 +54,28 @@ end type coo_graph
 
 
 
+!--------------------------------------------------------------------------!
+abstract interface                                                         !
+!--------------------------------------------------------------------------!
+    subroutine coo_change_edge_ifc(g,i,j)
+        import :: coo_graph
+        class(coo_graph), intent(inout) :: g
+        integer, intent(in) :: i,j
+    end subroutine coo_change_edge_ifc
+end interface
+
+
+
 
 
 contains
 
 
+
+
+!==========================================================================!
+!==== Constructors                                                     ====!
+!==========================================================================!
 
 !--------------------------------------------------------------------------!
 subroutine coo_init(g,n,m,num_neighbor_nodes)                              !
@@ -74,6 +97,8 @@ subroutine coo_init(g,n,m,num_neighbor_nodes)                              !
         g%m = n
     endif
 
+    ! If we know how many neighbors each vertex has, the sum of this list
+    ! gives a bound on how much space we should allocate
     if (present(num_neighbor_nodes)) then
         ne = sum(num_neighbor_nodes)
     else
@@ -83,10 +108,18 @@ subroutine coo_init(g,n,m,num_neighbor_nodes)                              !
     call g%edges(1)%init(capacity=ne)
     call g%edges(2)%init(capacity=ne)
 
+    ! At initialization, the number of edges and max degree is zero
     g%ne = 0
     g%max_degree = 0
     g%capacity = ne
-    
+
+    ! Make all the function pointers for implementations of graph
+    ! operations refer to the right methods, which, for a graph that has
+    ! just been initialized, are methods for *mutable* graphs.
+    g%mutable = .true.
+    g%add_edge_impl => coo_add_edge_mutable
+    g%delete_edge_impl => coo_delete_edge_mutable
+
 end subroutine coo_init
 
 
@@ -101,23 +134,37 @@ subroutine coo_graph_copy(g,h)                                             !
     integer :: i,j,k,n,num_blocks,num_returned,edges(2,64)
     type(graph_edge_cursor) :: cursor
 
+    ! Make all the function pointers for implementations of graph
+    ! operations refer to the right methods, which, for a graph that has
+    ! just been initialized, are methods for *mutable* graphs.
+    g%mutable = .true.
+    g%add_edge_impl => coo_add_edge_mutable
+    g%delete_edge_impl => coo_delete_edge_mutable
+
+    ! Copy all the attributes of h to g
     g%n = h%n
     g%m = h%m
     g%ne = h%ne
-    allocate(g%degrees(g%n))
-
-    call g%edges(1)%init(capacity=g%ne)
-    call g%edges(2)%init(capacity=g%ne)
-
     g%max_degree = h%max_degree
+
     g%capacity = g%ne
 
+    allocate(g%degrees(g%capacity))
+
+    ! Allocate space in the two dynamic arrays for the edges of g
+    call g%edges(1)%init(capacity=g%capacity)
+    call g%edges(2)%init(capacity=g%capacity)
+
+    ! Make an edge iterator for the copied graph h
     cursor = h%make_cursor(0)
     num_blocks = (cursor%final-cursor%start+1)/64+1
 
+    ! Iterate through all the edges of h
     do n=1,num_blocks
+        ! Get a chunk of edges of h
         edges = h%get_edges(cursor,64,num_returned)
 
+        ! Add each edge from the chunk into g
         do k=1,num_returned
             i = edges(1,k)
             j = edges(2,k)
@@ -134,6 +181,11 @@ subroutine coo_graph_copy(g,h)                                             !
 end subroutine coo_graph_copy
 
 
+
+
+!==========================================================================!
+!==== Accessors                                                        ====!
+!==========================================================================!
 
 !--------------------------------------------------------------------------!
 function coo_degree(g,i) result(d)                                         !
@@ -215,6 +267,11 @@ end function coo_find_edge
 
 
 
+
+!==========================================================================!
+!==== Edge iterator                                                    ====!
+!==========================================================================!
+
 !--------------------------------------------------------------------------!
 function coo_make_cursor(g,thread) result(cursor)                          !
 !--------------------------------------------------------------------------!
@@ -262,8 +319,37 @@ end function coo_get_edges
 
 
 
+
+!==========================================================================!
+!==== Mutators                                                         ====!
+!==========================================================================!
+
 !--------------------------------------------------------------------------!
 subroutine coo_add_edge(g,i,j)                                             !
+!--------------------------------------------------------------------------!
+    class(coo_graph), intent(inout) :: g
+    integer, intent(in) :: i,j
+
+    call g%add_edge_impl(i,j)
+
+end subroutine coo_add_edge
+
+
+
+!--------------------------------------------------------------------------!
+subroutine coo_delete_edge(g,i,j)                                          !
+!--------------------------------------------------------------------------!
+    class(coo_graph), intent(inout) :: g
+    integer, intent(in) :: i,j
+
+    call g%delete_edge_impl(i,j)
+
+end subroutine coo_delete_edge
+
+
+
+!--------------------------------------------------------------------------!
+subroutine coo_add_edge_mutable(g,i,j)                                     !
 !--------------------------------------------------------------------------!
     class(coo_graph), intent(inout) :: g
     integer, intent(in) :: i,j
@@ -283,12 +369,12 @@ subroutine coo_add_edge(g,i,j)                                             !
         g%max_degree = max(g%max_degree,g%degrees(i))
     endif
 
-end subroutine coo_add_edge
+end subroutine coo_add_edge_mutable
 
 
 
 !--------------------------------------------------------------------------!
-subroutine coo_delete_edge(g,i,j)                                          !
+subroutine coo_delete_edge_mutable(g,i,j)                                  !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(coo_graph), intent(inout) :: g
@@ -316,7 +402,22 @@ subroutine coo_delete_edge(g,i,j)                                          !
         if (g%degrees(i)+1==g%max_degree) g%max_degree = maxval(g%degrees)
     endif
 
-end subroutine coo_delete_edge
+end subroutine coo_delete_edge_mutable
+
+
+
+!--------------------------------------------------------------------------!
+subroutine coo_change_edge_error(g,i,j)                                    !
+!--------------------------------------------------------------------------!
+    class(coo_graph), intent(inout) :: g
+    integer, intent(in) :: i,j
+
+    print *, 'Attempted to alter edge',i,j,'of a COO graph'
+    print *, 'Graph is mutable:',g%mutable
+    print *, 'Terminating.'
+    call exit(1)
+
+end subroutine coo_change_edge_error
 
 
 
@@ -365,6 +466,26 @@ subroutine coo_graph_right_permute(g,p,edge_p)                             !
     if (present(edge_p)) allocate(edge_p(0,0))
 
 end subroutine coo_graph_right_permute
+
+
+
+!--------------------------------------------------------------------------!
+subroutine coo_graph_compress(g,edge_p)                                    !
+!--------------------------------------------------------------------------!
+    class(coo_graph), intent(inout) :: g
+    integer, allocatable, intent(inout), optional :: edge_p(:,:)
+
+    if (present(edge_p)) allocate(edge_p(0,0))
+
+    ! COO graphs cannot be compressed.
+
+    ! Redirect all the function pointers for implementations of graph
+    ! mutators to methods for *immutable* graphs
+    g%mutable = .false.
+    g%add_edge_impl => coo_change_edge_error
+    g%delete_edge_impl => coo_change_edge_error
+
+end subroutine coo_graph_compress
 
 
 

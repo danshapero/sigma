@@ -11,6 +11,12 @@ type, extends(graph) :: ellpack_graph                                      !
 !--------------------------------------------------------------------------!
     integer, allocatable :: node(:,:)
     integer :: max_neighbors
+
+    !------------------------
+    ! Method implementations
+    procedure(ell_change_edge_ifc), pointer, private :: add_edge_impl
+    procedure(ell_change_edge_ifc), pointer, private :: delete_edge_impl
+
 contains
     !--------------
     ! Constructors
@@ -35,6 +41,7 @@ contains
     procedure :: delete_edge => ellpack_delete_edge
     procedure :: left_permute => ellpack_graph_left_permute
     procedure :: right_permute => ellpack_graph_right_permute
+    procedure :: compress => ellpack_graph_compress
 
     !-------------
     ! Destructors
@@ -52,11 +59,28 @@ end type ellpack_graph
 
 
 
+!--------------------------------------------------------------------------!
+abstract interface                                                         !
+!--------------------------------------------------------------------------!
+    subroutine ell_change_edge_ifc(g,i,j)
+        import :: ellpack_graph
+        class(ellpack_graph), intent(inout) :: g
+        integer, intent(in) :: i,j
+    end subroutine ell_change_edge_ifc
+end interface
+
+
+
 
 
 contains
 
 
+
+
+!==========================================================================!
+!==== Constructors                                                     ====!
+!==========================================================================!
 
 !--------------------------------------------------------------------------!
 subroutine ellpack_graph_init(g,n,m,num_neighbor_nodes)                    !
@@ -84,6 +108,13 @@ subroutine ellpack_graph_init(g,n,m,num_neighbor_nodes)                    !
     g%ne = 0
     g%capacity = g%max_neighbors*g%n
 
+    ! Make all the function pointers for implementations of graph
+    ! operations refer to the right methods, which, for a graph that has
+    ! just been initialized, are methods for *mutable* graphs.
+    g%mutable = .true.
+    g%add_edge_impl => ellpack_add_edge_mutable
+    g%delete_edge_impl => ellpack_delete_edge_mutable
+
 end subroutine ellpack_graph_init
 
 
@@ -98,6 +129,14 @@ subroutine ellpack_graph_copy(g,h)                                         !
     integer :: i,j,k,n,num_blocks,num_returned,edges(2,64)
     type(graph_edge_cursor) :: cursor
 
+    ! Make all the function pointers for implementations of graph
+    ! operations refer to the right methods, which, for a graph that has
+    ! just been initialized, are methods for *mutable* graphs.
+    g%mutable = .true.
+    g%add_edge_impl => ellpack_add_edge_mutable
+    g%delete_edge_impl => ellpack_delete_edge_mutable
+
+    ! Copy all the attributes of g from those of h
     g%n = h%n
     g%m = h%m
     g%ne = h%ne
@@ -105,15 +144,20 @@ subroutine ellpack_graph_copy(g,h)                                         !
     g%max_neighbors = g%max_degree
     g%capacity = g%max_degree * g%n
 
+    ! Allocate space for the main node array of g
     allocate(g%node(g%max_degree,g%n))
     g%node = 0
 
+    ! Make an edge iterator for the copied graph h
     cursor = h%make_cursor(0)
     num_blocks = (cursor%final-cursor%current+1)/64+1
 
+    ! Iterate through all the edges of h
     do n=1,num_blocks
+        ! Get a chunk of edges from h
         edges = h%get_edges(cursor,64,num_returned)
 
+        ! Add each edge from the chunk into g
         do k=1,num_returned
             i = edges(1,k)
             j = edges(2,k)
@@ -127,6 +171,11 @@ subroutine ellpack_graph_copy(g,h)                                         !
 end subroutine ellpack_graph_copy
 
 
+
+
+!==========================================================================!
+!==== Accessors                                                        ====!
+!==========================================================================!
 
 !--------------------------------------------------------------------------!
 function ellpack_degree(g,i) result(d)                                     !
@@ -202,6 +251,11 @@ end function ellpack_find_edge
 
 
 
+
+!==========================================================================!
+!==== Edge iterator                                                    ====!
+!==========================================================================!
+
 !--------------------------------------------------------------------------!
 function ellpack_make_cursor(g,thread) result(cursor)                      !
 !--------------------------------------------------------------------------!
@@ -268,8 +322,37 @@ end function ellpack_get_edges
 
 
 
+
+!==========================================================================!
+!==== Mutators                                                         ====!
+!==========================================================================!
+
 !--------------------------------------------------------------------------!
 subroutine ellpack_add_edge(g,i,j)                                         !
+!--------------------------------------------------------------------------!
+    class(ellpack_graph), intent(inout) :: g
+    integer, intent(in) :: i,j
+
+    call g%add_edge_impl(i,j)
+
+end subroutine ellpack_add_edge
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ellpack_delete_edge(g,i,j)                                      !
+!--------------------------------------------------------------------------!
+    class(ellpack_graph), intent(inout) :: g
+    integer, intent(in) :: i,j
+
+    call g%delete_edge_impl(i,j)
+
+end subroutine ellpack_delete_edge
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ellpack_add_edge_mutable(g,i,j)                                 !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(ellpack_graph), intent(inout) :: g
@@ -301,12 +384,12 @@ subroutine ellpack_add_edge(g,i,j)                                         !
         g%max_degree = max(g%max_degree,indx)
     endif
 
-end subroutine ellpack_add_edge
+end subroutine ellpack_add_edge_mutable
 
 
 
 !--------------------------------------------------------------------------!
-subroutine ellpack_delete_edge(g,i,j)                                      !
+subroutine ellpack_delete_edge_mutable(g,i,j)                              !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(ellpack_graph), intent(inout) :: g
@@ -346,7 +429,22 @@ subroutine ellpack_delete_edge(g,i,j)                                      !
         if (max_degree_decrease) g%max_degree = g%max_degree-1
     endif
 
-end subroutine ellpack_delete_edge
+end subroutine ellpack_delete_edge_mutable
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ellpack_change_edge_error(g,i,j)                                !
+!--------------------------------------------------------------------------!
+    class(ellpack_graph), intent(inout) :: g
+    integer, intent(in) :: i,j
+
+    print *, 'Attempted to alter edge',i,j,'of an ellpack graph'
+    print *, 'Graph is mutable:',g%mutable
+    print *, 'Terminating.'
+    call exit(1)
+
+end subroutine ellpack_change_edge_error
 
 
 
@@ -405,6 +503,73 @@ end subroutine ellpack_graph_right_permute
 
 
 !--------------------------------------------------------------------------!
+subroutine ellpack_graph_compress(g,edge_p)                                !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(ellpack_graph), intent(inout) :: g
+    integer, allocatable, intent(inout), optional :: edge_p(:,:)
+    ! local variables
+    integer :: i,j,k,jt
+    integer, allocatable :: node(:,:)
+
+    ! If the maximum number of neighbors possible for each verte of the
+    ! graph is greater than the maximum degree of the graph, we can reduce
+    ! the storage needed
+    if (g%max_neighbors/=g%max_degree) then
+        allocate(node(g%max_degree,g%n))
+
+        ! Copy the array g%node into a smaller temporary array node
+        do i=1,g%n
+            node(1:g%max_degree,i) = g%node(1:g%max_degree,i)
+        enddo
+
+        ! Transfer the allocation status of node to g%node
+        call move_alloc(from=node, to=g%node)
+
+        ! Compute the edge permutation if the caller wants it
+        if (present(edge_p)) then
+            allocate(edge_p(3,g%n))
+
+            do i=1,g%n
+                edge_p(1,i) = g%max_neighbors*(i-1)+1
+                edge_p(2,i) = g%max_degree*(i-1)+1
+                edge_p(3,i) = g%max_degree
+            enddo
+        endif
+    else
+        if (present(edge_p)) allocate(edge_p(0,0))
+    endif
+
+    ! Fill out any remaining null edges with copies of existing edges so
+    ! that the edge iterator never returns a null edge
+    do i=1,g%n
+        jt = max(g%node(1,i),1)
+        do k=1,g%max_degree-1
+            j = g%node(k,i)
+            if (j/=0) then
+                jt = j
+            else
+                g%node(k,i) = jt
+            endif
+        enddo
+    enddo
+
+    ! Redirect all the function pointers for implementations of graph
+    ! operations to methods for *immutable* graphs
+    g%mutable = .false.
+    g%add_edge_impl => ellpack_change_edge_error
+    g%delete_edge_impl => ellpack_change_edge_error
+
+end subroutine ellpack_graph_compress
+
+
+
+
+!==========================================================================!
+!==== Destructors                                                      ====!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
 subroutine ellpack_free(g)                                                 !
 !--------------------------------------------------------------------------!
     class(ellpack_graph), intent(inout) :: g
@@ -415,9 +580,19 @@ subroutine ellpack_free(g)                                                 !
     g%ne = 0
     g%max_degree = 0
 
+    g%add_edge_impl => null()
+    g%delete_edge_impl => null()
+
+    g%mutable = .true.
+
 end subroutine ellpack_free
 
 
+
+
+!==========================================================================!
+!==== Testing, debugging & I/O                                         ====!
+!==========================================================================!
 
 !--------------------------------------------------------------------------!
 subroutine ellpack_dump_edges(g,edges)                                     !

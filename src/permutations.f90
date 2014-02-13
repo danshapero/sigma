@@ -166,7 +166,7 @@ subroutine greedy_color_ordering(g,p,ptrs,num_colors)                      !
     class(graph), intent(in) :: g
     integer, intent(out) :: p(:), ptrs(:), num_colors
     ! local variables
-    integer :: i,k,inc,color,added(g%max_degree+1)
+    integer :: i,k,color,added(g%max_degree+1)
 
     ! Assign colors to all the nodes and put them in the array p
     call greedy_coloring(g,p)

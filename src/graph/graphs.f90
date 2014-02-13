@@ -60,7 +60,7 @@ contains
     ! Make a cursor which stores some placeholder information needed
     ! for iterating through all of a graph's edges.
 
-    procedure(get_edges_ifc), deferred   :: get_edges
+    procedure(get_edges_ifc), deferred :: get_edges
     ! Return a fixed number of edges of the graph and update the graph
     ! edge cursor to reflect our new position with the graph's edges.
 
@@ -68,14 +68,14 @@ contains
     !----------
     ! Mutators
     !----------
-    procedure(add_edge_ifc), deferred      :: add_edge
+    procedure(change_edge_ifc), deferred :: add_edge
     ! Add in a new edge if it does not already exist.
     ! The behavior of this procedure will change depending on the graph's
     ! mutability state; if the graph has been compressed, it will be
     ! rendered immutable, and attemting to add an edge will instead
     ! yield an error.
 
-    procedure(delete_edge_ifc), deferred   :: delete_edge
+    procedure(change_edge_ifc), deferred :: delete_edge
     ! Delete an edge if it does exist.
     ! Will result in an error if invoked when the graph is immutable.
 
@@ -91,12 +91,10 @@ contains
     ! Apply a permutation to the graph's right-vertices.
     ! Optionally return compact array describing edge permutation.
 
-!    procedure(compress_graph_ifc), deferred :: compress
+    procedure(compress_graph_ifc), deferred :: compress
     ! Compress the graph. This eliminates any extra space which has been
     ! pre-allocated for adding edges. Reduces memory usage and branching
     ! but renders the graph immutable.
-
-!    procedure(add_graph_ifc), deferred      :: add
 
 
     !-------------
@@ -188,17 +186,11 @@ abstract interface                                                         !
         integer :: edges(2,num_edges)
     end function get_edges_ifc
 
-    subroutine add_edge_ifc(g,i,j)
+    subroutine change_edge_ifc(g,i,j)
         import :: graph
         class(graph), intent(inout) :: g
         integer, intent(in) :: i,j
-    end subroutine add_edge_ifc
-
-    subroutine delete_edge_ifc(g,i,j)
-        import :: graph
-        class(graph), intent(inout) :: g
-        integer, intent(in) :: i,j
-    end subroutine delete_edge_ifc
+    end subroutine change_edge_ifc
 
     subroutine permute_graph_ifc(g,p,edge_p)
         import :: graph
@@ -207,16 +199,11 @@ abstract interface                                                         !
         integer, allocatable, intent(out), optional :: edge_p(:,:)
     end subroutine permute_graph_ifc
 
-    subroutine compress_graph_ifc(g)
+    subroutine compress_graph_ifc(g,edge_p)
         import :: graph
         class(graph), intent(inout) :: g
+        integer, allocatable, intent(inout), optional :: edge_p(:,:)
     end subroutine compress_graph_ifc
-
-    subroutine add_graph_ifc(g,g1,g2)
-        import :: graph
-        class(graph), intent(inout) :: g
-        class(graph), intent(in)    :: g1, g2
-    end subroutine add_graph_ifc
 
     subroutine free_ifc(g)
         import :: graph

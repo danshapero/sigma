@@ -9,7 +9,7 @@ implicit none
     integer :: i,j,k,frmt,ordering
     real(dp) :: z
     logical :: correct
-    integer, allocatable :: edges(:,:), nbrs(:), p(:), num_nbrs(:)
+    integer, allocatable :: edges(:,:), nbrs(:), p(:)
     real(dp), allocatable :: x(:), y(:)
     character(len=3) :: orientation
     real(dp), allocatable :: B(:,:)
