@@ -301,6 +301,25 @@ implicit none
             call exit(1)
         endif
 
+        ! Check that compressing the graph works properly
+        call g%compress()
+        correct = .true.
+        correct = correct .and. g%connected(1,3) .and. g%connected(1,5) &
+                        & .and. g%connected(1,7)
+        do i=2,7
+            j = mod(i-1,6)+2
+            correct = correct .and. g%connected(i,j)
+
+            j = mod(i+3,6)+2
+            correct = correct .and. g%connected(i,j)
+        enddo
+        if (.not.correct) then
+            print *, 'Test',test
+            print *, 'Graph connectivity not preserved by compressing'
+            print *, 'storage space.'
+            call exit(1)
+        endif
+
         call g%free()
 
         deallocate(g,nbrs,p)

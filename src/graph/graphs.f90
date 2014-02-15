@@ -96,6 +96,10 @@ contains
     ! pre-allocated for adding edges. Reduces memory usage and branching
     ! but renders the graph immutable.
 
+    procedure(decompress_graph_ifc), deferred :: decompress
+    ! Reverses the compress operation and makes the graph mutable, but
+    ! there will be additional branching due to null edges.
+
 
     !-------------
     ! Destructors
@@ -204,6 +208,11 @@ abstract interface                                                         !
         class(graph), intent(inout) :: g
         integer, allocatable, intent(inout), optional :: edge_p(:,:)
     end subroutine compress_graph_ifc
+
+    subroutine decompress_graph_ifc(g)
+        import :: graph
+        class(graph), intent(inout) :: g
+    end subroutine decompress_graph_ifc
 
     subroutine free_ifc(g)
         import :: graph

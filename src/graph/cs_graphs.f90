@@ -36,6 +36,7 @@ contains
     procedure :: left_permute => cs_graph_left_permute
     procedure :: right_permute => cs_graph_right_permute
     procedure :: compress => cs_graph_compress
+    procedure :: decompress => cs_graph_decompress
 
     !-------------
     ! Destructors
@@ -585,12 +586,27 @@ subroutine cs_graph_compress(g,edge_p)                                     !
         ! owned by the graph
         call move_alloc(from=ptr, to=g%ptr)
         call move_alloc(from=node, to=g%node)
+
+        ! Change the graph's capacity to reflect that there is no
+        ! extra storage
+        g%capacity = g%ne
     endif
 
     ! Mark the graph as immutable
     g%mutable = .false.
 
 end subroutine cs_graph_compress
+
+
+
+!--------------------------------------------------------------------------!
+subroutine cs_graph_decompress(g)                                          !
+!--------------------------------------------------------------------------!
+    class(cs_graph), intent(inout) :: g
+
+    g%mutable = .true.
+
+end subroutine cs_graph_decompress
 
 
 
@@ -609,6 +625,7 @@ subroutine cs_free(g)                                                      !
     g%m = 0
     g%ne = 0
     g%max_degree = 0
+    g%capacity = 0
 
     g%mutable = .true.
 

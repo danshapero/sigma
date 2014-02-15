@@ -36,6 +36,7 @@ contains
     procedure :: left_permute => ellpack_graph_left_permute
     procedure :: right_permute => ellpack_graph_right_permute
     procedure :: compress => ellpack_graph_compress
+    procedure :: decompress => ellpack_graph_decompress
 
     !-------------
     ! Destructors
@@ -459,11 +460,13 @@ subroutine ellpack_graph_compress(g,edge_p)                                !
     integer :: i,j,k,jt
     integer, allocatable :: node(:,:)
 
-    ! If the maximum number of neighbors possible for each verte of the
+    ! If the maximum number of neighbors possible for each vertex of the
     ! graph is greater than the maximum degree of the graph, we can reduce
     ! the storage needed
     if (g%max_neighbors/=g%max_degree) then
         allocate(node(g%max_degree,g%n))
+        g%max_neighbors = g%max_degree
+        g%capacity = g%max_degree * g%n
 
         ! Copy the array g%node into a smaller temporary array node
         do i=1,g%n
@@ -490,7 +493,7 @@ subroutine ellpack_graph_compress(g,edge_p)                                !
     ! Fill out any remaining null edges with copies of existing edges so
     ! that the edge iterator never returns a null edge
     do i=1,g%n
-        jt = max(g%node(1,i),1)
+        jt = g%node(1,i)
         do k=1,g%max_degree-1
             j = g%node(k,i)
             if (j/=0) then
@@ -505,6 +508,33 @@ subroutine ellpack_graph_compress(g,edge_p)                                !
     g%mutable = .false.
 
 end subroutine ellpack_graph_compress
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ellpack_graph_decompress(g)                                     !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(ellpack_graph), intent(inout) :: g
+    ! local variables
+    integer :: i,j1,j2,k
+
+    g%mutable = .true.
+
+    ! If there were any duplicate edges created as a result of compression,
+    ! replace them with null edges.
+    do i=1,g%n
+        do k=g%max_neighbors,2,-1
+            j1 = g%node(k,i)
+            j2 = g%node(k-1,i)
+            if (j1==j2) g%node(k,i) = 0
+        enddo
+    enddo
+    ! Note that if you had an isolated vertex with no edges at all, this
+    ! would spuriously leave it with one edge left. But that's a pretty
+    ! weird edge case.
+
+end subroutine ellpack_graph_decompress
 
 
 
@@ -523,6 +553,7 @@ subroutine ellpack_free(g)                                                 !
     g%m = 0
     g%ne = 0
     g%max_degree = 0
+    g%capacity = 0
 
     g%mutable = .true.
 
