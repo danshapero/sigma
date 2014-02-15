@@ -1,8 +1,12 @@
 !==========================================================================!
 program graph_example_1                                                    !
 !==========================================================================!
-!==== Example program demonstrating how to initialize a graph and fill ====!
-!==== it with some random edges, then do a few operations on it.       ====!
+!==== Example program demonstrating the following graph operations:    ====!
+!====       o  initialize a graph with a given number of vertices      ====!
+!====       o  add edges into a graph (in our case, this is done       ====!
+!====               randomly, with a fixed probability)                ====!
+!====       o  check whether two vertices are connected                ====!
+!====       o  find the degree of a vertex                             ====!
 !==========================================================================!
 
 use fempack
@@ -16,15 +20,13 @@ implicit none
     ! integer indices
     integer :: i,j,k
 
-    ! variables for computing the degree of the graph
+    ! variables for estimating the probability that two vertices are
+    ! connected
+    integer :: num_connected
+
+    ! variables for computing statistics on the degree of graph vertices
     integer :: d, min_degree, max_degree
     real(dp) :: avg_degree
-
-    ! variables for doing a breadth-first search through the graph
-    integer, allocatable :: neighbors(:)
-    integer :: component_size
-    type(dynamic_array) :: stack
-    logical :: found(512)
 
 
 
@@ -36,7 +38,7 @@ implicit none
 
 
     !----------------------------------------------------------------------!
-    ! Set up a graph                                                       !
+    ! Set up a graph with edges chosen at random                           !
     !----------------------------------------------------------------------!
 
     ! Initialize g to be a graph with 512 vertices
@@ -57,12 +59,33 @@ implicit none
         enddo
     enddo
 
+    print *, 'Random graph generated with 512 vertices.'
+
+
+
+    !----------------------------------------------------------------------!
+    ! Estimate the probability that two nodes are connected                !
+    !----------------------------------------------------------------------!
+    num_connected = 0
+
+    do k=1,1024
+        call random_number(z)
+
+        i = int( 512*z(1)+1 )
+        j = int( 512*z(2)+1 )
+
+        if (g%connected(i,j)) then
+            num_connected = num_connected+1
+        endif
+    enddo
+
+    print *, 'From a sample of 1024 edges,',num_connected,'were connected.'
+
 
 
     !----------------------------------------------------------------------!
     ! Compute the minimum, maximum and average degree of the graph         !
     !----------------------------------------------------------------------!
-
     min_degree = 512
     max_degree = 0
     avg_degree = 0.0_dp
@@ -78,68 +101,8 @@ implicit none
 
     avg_degree = avg_degree/512
 
-    print *, 'Random graph generated with 512 vertices and',g%ne,'edges.'
     print *, 'Min/max/average degrees:',min_degree,max_degree,avg_degree
-    print *, ' '
 
-
-
-    !----------------------------------------------------------------------!
-    ! Depth-first search the graph                                         !
-    !----------------------------------------------------------------------!
-
-    allocate(neighbors(max_degree))
-    found = .false.
-
-    ! initialize a stack to store the edges that need visiting
-    call stack%init()
-
-    ! enqueue vertex #1
-    call stack%push(1)
-    found(1) = .true.
-
-    ! continue until the queue is empty
-    do while( stack%length>0 )
-        ! pop a vertex i off the front of the queue
-        i = stack%pop()
-
-        ! find the degree of that vertex
-        d = g%degree(i)
-
-        ! find all the neighbors of vertex i
-        call g%neighbors(i,neighbors)
-
-        ! for each of those neighbors j,
-        do k=1,d
-            j = neighbors(k)
-            ! check if vertex j has been visited yet.
-            if (.not.found(j)) then
-                ! if not, mark it as having been visited and enter it
-                ! into the queue
-                found(j) = .true.
-                call stack%push(j)
-            endif
-        enddo
-    enddo
-
-
-
-    !----------------------------------------------------------------------!
-    ! Find the size of the connected component of vertex 1                 !
-    !----------------------------------------------------------------------!
-
-    component_size = 0
-    do i=1,512
-        if (found(i)) component_size = component_size+1
-    enddo
-
-    print *, 'Depth-first search of graph complete.'
-    if (component_size==512) then
-        print *, 'Graph is connected! Hooray!'
-    else
-        print *, 'Graph is not connected! Oh bother!'
-        print *, 'Size of connected component of vertex #1:',component_size
-    endif
 
 
 end program graph_example_1

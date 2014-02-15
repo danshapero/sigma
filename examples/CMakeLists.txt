@@ -6,3 +6,6 @@ target_link_libraries(permutation fempack)
 
 add_executable(graph_example_1 graphs/graph_example_1.f90)
 target_link_libraries(graph_example_1 fempack)
+
+add_executable(graph_example_2 graphs/graph_example_2.f90)
+target_link_libraries(graph_example_2 fempack)
