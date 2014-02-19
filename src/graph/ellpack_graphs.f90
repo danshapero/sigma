@@ -494,7 +494,7 @@ subroutine ellpack_graph_compress(g,edge_p)                                !
     ! that the edge iterator never returns a null edge
     do i=1,g%n
         jt = g%node(1,i)
-        do k=1,g%max_degree-1
+        do k=2,g%max_degree
             j = g%node(k,i)
             if (j/=0) then
                 jt = j

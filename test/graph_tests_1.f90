@@ -320,6 +320,25 @@ implicit none
             call exit(1)
         endif
 
+        cursor = g%make_cursor(0)
+        num_blocks = (cursor%final-cursor%start)/12+1
+        do n=1,num_blocks
+            edges = g%get_edges(cursor,12,num_returned)
+
+            do k=1,num_returned
+                i = edges(1,k)
+                j = edges(2,k)
+
+                if (i==0 .or. j==0) then
+                    print *, 'Test',test
+                    print *, 'After compressing graph, edge iterator'
+                    print *, 'should not be outputting any null edges'
+                    print *, 'Returned a null edge',i,j
+                    call exit(1)
+                endif
+            enddo
+        enddo        
+
         call g%free()
 
         deallocate(g,nbrs,p)

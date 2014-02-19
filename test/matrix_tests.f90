@@ -94,6 +94,12 @@ implicit none
                 print *, 'Value found:',maxval(dabs(y))-2.0_dp
             endif
 
+            ! Compress the matrix and test to see if matrix multiplication
+            ! still works
+            call A%compress()
+
+            call A%matvec_add(x,y)
+
             ! Set all the matrix entries so it's easiest to tell if we've
             ! permuted everything right, and set up an equivalent dense
             ! matrix to check against

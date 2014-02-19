@@ -495,7 +495,7 @@ subroutine sparse_matvec_add_compressed(A,x,y,trans)                       !
 
         ! Orient the edges according to the whether the matrix is in row-
         ! or column-orientation
-        edges = edges(order,:)
+        !edges = edges(order,:)
 
         ! Go through all the edges (i,j) that we just plucked from A%g
         do k=1,num_returned
@@ -543,7 +543,7 @@ subroutine sparse_matvec_add_decompressed(A,x,y,trans)                     !
 
         ! Orient the edges according to the whether the matrix is in row-
         ! or column-orientation
-        edges = edges(order,:)
+        !edges = edges(order,:)
 
         ! Go through all the edges (i,j) that we just plucked from A%g
         do k=1,num_returned
