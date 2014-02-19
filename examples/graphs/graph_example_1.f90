@@ -79,7 +79,8 @@ implicit none
         endif
     enddo
 
-    print *, 'From a sample of 1024 edges,',num_connected,'were connected.'
+    print *, 'From a random sample of 1024 edges,'
+    print *, num_connected,'were connected.'
 
 
 

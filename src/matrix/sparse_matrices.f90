@@ -13,6 +13,7 @@ module sparse_matrices                                                     !
 use types, only: dp
 use graphs
 use ll_graphs
+use cs_graphs
 
 implicit none
 
@@ -36,31 +37,51 @@ contains
     ! Constructors
     !--------------
     procedure :: init => sparse_mat_init
+    ! Initialize a sparse matrix given the number of rows and columns,
+    ! and the desired ordering, e.g. row- or column-major ordering.
 
 
     !-----------
     ! Accessors
     !-----------
     procedure :: get_value => sparse_mat_get_value
+    ! Return a matrix entry
 
 
     !----------
     ! Mutators
     !----------
     procedure :: set_value => sparse_mat_set_value
+    ! Set the value of a matrix entry
+
     procedure :: add_value => sparse_mat_add_value
-    procedure :: add_matrix => sparse_mat_add_mats
+    ! Add a number to a matrix entry
+
+    procedure :: add => sparse_mat_add_mats
+    ! Compute the sum A <- A+B
+
     procedure :: zero => sparse_mat_zero
+    ! Set all entries of a sparse matrix to zero
+
     procedure :: left_permute => sparse_mat_leftperm
+    ! Permute the rows of a sparse matrix
+
     procedure :: right_permute => sparse_mat_rightperm
+    ! Permute the columns of a sparse matrix
+
     procedure :: compress => sparse_mat_compress
+    ! Compress the storage of a sparse matrix. This makes the underlying
+    ! connectivity graph immutable
 
 
     !------------------------------
     ! Matrix-vector multiplication
     !------------------------------
     procedure :: matvec => sparse_mat_matvec
+    ! Compute the product y = A*x of a matrix and a vector
+
     procedure :: matvec_add => sparse_mat_matvec_add
+    ! Add the product A*x to the vector y
 
 
     !-------------
@@ -176,7 +197,6 @@ end subroutine sparse_mat_init
 
 
 
-
 !==========================================================================!
 !==== Accessors                                                        ====!
 !==========================================================================!
@@ -265,16 +285,65 @@ end subroutine sparse_mat_add_value
 
 
 !--------------------------------------------------------------------------!
-subroutine sparse_mat_add_mats(A,B,C)                                      !
+subroutine sparse_mat_add_mats(A,B)                                        !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(sparse_matrix), intent(inout) :: A
-    type(sparse_matrix), intent(in) :: B, C
+    class(sparse_matrix), intent(in)    :: B
     ! local variables
-    integer :: i,j,k
+    integer :: i,j,k,l,n,ind(2)
+    integer :: edges(2,64), num_blocks, num_returned
     type(graph_edge_cursor) :: cursor
+    type(dynamic_array) :: stack
 
-    ! Beats me
+    ! Initialize an empty stack which will store entries of B that are zero
+    ! in A. For these entries, we may need to allocate additional storage
+    ! space in the structure of A.
+    call stack%init()
+
+    ! Make a cursor for iterating through graph edges.
+    cursor = B%g%make_cursor(0)
+    num_blocks = (cursor%final-cursor%start+1)/64+1
+
+    ! Iterate through all the non-zero entries of B.
+    do n=1,num_blocks
+        ! Get a chunk of edges.
+        edges = B%g%get_edges(cursor,64,num_returned)
+
+        ! For each edge,
+        do k=1,num_returned
+            i = edges(B%order(1),k)
+            j = edges(B%order(2),k)
+
+            ind = [i,j]
+            ind = ind(A%order)
+
+            ! if that edge is non-null,
+            if (ind(1)/=0 .and. ind(2)/=0) then
+                ! find the corresponding edge in A.
+                l = A%g%find_edge(ind(1),ind(2))
+
+                ! If that edge exists in A,
+                if (l/=-1) then
+                    ! add the value from B to A.
+                    A%val(l) = A%val(l)+B%val(64*(n-1)+k)
+                else
+                    ! Otherwise, B has a non-zero entry where A does not.
+                    ! Push those entries onto the stack so we can expand the
+                    ! storage of A later.
+                    call stack%push(64*(n-1)+k)
+                endif
+            endif
+        enddo
+    enddo
+
+    ! For now, if B is not structurally a sub-matrix of A, we throw an error
+    ! because I don't feel like writing this yet.
+    if (stack%length>0) then
+        print *, 'Attempted to add a matrix B into a matrix A which would'
+        print *, 'require expanding the storage of A. Not implemented yet.'
+        call exit(1)
+    endif
 
 end subroutine sparse_mat_add_mats
 
