@@ -26,14 +26,22 @@ contains
     !--------------
     ! Constructors
     !--------------
-    procedure(init_graph_ifc), deferred :: init
+    procedure(init_graph_const_deg_ifc), deferred :: init_const_degree
     ! Initialize a graph based on the number of left- and right-
     ! vertices, and optionally the maximum number of neighbors for each
     ! vertex.
 
+    procedure(init_graph_var_deg_ifc), deferred :: init_variable_degree
+    ! Initialize a graph based on the number of left- and right- vertices
+    ! and the number of neighbors each vertex can have, which may be
+    ! different from one vertex to the next.
+
     procedure(copy_graph_ifc), deferred :: copy
     ! Copy the connectivity structure of another graph, which may well
     ! be of a different type.
+
+    generic :: init => init_const_degree, init_variable_degree, copy
+    ! Overload all the previous constructors
 
 
     !-----------
@@ -133,12 +141,19 @@ end type graph_edge_cursor
 !--------------------------------------------------------------------------!
 abstract interface                                                         !
 !--------------------------------------------------------------------------!
-    subroutine init_graph_ifc(g,n,m,num_neighbor_nodes)
+    subroutine init_graph_const_deg_ifc(g,n,m,degree)
         import :: graph
         class(graph), intent(inout) :: g
         integer, intent(in) :: n
-        integer, intent(in), optional :: m, num_neighbor_nodes(:)
-    end subroutine init_graph_ifc
+        integer, intent(in), optional :: m, degree
+    end subroutine init_graph_const_deg_ifc
+
+    subroutine init_graph_var_deg_ifc(g,n,m,degrees)
+        import :: graph
+        class(graph), intent(inout) :: g
+        integer, intent(in) :: n, degrees(:)
+        integer, intent(in), optional :: m
+    end subroutine init_graph_var_deg_ifc
 
     subroutine copy_graph_ifc(g,h)
         import :: graph

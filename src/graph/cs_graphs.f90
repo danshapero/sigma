@@ -14,7 +14,8 @@ type, extends(graph) :: cs_graph                                           !
 contains
     !--------------
     ! Constructors
-    procedure :: init => cs_init
+    procedure :: init_const_degree => cs_init_const_degree
+    procedure :: init_variable_degree => cs_init_variable_degree
     procedure :: copy => cs_graph_copy
 
     !-----------
@@ -65,12 +66,69 @@ contains
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine cs_init(g,n,m,num_neighbor_nodes)                               !
+subroutine cs_init_const_degree(g,n,m,degree)                              !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_graph), intent(inout) :: g
     integer, intent(in) :: n
-    integer, intent(in), optional :: m, num_neighbor_nodes(:)
+    integer, intent(in), optional :: m, degree
+    ! local variables
+    integer :: k, ne
+
+    ! Set the number of (left-)nodes in the graph and allocate the node
+    ! pointer array ptr
+    g%n = n
+    allocate( g%ptr(n+1) )
+
+    ! If the graph is not square, set the number of right-nodes
+    if (present(m)) then
+        g%m = m
+    else
+        g%m = n
+    endif
+
+    ! If the degree argument is present, we have an upper bound on the
+    ! number of edges to allocate in the graph
+    if (present(degree)) then
+        ne = degree*g%n
+    else
+        ne = g%n
+    endif
+
+    ! Allocate the node array to be the number of edges, whether we actually
+    ! have an upper bound on what that is or we've set it to some default
+    allocate( g%node(ne) )
+    g%node = 0
+    g%capacity = ne
+
+    ! If we know how many neighbors each vertex has, fill in the ptr
+    ! array accordingly
+    if (present(degree)) then
+        do k=1,g%n+1
+            g%ptr(k) = (k-1)*degree+1
+        enddo
+    else
+        g%ptr = 1
+    endif
+
+    ! The total number of edges and max degree at initialization is zero
+    g%ne = 0
+    g%max_degree = 0
+
+    ! Mark the graph as mutable
+    g%mutable = .true.
+
+end subroutine cs_init_const_degree
+
+
+
+!--------------------------------------------------------------------------!
+subroutine cs_init_variable_degree(g,n,m,degrees)                          !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(cs_graph), intent(inout) :: g
+    integer, intent(in) :: n, degrees(:)
+    integer, intent(in), optional :: m
     ! local variables
     integer :: k,ne
 
@@ -86,31 +144,20 @@ subroutine cs_init(g,n,m,num_neighbor_nodes)                               !
         g%m = n
     endif
 
-    ! If the graph is being initialized with a set of edges, set the number
-    ! of edges and allocate space in the node array node
-    if (present(num_neighbor_nodes)) then
-        ne = sum(num_neighbor_nodes)
-    else
-        ne = g%n
-    endif
+    ! Set the number of edges to allocate in the node array
+    ne = sum(degrees)
 
-    ! Allocate the node array to be the number of edges, whether we actually
-    ! have an upper bound on what that is or we've set it to some default
+    ! Allocate the node array to be the number of edges
     allocate( g%node(ne) )
     g%node = 0
     g%capacity = ne
 
     ! If we know how many neighbors each vertex has, fill in the ptr
     ! array accordingly
-    if (present(num_neighbor_nodes)) then
-        g%ptr(1) = 1
-        do k=1,g%n
-            g%ptr(k+1) = g%ptr(k)+num_neighbor_nodes(k)
-        enddo
-    ! Otherwise, ptr is all 1s
-    else
-        g%ptr = 1
-    endif
+    g%ptr(1) = 1
+    do k=1,g%n
+        g%ptr(k+1) = g%ptr(k)+degrees(k)
+    enddo
 
     ! The total number of edges and max degree at initialization is zero
     g%ne = 0
@@ -119,7 +166,7 @@ subroutine cs_init(g,n,m,num_neighbor_nodes)                               !
     ! Mark the graph as mutable
     g%mutable = .true.
 
-end subroutine cs_init
+end subroutine cs_init_variable_degree
 
 
 

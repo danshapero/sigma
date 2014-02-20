@@ -13,7 +13,8 @@ type, extends(graph) :: ll_graph                                           !
 contains
     !--------------
     ! Constructors
-    procedure :: init => ll_init
+    procedure :: init_const_degree => ll_init_const_degree
+    procedure :: init_variable_degree => ll_init_variable_degree
     procedure :: copy => ll_graph_copy
 
     !-----------
@@ -60,14 +61,14 @@ contains
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine ll_init(g,n,m,num_neighbor_nodes)                               !
+subroutine ll_init_const_degree(g,n,m,degree)                              !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(ll_graph), intent(inout) :: g
     integer, intent(in) :: n
-    integer, intent(in), optional :: m, num_neighbor_nodes(:)
+    integer, intent(in), optional :: m, degree
     ! local variables
-    integer :: k,ne
+    integer :: k, ne
 
     g%n = n
     allocate(g%lists(n))
@@ -80,12 +81,11 @@ subroutine ll_init(g,n,m,num_neighbor_nodes)                               !
 
     ! If we know how many neighbors each vertex has, initialize each
     ! dynamic array with the requisite amount of storage.
-    if (present(num_neighbor_nodes)) then
+    if (present(degree)) then
         do k=1,n
-            call g%lists(k)%init(capacity=num_neighbor_nodes(k), &
-                & min_capacity=2)
+            call g%lists(k)%init(capacity=degree, min_capacity=2)
         enddo
-        ne = sum(num_neighbor_nodes)
+        ne = degree*g%n
     else
         do k=1,n
             call g%lists(k)%init(capacity=4, min_capacity=2)
@@ -101,7 +101,44 @@ subroutine ll_init(g,n,m,num_neighbor_nodes)                               !
     ! Mark the graph as mutable
     g%mutable = .true.
 
-end subroutine ll_init
+end subroutine ll_init_const_degree
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ll_init_variable_degree(g,n,m,degrees)                          !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(ll_graph), intent(inout) :: g
+    integer, intent(in) :: n, degrees(:)
+    integer, intent(in), optional :: m
+    ! local variables
+    integer :: k,ne
+
+    g%n = n
+    allocate(g%lists(n))
+
+    if (present(m)) then
+        g%m = m
+    else
+        g%m = n
+    endif
+
+    ! Initialize each dynamic array with the storage specified by the
+    ! `degrees` argument.
+    do k=1,n
+        call g%lists(k)%init(capacity=degrees(k), min_capacity=2)
+    enddo
+
+    ! The total number of edges and max degree at initialization is zero
+    g%ne = 0
+    g%max_degree = 0
+    g%capacity = sum(degrees)
+
+    ! Mark the graph as mutable
+    g%mutable = .true.
+
+end subroutine ll_init_variable_degree
 
 
 

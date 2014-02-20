@@ -15,7 +15,8 @@ type, extends(graph) :: coo_graph                                          !
 contains
     !--------------
     ! Constructors
-    procedure :: init => coo_init
+    procedure :: init_const_degree => coo_init_const_degree
+    procedure :: init_variable_degree => coo_init_variable_degree
     procedure :: copy => coo_graph_copy
 
     !-----------
@@ -62,12 +63,12 @@ contains
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine coo_init(g,n,m,num_neighbor_nodes)                              !
+subroutine coo_init_const_degree(g,n,m,degree)                             !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(coo_graph), intent(inout) :: g
     integer, intent(in) :: n
-    integer, intent(in), optional :: m, num_neighbor_nodes(:)
+    integer, intent(in), optional :: m, degree
     ! local variables
     integer :: ne
 
@@ -81,10 +82,8 @@ subroutine coo_init(g,n,m,num_neighbor_nodes)                              !
         g%m = n
     endif
 
-    ! If we know how many neighbors each vertex has, the sum of this list
-    ! gives a bound on how much space we should allocate
-    if (present(num_neighbor_nodes)) then
-        ne = sum(num_neighbor_nodes)
+    if (present(degree)) then
+        ne = degree*g%n
     else
         ne = max(g%m,g%n)
     endif
@@ -100,7 +99,45 @@ subroutine coo_init(g,n,m,num_neighbor_nodes)                              !
     ! Mark the graph as mutable
     g%mutable = .true.
 
-end subroutine coo_init
+end subroutine coo_init_const_degree
+
+
+
+!--------------------------------------------------------------------------!
+subroutine coo_init_variable_degree(g,n,m,degrees)                         !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(coo_graph), intent(inout) :: g
+    integer, intent(in) :: n, degrees(:)
+    integer, intent(in), optional :: m
+    ! local variables
+    integer :: ne
+
+    g%n = n
+    allocate(g%degrees(n))
+    g%degrees = 0
+
+    if (present(m)) then
+        g%m = m
+    else
+        g%m = n
+    endif
+
+    ! The sum of the degree list gives a bound on how much space to allocate
+    ne = sum(degrees)
+
+    call g%edges(1)%init(capacity=ne)
+    call g%edges(2)%init(capacity=ne)
+
+    ! At initialization, the number of edges and max degree is zero
+    g%ne = 0
+    g%max_degree = 0
+    g%capacity = ne
+
+    ! Mark the graph as mutable
+    g%mutable = .true.
+
+end subroutine coo_init_variable_degree
 
 
 

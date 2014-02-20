@@ -14,7 +14,8 @@ type, extends(graph) :: ellpack_graph                                      !
 contains
     !--------------
     ! Constructors
-    procedure :: init => ellpack_graph_init
+    procedure :: init_const_degree => ellpack_init_const_degree
+    procedure :: init_variable_degree => ellpack_init_variable_degree
     procedure :: copy => ellpack_graph_copy
 
     !-----------
@@ -66,11 +67,11 @@ contains
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine ellpack_graph_init(g,n,m,num_neighbor_nodes)                    !
+subroutine ellpack_init_const_degree(g,n,m,degree)                         !
 !--------------------------------------------------------------------------!
     class(ellpack_graph), intent(inout) :: g
     integer, intent(in) :: n
-    integer, intent(in), optional :: m, num_neighbor_nodes(:)
+    integer, intent(in), optional :: m, degree
 
     g%n = n
 
@@ -80,11 +81,12 @@ subroutine ellpack_graph_init(g,n,m,num_neighbor_nodes)                    !
         g%m = n
     endif
 
-    if (present(num_neighbor_nodes)) then
-        g%max_neighbors = maxval(num_neighbor_nodes)
+    if (present(degree)) then
+        g%max_neighbors = degree
     else
-        g%max_neighbors = 6
+        g%max_neighbors = 1
     endif
+
     allocate(g%node(g%max_neighbors,g%n))
     g%node = 0
     g%max_degree = 0
@@ -94,7 +96,37 @@ subroutine ellpack_graph_init(g,n,m,num_neighbor_nodes)                    !
     ! Mark the graph as mutable
     g%mutable = .true.
 
-end subroutine ellpack_graph_init
+end subroutine ellpack_init_const_degree
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ellpack_init_variable_degree(g,n,m,degrees)                     !
+!--------------------------------------------------------------------------!
+    class(ellpack_graph), intent(inout) :: g
+    integer, intent(in) :: n, degrees(:)
+    integer, intent(in), optional :: m
+
+    g%n = n
+
+    if (present(m)) then
+        g%m = m
+    else
+        g%m = n
+    endif
+
+    g%max_neighbors = maxval(degrees)
+
+    allocate(g%node(g%max_neighbors,g%n))
+    g%node = 0
+    g%max_degree = 0
+    g%ne = 0
+    g%capacity = g%max_neighbors*g%n
+
+    ! Mark the graph as mutable
+    g%mutable = .true.
+
+end subroutine ellpack_init_variable_degree
 
 
 

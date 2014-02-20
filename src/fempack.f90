@@ -52,7 +52,7 @@ subroutine new_graph(g,graph_format,n,m,num_nbrs)                          !
             allocate(ellpack_graph::g)
     end select
 
-    call g%init(n,m=m,num_neighbor_nodes=num_nbrs)
+    call g%init(n,m=m,degrees=num_nbrs)
     
 end subroutine new_graph
 
