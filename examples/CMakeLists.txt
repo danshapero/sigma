@@ -9,3 +9,6 @@ target_link_libraries(graph_example_1 fempack)
 
 add_executable(graph_example_2 graphs/graph_example_2.f90)
 target_link_libraries(graph_example_2 fempack)
+
+add_executable(graph_example_3 graphs/graph_example_3.f90)
+target_link_libraries(graph_example_3 fempack)
