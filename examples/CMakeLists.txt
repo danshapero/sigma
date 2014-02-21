@@ -12,3 +12,6 @@ target_link_libraries(graph_example_2 fempack)
 
 add_executable(graph_example_3 graphs/graph_example_3.f90)
 target_link_libraries(graph_example_3 fempack)
+
+add_executable(matrix_example_1 matrices/matrix_example_1.f90)
+target_link_libraries(matrix_example_1 fempack)
