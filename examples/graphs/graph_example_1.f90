@@ -3,10 +3,12 @@ program graph_example_1                                                    !
 !==========================================================================!
 !==== Example program demonstrating the following graph operations:    ====!
 !====       o  initialize a graph with a given number of vertices      ====!
-!====       o  add edges into a graph (in our case, this is done       ====!
-!====               randomly, with a fixed probability)                ====!
+!====       o  add edges into a graph                                  ====!
 !====       o  check whether two vertices are connected                ====!
 !====       o  find the degree of a vertex                             ====!
+!==== These are illustrated by constructing a *random* graph using     ====!
+!==== the *Erdos-Renyi* model: two vertices i, j are connected with    ====!
+!==== some fixed probability p, independent of all other edges.        ====!
 !==========================================================================!
 
 use fempack

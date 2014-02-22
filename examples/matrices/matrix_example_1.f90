@@ -9,6 +9,11 @@ program matrix_example_1                                                   !
 !====       o  multiply the transpose of a matrix by a vector          ====!
 !==== This program assumes the user has some familiarity with graph    ====!
 !==== operations as a prerequisite.                                    ====!
+!==== The matrix operations are illustrated by generating a random     ====!
+!==== directed graph and simulating a random walk on this graph.       ====!
+!==== The matrix generated is the transition probability matrix for    ====!
+!==== underlying graph, assuming that the random walker is equally     ====!
+!==== likely to go to any neighbor.                                    ====!
 !==========================================================================!
 
 use fempack
@@ -31,7 +36,7 @@ implicit none
     integer, allocatable :: neighbors(:)
 
     ! some vectors
-    real(dp), allocatable :: x(:), y(:), q(:)
+    real(dp), allocatable :: x(:), y(:)
 
 
 
@@ -39,7 +44,7 @@ implicit none
     call init_seed()
     p = 7.0/512
 
-    allocate(x(512), y(512), q(512))
+    allocate(x(512), y(512))
 
 
 
@@ -53,7 +58,7 @@ implicit none
         call random_number(z)
 
         do j=1,512
-            if ( z(j)<p ) call g%add_edge(j,i)
+            if ( z(j)<p ) call g%add_edge(i,j)
         enddo
     enddo
 

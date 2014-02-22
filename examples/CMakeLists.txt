@@ -15,3 +15,6 @@ target_link_libraries(graph_example_3 fempack)
 
 add_executable(matrix_example_1 matrices/matrix_example_1.f90)
 target_link_libraries(matrix_example_1 fempack)
+
+add_executable(solver_example_1 solvers/solver_example_1.f90)
+target_link_libraries(solver_example_1 fempack)

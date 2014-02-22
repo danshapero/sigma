@@ -100,7 +100,7 @@ implicit none
         ! Iterate through all the edges of g and make sure they all are
         ! connected in h
         cursor = g%make_cursor(0)
-        num_blocks = (cursor%final-cursor%start+1)/64+1
+        num_blocks = (cursor%final-cursor%start)/64+1
 
         do n=1,num_blocks
             edges = g%get_edges(cursor,64,num_returned)
@@ -124,7 +124,7 @@ implicit none
         ! Iterate through all the edges of h and make sure they all are
         ! connected in g
         cursor = h%make_cursor(0)
-        num_blocks = (cursor%final-cursor%start+1)/64+1
+        num_blocks = (cursor%final-cursor%start)/64+1
 
         do n=1,num_blocks
             edges = h%get_edges(cursor,64,num_returned)

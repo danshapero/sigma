@@ -44,7 +44,7 @@ implicit none
 
     !----------------------------------------------------------------------!
     ! Set up a graph representing the integer lattice on a grid of         !
-    ! 1024 x 1024 points.                                                  !
+    ! nx x ny points.                                                      !
     !----------------------------------------------------------------------!
     call g%init(nx*ny,degree=4)
 

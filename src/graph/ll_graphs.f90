@@ -162,7 +162,7 @@ subroutine ll_graph_copy(g,h)                                              !
     cursor = h%make_cursor(0)
 
     ! Find the number of chunks into which we're dividing the edges of h
-    num_blocks = (cursor%final-cursor%start+1)/64+1
+    num_blocks = (cursor%final-cursor%start)/64+1
 
     ! Iterate through all the chunks
     do n=1,num_blocks

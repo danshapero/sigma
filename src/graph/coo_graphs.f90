@@ -170,7 +170,7 @@ subroutine coo_graph_copy(g,h)                                             !
 
     ! Make an edge iterator for the copied graph h
     cursor = h%make_cursor(0)
-    num_blocks = (cursor%final-cursor%start+1)/64+1
+    num_blocks = (cursor%final-cursor%start)/64+1
 
     ! Iterate through all the edges of h
     do n=1,num_blocks
