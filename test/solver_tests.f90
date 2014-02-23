@@ -1,6 +1,6 @@
 program solver_tests
 
-use fempack
+use sigma
 
 implicit none
 

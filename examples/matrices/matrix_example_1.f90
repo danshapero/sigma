@@ -16,7 +16,7 @@ program matrix_example_1                                                   !
 !==== likely to go to any neighbor.                                    ====!
 !==========================================================================!
 
-use fempack
+use sigma
 
 implicit none
 

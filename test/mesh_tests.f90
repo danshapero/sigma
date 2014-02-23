@@ -1,6 +1,6 @@
 program mesh_tests
 
-use fempack
+use sigma
 
 implicit none
 

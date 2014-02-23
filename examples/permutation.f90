@@ -1,6 +1,6 @@
 program permutation
 
-use fempack
+use sigma
 use fem
 
 implicit none

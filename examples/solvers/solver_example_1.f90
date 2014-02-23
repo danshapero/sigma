@@ -8,7 +8,7 @@ program solver_example_1                                                   !
 !==== As in previous examples, the graph is generated randomly.        ====!
 !==========================================================================!
 
-use fempack
+use sigma
 
 implicit none
 

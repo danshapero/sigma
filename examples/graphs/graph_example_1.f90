@@ -11,7 +11,7 @@ program graph_example_1                                                    !
 !==== some fixed probability p, independent of all other edges.        ====!
 !==========================================================================!
 
-use fempack
+use sigma
 
 implicit none
 

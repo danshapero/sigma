@@ -1,6 +1,6 @@
 module fem
 
-use fempack
+use sigma
 
 implicit none
 

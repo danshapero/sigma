@@ -1,6 +1,6 @@
 program graph_tests_1
 
-use fempack
+use sigma
 
 implicit none
 

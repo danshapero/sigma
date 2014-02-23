@@ -11,7 +11,7 @@ program graph_example_3                                                    !
 !==== path through the lattice?                                        ====!
 !==========================================================================!
 
-use fempack
+use sigma
 
 implicit none
 

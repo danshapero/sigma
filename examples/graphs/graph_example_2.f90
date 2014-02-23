@@ -9,7 +9,7 @@ program graph_example_2                                                    !
 !==== As in example 1, the graph is generated randomly.                ====!
 !==========================================================================!
 
-use fempack
+use sigma
 
 implicit none
 

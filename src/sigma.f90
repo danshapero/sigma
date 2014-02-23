@@ -1,4 +1,4 @@
-module fempack
+module sigma
 
 ! Use all the graph modules
 use graphs
@@ -59,5 +59,4 @@ end subroutine new_graph
 
 
 
-end module fempack
-
+end module sigma

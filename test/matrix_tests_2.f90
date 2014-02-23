@@ -1,6 +1,6 @@
 program matrix_tests_2
 
-use fempack
+use sigma
 
 implicit none
 

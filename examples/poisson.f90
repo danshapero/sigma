@@ -1,6 +1,6 @@
 program poisson
 
-use fempack
+use sigma
 use fem
 use omp_lib
 
