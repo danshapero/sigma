@@ -342,7 +342,7 @@ subroutine dynamic_array_init(a,capacity,min_capacity)                     !
     a%capacity = 32
 
     if (present(capacity)) then
-        a%capacity = max(capacity,a%capacity)
+        a%capacity = capacity
     endif
 
     if (present(min_capacity)) then
