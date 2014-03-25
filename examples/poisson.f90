@@ -28,7 +28,7 @@ implicit none
 !--------------------------------------------------------------------------!
 ! Read in the triangular mesh and assemble the matrices                    !
 !--------------------------------------------------------------------------!
-    call get_environment_variable('FEMPACK',filename)
+    call get_environment_variable('SIGMA',filename)
     filename = trim(filename)//'/examples/meshes/circle.1'
     call read_triangle_mesh(g,x,bnd,ele,filename)
 

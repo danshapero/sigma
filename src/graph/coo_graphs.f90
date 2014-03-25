@@ -357,8 +357,8 @@ subroutine coo_add_edge(g,i,j)                                             !
             g%ne = g%ne+1
             g%capacity = g%edges(1)%capacity
 
-            ! If the degree of node i is now the greatest of all nodes in the
-            ! graph, update the degree accordingly
+            ! If the degree of node i is now the greatest of all nodes in
+            ! the graph, update the degree accordingly
             g%degrees(i) = g%degrees(i)+1
             g%max_degree = max(g%max_degree,g%degrees(i))
         endif

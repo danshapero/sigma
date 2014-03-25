@@ -51,15 +51,15 @@ implicit none
     ! Make every (x,y) connected to (x,y+1), (x,y-1), (x+1,y) & (x-1,y)
     do x = 1,nx
         do y = 1,ny
-            i = nx*(x-1)+y
+            i = ny*(x-1)+y
 
             ! Add edge from (x,y) to (x,y+1) and vice versa
-            j = nx*(x-1)+mod(y,ny)+1
+            j = ny*(x-1)+mod(y,ny)+1
             call g%add_edge(i,j)
             call g%add_edge(j,i)
 
             ! (x,y) to (x+1,y) and v.v.
-            j = nx*mod(x,nx)+y
+            j = ny*mod(x,nx)+y
             call g%add_edge(i,j)
             call g%add_edge(j,i)
         enddo
@@ -67,8 +67,8 @@ implicit none
 
     ! Delete all the connections between (x,1) and (x,1024)
     do x=1,nx
-        i = nx*(x-1)+1
-        j = nx*(x-1)+ny
+        i = ny*(x-1)+1
+        j = ny*(x-1)+ny
 
         call g%delete_edge(i,j)
         call g%delete_edge(j,i)
@@ -77,7 +77,7 @@ implicit none
     ! Delete all the connections between (1,y) and (1024,y)
     do y=1,ny
         i = y
-        j = nx*(nx-1)+y
+        j = ny*(nx-1)+y
 
         call g%delete_edge(i,j)
         call g%delete_edge(j,i)
@@ -96,11 +96,11 @@ implicit none
             call random_number(z)
 
             ! Find the index for the point (x,y)
-            i = nx*(x-1)+y
+            i = ny*(x-1)+y
 
             ! If the first number is less than p, delete the connection
             ! to (x,y+1)
-            j = nx*(x-1)+mod(y,ny)+1
+            j = ny*(x-1)+mod(y,ny)+1
             if (z(1)<p) then
                 call g%delete_edge(i,j)
                 call g%delete_edge(j,i)
@@ -108,7 +108,7 @@ implicit none
 
             ! If the second number is less than p, delete the connection
             ! to (x+1,y)
-            j = nx*mod(x,nx)+y
+            j = ny*mod(x,nx)+y
             if (z(2)<p) then
                 call g%delete_edge(i,j)
                 call g%delete_edge(j,i)
