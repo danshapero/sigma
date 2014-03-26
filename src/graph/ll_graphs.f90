@@ -376,21 +376,21 @@ subroutine ll_add_edge(g,i,j)                                              !
         print *, 'Attempted to add an edge to an immutable LL graph'
         print *, 'Terminating.'
         call exit(1)
-    else
-        if (.not.g%connected(i,j)) then
-            ! Record the old capacity of the list of i's neighbors
-            cap = g%lists(i)%capacity
+    endif
 
-            ! Push the new neighbor node j onto the list of i's neighbors
-            call g%lists(i)%push(j)
+    if (.not.g%connected(i,j)) then
+        ! Record the old capacity of the list of i's neighbors
+        cap = g%lists(i)%capacity
 
-            ! Change the graph's max degree if need be
-            g%max_degree = max(g%max_degree,g%lists(i)%length)
+        ! Push the new neighbor node j onto the list of i's neighbors
+        call g%lists(i)%push(j)
 
-            ! Increment the number of edges and graph capacity
-            g%ne = g%ne+1
-            g%capacity = g%capacity+g%lists(i)%capacity-cap
-        endif
+        ! Change the graph's max degree if need be
+        g%max_degree = max(g%max_degree,g%lists(i)%length)
+
+        ! Increment the number of edges and graph capacity
+        g%ne = g%ne+1
+        g%capacity = g%capacity+g%lists(i)%capacity-cap
     endif
 
 end subroutine ll_add_edge
@@ -408,39 +408,39 @@ subroutine ll_delete_edge(g,i,j)                                           !
         print *, 'Attempted to delete an edge from an immutable LL graph'
         print *, 'Terminating.'
         call exit(1)
-    else
-        if (g%connected(i,j)) then
-            ! Record the degree of vertex i and capacity
-            degree = g%lists(i)%length
-            cap = g%lists(i)%capacity
+    endif
 
-            ! Pop from the list of i's neighbors
-            jt = g%lists(i)%pop()
+    if (g%connected(i,j)) then
+        ! Record the degree of vertex i and capacity
+        degree = g%lists(i)%length
+        cap = g%lists(i)%capacity
 
-            ! If the vertex jt popped from i's neighbors is not vertex j,
-            if (jt/=j) then
-                ! find where vertex j was stored and put jt there.
-                do k=1,g%lists(i)%length
-                    if (g%lists(i)%get_entry(k)==j) then
-                        call g%lists(i)%set_entry(k,jt)
-                    endif
-                enddo
-            endif
+        ! Pop from the list of i's neighbors
+        jt = g%lists(i)%pop()
 
-            ! If the degree of vertex i was the max degree of the graph,
-            ! check that the max degree of the graph hasn't decreased.
-            !!Make this a guaranteed O(1) operation somehow
-            if (degree==g%max_degree) then
-                g%max_degree = 0
-                do k=1,g%n
-                    g%max_degree = max(g%max_degree,g%lists(k)%length)
-                enddo
-            endif
-
-            ! Decrement the number of edges and capacity of the graph
-            g%ne = g%ne-1
-            g%capacity = g%capacity+g%lists(i)%capacity-cap
+        ! If the vertex jt popped from i's neighbors is not vertex j,
+        if (jt/=j) then
+            ! find where vertex j was stored and put jt there.
+            do k=1,g%lists(i)%length
+                if (g%lists(i)%get_entry(k)==j) then
+                    call g%lists(i)%set_entry(k,jt)
+                endif
+            enddo
         endif
+
+        ! If the degree of vertex i was the max degree of the graph,
+        ! check that the max degree of the graph hasn't decreased.
+        !!Make this a guaranteed O(1) operation somehow
+        if (degree==g%max_degree) then
+            g%max_degree = 0
+            do k=1,g%n
+                g%max_degree = max(g%max_degree,g%lists(k)%length)
+            enddo
+        endif
+
+        ! Decrement the number of edges and capacity of the graph
+        g%ne = g%ne-1
+        g%capacity = g%capacity+g%lists(i)%capacity-cap
     endif
 
 end subroutine ll_delete_edge

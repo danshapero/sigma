@@ -49,7 +49,7 @@ contains
 
     !--------------------
     ! Auxiliary routines
-    procedure :: ellpack_add_edge_with_max_degree_increase
+    procedure, private :: add_edge_with_reallocation
     procedure :: ellpack_max_degree_decrease
 end type ellpack_graph
 
@@ -347,29 +347,27 @@ subroutine ellpack_add_edge(g,i,j)                                         !
         print *, 'Attempting to add edge to an immutable ellpack graph'
         print *, 'Terminating.'
         call exit(1)
-    else
-        ! If vertices i,j are already connected, we needn't add the edge
-        if (.not.g%connected(i,j)) then
-            ! Find the index in g%node(:,i) where we can add in node j
-            indx = -1
+    endif
 
-            do k=g%max_neighbors,1,-1
-                if (g%node(k,i)==0) then
-                    indx = k
-                endif
-            enddo
+    ! If vertices i,j are already connected, we needn't add the edge
+    if (.not.g%connected(i,j)) then
+        ! Find the index in g%node(:,i) where we can add in node j
+        indx = -1
 
-            ! If there is room to add j, then do so
-            if (indx/=-1) then
-                g%node(indx,i) = j
-                g%ne = g%ne+1
-            ! If there is no room, then degree(i) = max degree of g.
-            else
-                print *, 'Not enough space to add edge',i,j
+        do k=g%max_neighbors,1,-1
+            if (g%node(k,i)==0) then
+                indx = k
             endif
+        enddo
 
-            ! Increment the maximum degree of the graph if need be
+        ! If there is room to add j, then do so
+        if (indx/=-1) then
+            g%node(indx,i) = j
+            g%ne = g%ne+1
             g%max_degree = max(g%max_degree,indx)
+        ! If there is no room, then degree(i) = max degree of g.
+        else
+            call g%add_edge_with_reallocation(i,j)
         endif
     endif
 
@@ -626,28 +624,28 @@ end subroutine ellpack_dump_edges
 
 
 !--------------------------------------------------------------------------!
-subroutine ellpack_add_edge_with_max_degree_increase(g,i,j)                !
+subroutine add_edge_with_reallocation(g,i,j)                               !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(ellpack_graph), intent(inout) :: g
     integer, intent(in) :: i,j
     ! local variables
-    integer :: k, node(g%max_degree,g%n)
+    integer :: k
+    integer, allocatable :: node(:,:)
 
-    node = g%node
-    deallocate(g%node)
-    allocate(g%node(g%max_degree+1,g%n))
+    allocate(node(g%max_neighbors+1,g%n))
+    node = 0
+    node(1:g%max_neighbors,:) = g%node(1:g%max_neighbors,:)
+    node(g%max_neighbors+1,i) = j
 
-    g%node = 0
-    do k=1,g%n
-        g%node(1:g%max_degree,k) = node(1:g%max_degree,k)
-    enddo
+    call move_alloc(from=node, to=g%node)
 
-    g%node(g%max_degree+1,i) = j
-
+    g%ne = g%ne+1
     g%max_degree = g%max_degree+1
+    g%max_neighbors = g%max_neighbors+1
+    g%capacity = g%n*g%max_neighbors
 
-end subroutine ellpack_add_edge_with_max_degree_increase
+end subroutine add_edge_with_reallocation
 
 
 

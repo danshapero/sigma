@@ -347,21 +347,21 @@ subroutine coo_add_edge(g,i,j)                                             !
         print *, 'Attempted to add an edge to an immutable COO graph'
         print *, 'Terminating.'
         call exit(1)
-    else
-        if (.not.g%connected(i,j)) then
-            ! Add in the new edge
-            call g%edges(1)%push(i)
-            call g%edges(2)%push(j)
+    endif
 
-            ! Increase the number of edges and the graph capacity
-            g%ne = g%ne+1
-            g%capacity = g%edges(1)%capacity
+    if (.not.g%connected(i,j)) then
+        ! Add in the new edge
+        call g%edges(1)%push(i)
+        call g%edges(2)%push(j)
 
-            ! If the degree of node i is now the greatest of all nodes in
-            ! the graph, update the degree accordingly
-            g%degrees(i) = g%degrees(i)+1
-            g%max_degree = max(g%max_degree,g%degrees(i))
-        endif
+        ! Increase the number of edges and the graph capacity
+        g%ne = g%ne+1
+        g%capacity = g%edges(1)%capacity
+
+        ! If the degree of node i is now the greatest of all nodes in
+        ! the graph, update the degree accordingly
+        g%degrees(i) = g%degrees(i)+1
+        g%max_degree = max(g%max_degree,g%degrees(i))
     endif
 
 end subroutine coo_add_edge
@@ -381,30 +381,30 @@ subroutine coo_delete_edge(g,i,j)                                          !
         print *, 'Attempted to delete an edge from an immutable COO graph'
         print *, 'Terminating.'
         call exit(1)
-    else
-        k = g%find_edge(i,j)
+    endif
 
-        if (k/=-1) then
-            it = g%edges(1)%pop()
-            jt = g%edges(2)%pop()
+    k = g%find_edge(i,j)
 
-            if (k<g%ne .and. g%ne>1) then
-                call g%edges(1)%set_entry(k,it)
-                call g%edges(2)%set_entry(k,jt)
-            endif
+    if (k/=-1) then
+        it = g%edges(1)%pop()
+        jt = g%edges(2)%pop()
 
-            ! Decrement the number of edges and the graph capacity
-            g%ne = g%ne-1
-            g%capacity = g%edges(1)%capacity
+        if (k<g%ne .and. g%ne>1) then
+            call g%edges(1)%set_entry(k,it)
+            call g%edges(2)%set_entry(k,jt)
+        endif
 
-            ! Change the degree of vertex i
-            g%degrees(i) = g%degrees(i)-1
+        ! Decrement the number of edges and the graph capacity
+        g%ne = g%ne-1
+        g%capacity = g%edges(1)%capacity
 
-            ! If vertex i had the greatest degree in the graph, check to
-            ! make sure the max degree hasn't decreased
-            if (g%degrees(i)+1==g%max_degree) then
-                g%max_degree = maxval(g%degrees)
-            endif
+        ! Change the degree of vertex i
+        g%degrees(i) = g%degrees(i)-1
+
+        ! If vertex i had the greatest degree in the graph, check to
+        ! make sure the max degree hasn't decreased
+        if (g%degrees(i)+1==g%max_degree) then
+            g%max_degree = maxval(g%degrees)
         endif
     endif
 

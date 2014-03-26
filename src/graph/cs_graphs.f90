@@ -49,6 +49,7 @@ contains
 
     !--------------------
     ! Auxiliary routines
+    procedure, private :: add_edge_with_reallocation
     procedure :: sort_node
     procedure, private :: max_degree_update
 end type cs_graph
@@ -426,28 +427,32 @@ subroutine cs_add_edge(g,i,j)                                              !
         print *, 'Attempted to add an edge to an immutable CS graph'
         print *, 'Terminating.'
         call exit(1)
-    else
-        if (.not.g%connected(i,j)) then
-            ! Try to see if the new neighbor can be added without
-            ! reallocating memory
-            added = .false.
-            do k=g%ptr(i),g%ptr(i+1)-1
-                if (g%node(k)==0) then
-                    g%node(k) = j
-                    added = .true.
-                    exit
-                endif
-            enddo
+    endif
 
+    if (.not.g%connected(i,j)) then
+        ! Try to see if the new neighbor can be added without
+        ! reallocating memory
+        added = .false.
+        do k=g%ptr(i),g%ptr(i+1)-1
+            if (g%node(k)==0) then
+                g%node(k) = j
+                added = .true.
+                exit
+            endif
+        enddo
+
+        ! If we successfully added the new edge,
+        if (added) then
+            ! increment the graph's number of edges
             g%ne = g%ne+1
 
-            if (.not.added) then
-                print *, 'Not enough space to add edge',i,j
-            endif
-
-            if (k-g%ptr(i)+1>g%max_degree) then
-                g%max_degree = k-g%ptr(i)+1
-            endif
+            ! and update the graphs' maximum degree.
+            g%max_degree = max(g%max_degree,k-g%ptr(i)+1)
+        else
+            ! Otherwise, we need to reallocate the internal structure
+            ! of the graph, done in a separate subroutine at the end of
+            ! this module.
+            call g%add_edge_with_reallocation(i,j)
         endif
     endif
 
@@ -468,36 +473,36 @@ subroutine cs_delete_edge(g,i,j)                                           !
         print *, 'Attempted to delete an edge from an immutable CS graph'
         print *, 'Terminating.'
         call exit(1)
-    else
-        ! Find the index in the list of edges of the edge to be removed
-        indx = g%find_edge(i,j)
+    endif
 
-        if (indx/=-1) then
-            ! Record the degree of the node from which an edge is to be
-            ! removed, and find the last node that i is connected to
-            do k=g%ptr(i),g%ptr(i+1)-1
-                if (g%node(k)/=0) then
-                    degree = k-g%ptr(i)+1
-                    jt = g%node(k)
-                endif
-            enddo
+    ! Find the index in the list of edges of the edge to be removed
+    indx = g%find_edge(i,j)
 
-            ! If there were more than two edges connected to node i, then
-            ! replace the edge (i,j) with the removed edge (i,jt)
-            if (degree>1) then
-                g%node(indx) = jt
+    if (indx/=-1) then
+        ! Record the degree of the node from which an edge is to be
+        ! removed, and find the last node that i is connected to
+        do k=g%ptr(i),g%ptr(i+1)-1
+            if (g%node(k)/=0) then
+                degree = k-g%ptr(i)+1
+                jt = g%node(k)
             endif
+        enddo
 
-            ! Remove the last edge (i,jt) connected to i
-            g%node( g%ptr(i)+degree-1 ) = 0
-
-            if (degree==g%max_degree) then
-                call g%max_degree_update()
-            endif
-
-            ! Decrement the number of edges in g
-            g%ne = g%ne-1
+        ! If there were more than two edges connected to node i, then
+        ! replace the edge (i,j) with the removed edge (i,jt)
+        if (degree>1) then
+            g%node(indx) = jt
         endif
+
+        ! Remove the last edge (i,jt) connected to i
+        g%node( g%ptr(i)+degree-1 ) = 0
+
+        if (degree==g%max_degree) then
+            call g%max_degree_update()
+        endif
+
+        ! Decrement the number of edges in g
+        g%ne = g%ne-1
     endif
 
 end subroutine cs_delete_edge
@@ -701,6 +706,57 @@ subroutine cs_dump_edges(g,edges)                                          !
     enddo
 
 end subroutine cs_dump_edges
+
+
+
+
+!==========================================================================!
+!==== Auxiliary procedures                                             ====!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
+subroutine add_edge_with_reallocation(g,i,j)                               !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(cs_graph), intent(inout) :: g
+    integer, intent(in) :: i,j
+    ! local variables
+    integer :: k
+    integer, allocatable :: node(:)
+
+    ! Allocate a temporary array `node` which will store the new list of
+    ! destination edges of g
+    allocate(node(g%capacity+1))
+
+    ! The index `k` in the new array of the edge to be added is 1 after
+    ! the last index for all the edges of row i
+    k = g%ptr(i+1)
+
+    ! Copy over the old edges of g into the new array
+    node(1:k-1) = g%node(1:k-1)
+    node(k+1:g%capacity+1) = g%node(k:g%capacity)
+
+    ! Add in the new edge
+    node(k) = j
+
+    ! Transfer the allocation status from the temporary edge array to
+    ! g's edge array
+    call move_alloc(from=node, to=g%node)
+
+    ! Update all the pointers to the starting index in the array `node`
+    ! for the edges of each vertex k
+    do k=i+1,g%n+1
+        g%ptr(k) = g%ptr(k)+1
+    enddo
+
+    ! Increment the number of edges and the capacity of g
+    g%ne = g%ne+1
+    g%capacity = g%capacity+1
+
+    ! Update the max degree of g if need be
+    g%max_degree = max(g%max_degree,g%ptr(i+1)-g%ptr(i))
+
+end subroutine add_edge_with_reallocation
 
 
 
