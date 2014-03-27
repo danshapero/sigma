@@ -89,6 +89,12 @@ contains
     !-------------
     procedure :: destroy => sparse_mat_destroy
 
+
+    !--------------------
+    ! Auxiliary routines
+    !--------------------
+    procedure, private :: set_value_with_reallocation
+
 end type sparse_matrix
 
 
@@ -253,7 +259,11 @@ subroutine sparse_mat_set_value(A,i,j,val)                                 !
 
     ! If that edge exists, set the corresponding entry in the array
     ! of values of A
-    if (k/=-1) A%val(k) = val
+    if (k/=-1) then
+        A%val(k) = val
+    else
+        call A%set_value_with_reallocation(i,j,val)
+    endif
 
 end subroutine sparse_mat_set_value
 
@@ -278,7 +288,11 @@ subroutine sparse_mat_add_value(A,i,j,val)                                 !
 
     ! If that edge exists, set the corresponding entry in the array
     ! of values of A
-    if (k/=-1) A%val(k) = A%val(k)+val
+    if (k/=-1) then
+        A%val(k) = A%val(k)+val
+    else
+        call A%set_value_with_reallocation(i,j,val)
+    endif
 
 end subroutine sparse_mat_add_value
 
@@ -638,6 +652,61 @@ subroutine sparse_mat_destroy(A)                                           !
     nullify(A%g)
 
 end subroutine sparse_mat_destroy
+
+
+
+
+!==========================================================================!
+!==== Auxiliary routines                                               ====!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
+subroutine set_value_with_reallocation(A,i,j,val)                          !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(inout) :: A
+    integer, intent(in) :: i,j
+    real(dp), intent(in) :: val
+    ! local variables
+    class(graph), pointer :: g
+    real(dp), allocatable :: vals(:)
+    integer :: k, n, indx, edges(2,64), ind(2), num_blocks, num_returned
+    type(graph_edge_cursor) :: cursor
+
+    allocate(g, mold=A%g)
+    call g%copy(A%g)
+
+    ind = [i,j]
+    ind = ind(A%order)
+
+    call g%add_edge(ind(1),ind(2))
+
+    allocate(vals(g%capacity))
+    indx = g%find_edge(ind(1),ind(2))
+    vals(indx) = val
+
+    cursor = A%g%make_cursor(0)
+    num_blocks = (cursor%final-cursor%start)/64+1
+
+    do n=1,num_blocks
+        edges = A%g%get_edges(cursor,64,num_returned)
+
+        do k=1,num_returned
+            ind(1) = edges(A%order(1),k)
+            ind(2) = edges(A%order(2),k)
+
+            indx = g%find_edge(ind(1),ind(2))
+            vals(indx) = A%val(k)
+        enddo
+    enddo
+
+    nullify(A%g)
+    A%g => g
+    A%nnz = A%g%ne
+
+    call move_alloc(from=vals, to=A%val)
+
+end subroutine set_value_with_reallocation
 
 
 

@@ -187,16 +187,15 @@ subroutine cs_graph_copy(g,h)                                              !
     ! Copy all of h's attributes to g
     g%n = h%n
     g%m = h%m
-    g%ne = h%ne
-    g%capacity = g%ne
+    g%capacity = h%ne
     g%max_degree = h%max_degree
 
     ! Allocate g's ptr and node arrays
-    allocate(g%ptr(g%n+1),g%node(g%ne))
+    allocate(g%ptr(g%n+1),g%node(g%capacity))
 
     ! Get a cursor from h with which to iterate through its edges
     cursor = h%make_cursor(0)
-    num_blocks = (cursor%final-cursor%start+1)/64+1
+    num_blocks = (cursor%final-cursor%start)/64+1
 
     ! Fill out the ptr array
     g%ptr = 0
