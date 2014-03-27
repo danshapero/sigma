@@ -46,7 +46,7 @@ subroutine petersen(g,n,k)                                                 !
     ! local variables
     integer :: i,j,m
 
-    call g%init(2*n,2*n,degree=3)
+    call g%init(2*n,degree=3)
 
     do i=1,n
         j = mod(i-1,n)+1
@@ -75,7 +75,7 @@ subroutine flower_snark(g,n)                                               !
     ! local variables
     integer :: i,j,k,l
 
-    call g%init(4*n,4*n,degree=3)
+    call g%init(4*n,degree=3)
 
     ! Build n copies of the star graph on 4 vertices; for each k<=n,
     ! call the vertices A_i, B_i, C_i and D_i, with A_i the center of
@@ -126,6 +126,38 @@ subroutine flower_snark(g,n)                                               !
     call g%add_edge(3,4*n)
 
 end subroutine flower_snark
+
+
+
+!--------------------------------------------------------------------------!
+subroutine hypercube(g,n)                                                  !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(graph), intent(inout) :: g
+    integer, intent(in) :: n
+    ! local variables
+    integer :: i,j,k,mask,nn
+
+    nn = 2**n
+    call g%init(nn, degree=n)
+
+    do i=1,nn
+        do k=1,n
+            ! First, make a `mask`, a number 
+            !     0...010...0
+            ! where the 1 is in the k-th bit.
+            mask = 2**(k-1)
+
+            ! If we take the `exclusive or` operation with i-1 and the mask,
+            ! we get a new number which is the same as i-1 only with the
+            ! k-th bit flipped. Add 1 to this and we get the vertex
+            j = ieor(i-1,mask)+1
+
+            call g%add_edge(i,j)
+        enddo
+    enddo
+
+end subroutine hypercube
 
 
 

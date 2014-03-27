@@ -91,6 +91,17 @@ implicit none
             endif
             call flower_snark(g,n)
 
+
+        case("hypercube")
+            allocate(cs_graph::g)
+            k = min(n,10)
+            if (verbose) then
+                write(*,40) 2**k
+40              format('Constructing hypercube graph on ',i4,' vertices.')
+            endif
+            call hypercube(g,k)
+
+
         case("erdos-renyi","erdos_renyi","erdosrenyi","er")
             allocate(ll_graph::g)
             call erdos_renyi(g,n,(1.0_dp*k)/n)
