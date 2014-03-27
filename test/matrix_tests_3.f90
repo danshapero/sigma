@@ -7,9 +7,7 @@ implicit none
     type(sparse_matrix) :: A
     class(graph), pointer :: g
 
-    integer :: i,j,k,nn,test1,test2
-    integer, allocatable :: neighbors(:)
-    character(len=3) :: orientation
+    integer :: i,j,nn
 
 
     nn = 64

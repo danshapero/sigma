@@ -19,7 +19,7 @@ implicit none
     real(dp) :: beta, p, dE
 
     ! variables for making a graph coloring
-    integer, allocatable :: color(:)
+    !integer, allocatable :: color(:)
 
     ! other variables
     integer :: i,j,d,nn,iter
@@ -112,7 +112,7 @@ implicit none
         case("barabasi-albert","barabasi_albert","barabasialbert","ba", &
                 & "scale-free","scale_free","scalefree")
             allocate(ll_graph::g)
-            call barabasi_albert(g,n,p)
+            call barabasi_albert(g,n,k)
     end select
 
     call g%compress()
@@ -135,7 +135,7 @@ implicit none
     do i=1,nn
         !call random_number(z)
         !s(i) = 2*int(z+0.5)-1
-        s(i) = 1.0
+        s(i) = 1
     enddo
 
 

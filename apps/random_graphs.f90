@@ -65,6 +65,7 @@ subroutine watts_strogatz(g,nn,k,p)                                        !
     ! ring graph
     type(ellpack_graph) :: g_ring
 
+    call init_seed()
 
     !------------------------------
     ! First, generate a ring graph
@@ -124,21 +125,49 @@ end subroutine watts_strogatz
 
 
 !--------------------------------------------------------------------------!
-subroutine barabasi_albert(g,n,p)                                          !
+subroutine barabasi_albert(g,nn,k)                                         !
 !--------------------------------------------------------------------------!
 !     Generate a scale-free graph g on n vertices using the preferential   !
 ! attachment algorithm of Barabasi-Albert; P[degree of node = k] = k^(-p). !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(graph), intent(inout) :: g
-    integer, intent(in) :: n
-    real(dp), intent(in) :: p
+    integer, intent(in) :: nn, k
     ! local variables
-    integer :: i,j,k,d
+    integer :: i,j,l,d,d_sum
+    real(dp) :: z
 
-    print *, 'Barabasi-Albert graph model not yet implemented!'
-    print *, 'Terminating program.'
-    call exit(1)
+    call init_seed()
+    call g%init(nn)
+
+    ! Generate an initial connected graph on the first k vertices
+    do i=1,k-1
+        j = i+1
+
+        call g%add_edge(i,j)
+        call g%add_edge(j,i)
+    enddo
+
+    ! Add new connections to new vertices in succession
+    do i=k+1,nn
+        ! Add k new connections
+        do l=1,k
+            d_sum = 2*g%ne
+
+            ! Generate a random number z
+            call random_number(z)
+
+            d = 0
+            do j=1,i-1
+                if (d <= z*d_sum .and. z*d_sum < d+g%degree(j)) then
+                    
+                    call g%add_edge(i,j)
+                    call g%add_edge(j,i)
+                endif
+            enddo
+        enddo
+    enddo
+    
 
 end subroutine barabasi_albert
 

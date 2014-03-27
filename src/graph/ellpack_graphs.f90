@@ -630,7 +630,6 @@ subroutine add_edge_with_reallocation(g,i,j)                               !
     class(ellpack_graph), intent(inout) :: g
     integer, intent(in) :: i,j
     ! local variables
-    integer :: k
     integer, allocatable :: node(:,:)
 
     allocate(node(g%max_neighbors+1,g%n))

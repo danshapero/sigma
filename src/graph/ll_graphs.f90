@@ -113,7 +113,7 @@ subroutine ll_init_variable_degree(g,n,m,degrees)                          !
     integer, intent(in) :: n, degrees(:)
     integer, intent(in), optional :: m
     ! local variables
-    integer :: k,ne
+    integer :: k
 
     g%n = n
     allocate(g%lists(n))

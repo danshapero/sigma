@@ -44,7 +44,7 @@ subroutine petersen(g,n,k)                                                 !
     class(graph), intent(inout) :: g
     integer, intent(in) :: n, k
     ! local variables
-    integer :: i,j,m
+    integer :: i,j
 
     call g%init(2*n,degree=3)
 
