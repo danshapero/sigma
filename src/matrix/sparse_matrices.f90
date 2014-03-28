@@ -11,6 +11,7 @@ module sparse_matrices                                                     !
 
 
 use types, only: dp
+use linear_operator_interface
 use graphs
 use ll_graphs
 
@@ -20,11 +21,11 @@ implicit none
 
 
 !--------------------------------------------------------------------------!
-type :: sparse_matrix                                                      !
+type, extends(linear_operator) :: sparse_matrix                            !
 !--------------------------------------------------------------------------!
     real(dp), allocatable :: val(:)
     class(graph), pointer :: g
-    integer :: nrow, ncol, nnz, max_degree, order(2)
+    integer :: nnz, max_degree, order(2)
     character(len=3) :: orientation
     logical :: pos_def
     logical :: assembled

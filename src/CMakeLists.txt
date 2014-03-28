@@ -17,5 +17,12 @@ solver/cg_solvers.f90
 solver/jacobi_preconditioners.f90
 )
 
-add_library( sigma SHARED types.f90 util.f90 vectors.f90 ${GRAPH_SRCS} ${MATRIX_SRCS} ${SOLVER_SRCS} eigensolver.f90 permutations.f90 conversions.f90 meshes.f90 wrapper.f90 sigma.f90 )
+set(LINEAR_OPERATOR_SRCS
+linear_operators/linear_operator_interface.f90
+linear_operators/linear_operator_sums.f90
+linear_operators/linear_operator_products.f90
+linear_operators/linear_operators.f90
+)
+
+add_library( sigma SHARED types.f90 util.f90 vectors.f90 ${LINEAR_OPERATOR_SRCS} ${GRAPH_SRCS} ${MATRIX_SRCS} ${SOLVER_SRCS} eigensolver.f90 permutations.f90 conversions.f90 meshes.f90 wrapper.f90 sigma.f90 )
 target_link_libraries(sigma blas lapack)
