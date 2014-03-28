@@ -51,7 +51,7 @@ end type linear_solver
 abstract interface                                                         !
 !--------------------------------------------------------------------------!
     subroutine opvec_add_ifc(A,x,y,trans)
-        import :: linear_operator
+        import :: linear_operator, dp
         class(linear_operator), intent(in) :: A
         real(dp), intent(in) :: x(:)
         real(dp), intent(inout) :: y(:)
@@ -65,7 +65,7 @@ end interface
 abstract interface                                                         !
 !--------------------------------------------------------------------------!
     subroutine linear_solve_ifc(solver,A,x,b)
-        import :: linear_solver
+        import :: linear_solver, linear_operator, dp
         class(linear_solver), intent(inout) :: solver
         class(linear_operator), intent(in) :: A
         real(dp), intent(inout) :: x(:)
@@ -93,7 +93,7 @@ function linear_operator_get_value(A,i,j) result(val)                      !
     call A%matvec(x,y)
     val = y(i)
 
-end subroutine linear_operator_get_value
+end function linear_operator_get_value
 
 
 
