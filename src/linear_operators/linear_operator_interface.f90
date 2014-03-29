@@ -25,6 +25,7 @@ contains
     procedure :: get_value => linear_operator_get_value
     procedure :: matvec => linear_operator_matvec
     procedure(opvec_add_ifc), deferred :: matvec_add
+    procedure :: solve => linear_operator_solve
 end type linear_operator
 
 
@@ -40,6 +41,7 @@ end type linear_operator_pointer
 !--------------------------------------------------------------------------!
 type, abstract :: linear_solver                                            !
 !--------------------------------------------------------------------------!
+    integer :: nrow, ncol
     class(linear_solver), pointer :: next
 contains
     procedure(linear_solve_ifc), deferred :: solve
@@ -109,6 +111,21 @@ subroutine linear_operator_matvec(A,x,y,trans)                             !
     call A%matvec_add(x,y,trans)
 
 end subroutine linear_operator_matvec
+
+
+
+!--------------------------------------------------------------------------!
+subroutine linear_operator_solve(A,x,b)                                    !
+!--------------------------------------------------------------------------!
+    class(linear_operator), intent(in) :: A
+    real(dp), intent(inout) :: x(:)
+    real(dp), intent(in) :: b(:)
+
+    ! This subroutine is a facade for more complex operations that occur
+    ! in a dedicated solver object contained in the operator itself
+    call A%solver%solve(A,x,b)
+
+end subroutine linear_operator_solve
 
 
 
