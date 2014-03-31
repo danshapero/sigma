@@ -13,7 +13,6 @@ module sparse_matrices                                                     !
 use types, only: dp
 use graphs
 use ll_graphs
-use cs_graphs
 
 implicit none
 
@@ -143,7 +142,7 @@ subroutine sparse_mat_init(A,nrow,ncol,orientation,g)
     class(sparse_matrix), intent(inout) :: A
     integer, intent(in) :: nrow, ncol
     character(len=3), intent(in) :: orientation
-    class(graph), pointer, intent(in), optional :: g
+    class(graph), pointer, intent(inout), optional :: g
 
     ! Check if the user has provided a connectivity graph
     if (present(g)) then
@@ -175,6 +174,9 @@ subroutine sparse_mat_init(A,nrow,ncol,orientation,g)
                 call A%g%init(ncol,nrow)
         end select
     endif
+
+    ! Increment g's reference counter
+    call A%g%add_reference()
 
     A%nnz = A%g%ne
     allocate(A%val(A%g%capacity))
@@ -648,7 +650,14 @@ subroutine sparse_mat_destroy(A)                                           !
 !--------------------------------------------------------------------------!
     class(sparse_matrix), intent(inout) :: A
 
+    ! Deallocate the array of A's matrix entries
     deallocate(A%val)
+
+    ! Decrement the reference counter for A%g
+    call A%g%remove_reference()
+
+    ! Nullify A's pointer to its graph. Don't de-allocate it -- there might
+    ! still be other references to it someplace else.
     nullify(A%g)
 
 end subroutine sparse_mat_destroy
@@ -700,8 +709,11 @@ subroutine set_value_with_reallocation(A,i,j,val)                          !
         enddo
     enddo
 
+    call A%g%remove_reference()
     nullify(A%g)
+
     A%g => g
+    call A%g%add_reference()
     A%nnz = A%g%ne
 
     call move_alloc(from=vals, to=A%val)

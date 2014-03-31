@@ -20,7 +20,7 @@ implicit none
 !--------------------------------------------------------------------------!
 type, abstract :: graph                                                    !
 !--------------------------------------------------------------------------!
-    integer :: n,m,ne,capacity,max_degree
+    integer :: n,m,ne,capacity,max_degree,reference_count = 0
     logical :: mutable
 contains
     !--------------
@@ -107,6 +107,15 @@ contains
     procedure(decompress_graph_ifc), deferred :: decompress
     ! Reverses the compress operation and makes the graph mutable, but
     ! there will be additional branching due to null edges.
+
+    procedure :: add_reference
+    ! Whenever another object, such as a matrix, points to a graph, we
+    ! need to increment the graph's reference counter. If the reference
+    ! counter goes above 2, the graph needs to be made immutable.
+
+    procedure :: remove_reference
+    ! If another object that was pointing to a graph is destroyed, the
+    ! graph's reference counter decreases.
 
 
     !-------------
@@ -252,6 +261,29 @@ end type graph_pointer
 
 
 contains
+
+
+
+!--------------------------------------------------------------------------!
+subroutine add_reference(g)                                                !
+!--------------------------------------------------------------------------!
+    class(graph), intent(inout) :: g
+
+    g%reference_count = g%reference_count+1
+    if (g%reference_count > 1) g%mutable = .false.
+
+end subroutine add_reference
+
+
+
+!--------------------------------------------------------------------------!
+subroutine remove_reference(g)                                             !
+!--------------------------------------------------------------------------!
+    class(graph), intent(inout) :: g
+
+    g%reference_count = g%reference_count-1
+
+end subroutine remove_reference
 
 
 
