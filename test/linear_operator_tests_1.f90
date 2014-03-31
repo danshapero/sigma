@@ -97,7 +97,7 @@ implicit none
     call B%matvec_add(x,z)
     if (maxval(dabs(z))==0.0_dp) then
         print *, 'Something went way wrong, made random matrices A, B'
-        print *, 'and (A+B)*[1,...,1] = 0.'
+        print *, 'and (A+B)*[1,...,1] = 0. Terminating.'
         call exit(1)
     endif
 
@@ -113,6 +113,39 @@ implicit none
     if (r>1.0e-14) then
         print *, 'Setting L = A+B and multiplying y = L*[1,..,1] failed;'
         print *, 'computed z = (A*x)+(B*x) but ||y-z|| = ',r
+        print *, 'Terminating.'
+        call exit(1)
+    endif
+
+    nullify(L)
+
+
+    !--------------------------------------------------------------------
+    ! Make a linear operator which is the product of two sparse matrices
+    !--------------------------------------------------------------------
+    L => multiply_operators(A,B)
+
+    x = 1.0_dp
+    call A%matvec(x,w)
+    call B%matvec(w,z)
+    if (maxval(dabs(z))==0.0_dp) then
+        print *, 'Something went way wrong, made random matrices A, B'
+        print *, 'and A*B*[1,..,1] = 0. Terminating.'
+        call exit(1)
+    endif
+
+    y = 0.0_dp
+    call L%matvec(x,y)
+    if (maxval(dabs(y))==0.0_dp) then
+        print *, 'Setting L = A*B and multiplying y = L*[1,..,1] failed,'
+        print *, 'got y = 0. Terminating.'
+        call exit(1)
+    endif
+
+    r = maxval(dabs(y-z))
+    if (r>1.0e-14) then
+        print *, 'Setting L = A*B and multiplying y = L*[1,..,1] failed;'
+        print *, 'computed z = A*(B*x) but ||y-z|| = ',r
         print *, 'Terminating.'
         call exit(1)
     endif
