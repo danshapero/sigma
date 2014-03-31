@@ -7,6 +7,12 @@ use coo_graphs
 use cs_graphs
 use ellpack_graphs
 
+! Use all the linear operator modules
+use linear_operator_interface
+use linear_operator_sums
+use linear_operator_products
+use linear_operators
+
 ! Use all the matrix modules
 use sparse_matrices
 

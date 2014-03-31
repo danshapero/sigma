@@ -4,11 +4,11 @@ use sigma
 
 implicit none
 
-    integer :: i,j,k,nn
+    integer :: i,j,k,n,nn
     class(graph), pointer :: g, h
-    real(dp) :: w, z, p
+    real(dp) :: p, q, r
     type(sparse_matrix), pointer :: A, B
-    real(dp), allocatable :: x(:), y(:)
+    real(dp), allocatable :: w(:), x(:), y(:), z(:)
     class(linear_operator), pointer :: L
     type(graph_edge_cursor) :: cursor
     integer :: num_blocks, num_returned, edges(2,64)
@@ -28,11 +28,11 @@ implicit none
 
     do i=1,nn
         do j=1,nn
-            call random_number(z)
-            if (z<p) call g%add_edge(i,j)
+            call random_number(q)
+            if (q<p) call g%add_edge(i,j)
 
             call random_number(z)
-            if (z<p) call h%add_edge(i,j)
+            if (q<p) call h%add_edge(i,j)
         enddo
     enddo
 
@@ -42,7 +42,6 @@ implicit none
     !--------------------------------------
     allocate(A,B)
     call A%init(nn,nn,'row',g)
-    call B%init(nn,nn,'col',h)
 
     cursor = g%make_cursor(0)
     num_blocks = (cursor%final-cursor%start)/64+1
@@ -54,14 +53,14 @@ implicit none
             i = edges(1,k)
             j = edges(2,k)
 
-            call random_number(z)
-            call random_number(w)
+            call random_number(q)
+            call random_number(r)
 
-            call A%set_entry(i,j,dsqrt(-2*log(w))*cos(2*pi*z))
+            call A%set_value(i,j,dsqrt(-2*log(r))*cos(2*pi*q))
         enddo
     enddo
 
-
+    call B%init(nn,nn,'col',h)
     cursor = h%make_cursor(0)
     num_blocks = (cursor%final-cursor%start)/64+1
 
@@ -72,10 +71,10 @@ implicit none
             i = edges(2,k)
             j = edges(1,k)
 
-            call random_number(z)
-            call random_number(w)
+            call random_number(q)
+            call random_number(r)
 
-            call B%set_entry(i,j,dsqrt(-2*log(w))*cos(2*pi*z))
+            call B%set_value(i,j,dsqrt(-2*log(r))*cos(2*pi*q))
         enddo
     enddo
 
@@ -83,8 +82,39 @@ implicit none
     !--------------------------------------------------------------------
     ! Make a linear operator which is the sum of the two sparse matrices
     !--------------------------------------------------------------------
-    L = add_operators(A,B)
+    L => add_operators(A,B)
 
-    
+
+
+    !--------------------------
+    ! Multiply L by some stuff
+    !--------------------------
+    allocate(w(nn),x(nn),y(nn),z(nn))
+    x = 1.0_dp
+
+    z = 0.0_dp
+    call A%matvec_add(x,z)
+    call B%matvec_add(x,z)
+    if (maxval(dabs(z))==0.0_dp) then
+        print *, 'Something went way wrong, made random matrices A, B'
+        print *, 'and (A+B)*[1,...,1] = 0.'
+        call exit(1)
+    endif
+
+    y = 0.0_dp
+    call L%matvec_add(x,y)
+    if (maxval(dabs(y))==0.0_dp) then
+        print *, 'Setting L = A+B and multiplying y = L*[1,..,1] failed,'
+        print *, 'got y = 0. Terminating.'
+        call exit(1)
+    endif
+
+    r = maxval(dabs(y-z))
+    if (r>1.0e-14) then
+        print *, 'Setting L = A+B and multiplying y = L*[1,..,1] failed;'
+        print *, 'computed z = (A*x)+(B*x) but ||y-z|| = ',r
+        print *, 'Terminating.'
+        call exit(1)
+    endif
 
 end program linear_operator_tests_1

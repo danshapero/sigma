@@ -117,13 +117,18 @@ end subroutine linear_operator_matvec
 !--------------------------------------------------------------------------!
 subroutine linear_operator_solve(A,x,b)                                    !
 !--------------------------------------------------------------------------!
+    ! input/output variables
     class(linear_operator), intent(in) :: A
     real(dp), intent(inout) :: x(:)
     real(dp), intent(in) :: b(:)
+    ! local variables
+    class(linear_solver), pointer :: solver
+
+    solver => A%solver
 
     ! This subroutine is a facade for more complex operations that occur
     ! in a dedicated solver object contained in the operator itself
-    call A%solver%solve(A,x,b)
+    call solver%solve(A,x,b)
 
 end subroutine linear_operator_solve
 
