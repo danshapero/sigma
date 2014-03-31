@@ -15,7 +15,7 @@ contains
 !--------------------------------------------------------------------------!
 function add_operators(A,B) result(C)                                      !
 !--------------------------------------------------------------------------!
-    class(linear_operator), pointer, intent(in) :: A, B
+    class(linear_operator), target, intent(in) :: A, B
     class(linear_operator), pointer :: C
 
     ! Do some error checking
@@ -45,7 +45,7 @@ end function add_operators
 function multiply_operators(A,B) result(C)                                 !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(linear_operator), pointer, intent(in) :: A, B
+    class(linear_operator), target, intent(in) :: A, B
     class(linear_operator), pointer :: C
     ! local variables
     integer :: d
