@@ -31,7 +31,7 @@ implicit none
             call random_number(q)
             if (q<p) call g%add_edge(i,j)
 
-            call random_number(z)
+            call random_number(q)
             if (q<p) call h%add_edge(i,j)
         enddo
     enddo
