@@ -187,6 +187,7 @@ subroutine cs_graph_copy(g,h)                                              !
     ! Copy all of h's attributes to g
     g%n = h%n
     g%m = h%m
+    g%ne = 0
     g%capacity = h%ne
     g%max_degree = h%max_degree
 
