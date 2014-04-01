@@ -52,6 +52,11 @@ function add_operators(A,B) result(C)                                      !
     ! Make a pointer to an operator_sum
     allocate(operator_sum::C)
 
+    ! Set the dimension of C
+    C%nrow = A%nrow
+    C%ncol = A%ncol
+
+    ! Make the summands of C point to A and B
     select type(C)
         type is(operator_sum)
             C%num_summands = 2
@@ -84,6 +89,11 @@ function multiply_operators(A,B) result(C)                                 !
     ! Make a pointer to an operator_product
     allocate(operator_product::C)
 
+    ! Set the dimension of C
+    C%nrow = A%nrow
+    C%ncol = B%ncol
+
+    ! Make the factors of C point to A and B
     select type(C)
         type is(operator_product)
             C%num_products = 2
