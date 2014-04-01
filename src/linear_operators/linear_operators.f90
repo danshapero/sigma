@@ -7,8 +7,25 @@ use linear_operator_products
 implicit none
 
 
+interface assignment(=)
+    module procedure assign_operators
+end interface
+
+
 
 contains
+
+
+
+!--------------------------------------------------------------------------!
+subroutine assign_operators(A,B)                                           !
+!--------------------------------------------------------------------------!
+    class(linear_operator), pointer, intent(out) :: A
+    class(linear_operator), target, intent(in) :: B
+
+    A => B
+
+end subroutine assign_operators
 
 
 

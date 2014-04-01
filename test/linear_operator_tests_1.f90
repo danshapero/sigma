@@ -82,7 +82,7 @@ implicit none
     !--------------------------------------------------------------------
     ! Make a linear operator which is the sum of the two sparse matrices
     !--------------------------------------------------------------------
-    L => add_operators(A,B)
+    L = add_operators(A,B)
 
 
 
@@ -123,7 +123,7 @@ implicit none
     !--------------------------------------------------------------------
     ! Make a linear operator which is the product of two sparse matrices
     !--------------------------------------------------------------------
-    L => multiply_operators(A,B)
+    L = multiply_operators(A,B)
 
     x = 1.0_dp
     call A%matvec(x,w)
