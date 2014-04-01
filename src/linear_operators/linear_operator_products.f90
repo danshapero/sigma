@@ -12,6 +12,7 @@ type, extends(linear_operator) :: operator_product                         !
 !--------------------------------------------------------------------------!
     integer :: num_products, temp_vec_size
     type(linear_operator_pointer), allocatable :: products(:)
+    real(dp), pointer :: z1(:), z2(:)
 contains
     procedure :: matvec_add => operator_product_matvec_add
 end type operator_product
@@ -32,15 +33,21 @@ subroutine operator_product_matvec_add(A,x,y,trans)                        !
     logical, intent(in), optional :: trans
     ! local variables
     integer :: k
-    real(dp) :: z1(A%temp_vec_size), z2(A%temp_vec_size)
+    real(dp), pointer :: z1(:), z2(:)
 
-    z1 = x
-    z2 = 0.0_dp
+    z1 => A%z1
+    z2 => A%z2
+
+    z1(1:A%ncol) = x(1:A%ncol)
+    z2(:) = 0.0_dp
     do k=1,A%num_products
         call A%products(k)%ap%matvec(z1,z2,trans)
-        z1 = z2
+        z1(:) = z2(:)
     enddo
     y = y+z2
+
+    z1(:) = 0.0_dp
+    z2(:) = 0.0_dp
 
 end subroutine operator_product_matvec_add
 

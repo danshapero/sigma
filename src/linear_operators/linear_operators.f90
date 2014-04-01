@@ -101,6 +101,7 @@ function multiply_operators(A,B) result(C)                                 !
 
             ! Make space for temporary vectors in the operator product
             C%temp_vec_size = maxval([A%nrow, A%ncol, B%nrow, B%ncol])
+            allocate(C%z1(C%temp_vec_size),C%z2(C%temp_vec_size))
 
             ! Make the operator_product point to its two factors
             C%products(1)%ap => A
