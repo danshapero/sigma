@@ -11,6 +11,14 @@ interface assignment(=)
     module procedure assign_operators
 end interface
 
+interface operator(+)
+    module procedure add_operators
+end interface
+
+interface operator(*)
+    module procedure multiply_operators
+end interface
+
 
 
 contains
