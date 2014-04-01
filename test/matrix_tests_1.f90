@@ -1,4 +1,4 @@
-program matrix_tests
+program matrix_tests_1
 
 use sigma
 
@@ -160,4 +160,4 @@ implicit none
 
     deallocate(x,y,nbrs,edges)
 
-end program matrix_tests
+end program matrix_tests_1

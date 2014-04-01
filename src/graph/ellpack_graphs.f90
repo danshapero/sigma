@@ -146,7 +146,7 @@ subroutine ellpack_graph_copy(g,h)                                         !
     ! Copy all the attributes of g from those of h
     g%n = h%n
     g%m = h%m
-    g%ne = h%ne
+    g%ne = 0
     g%max_degree = h%max_degree
     g%max_neighbors = g%max_degree
     g%capacity = g%max_degree * g%n
@@ -157,7 +157,7 @@ subroutine ellpack_graph_copy(g,h)                                         !
 
     ! Make an edge iterator for the copied graph h
     cursor = h%make_cursor(0)
-    num_blocks = (cursor%final-cursor%current+1)/64+1
+    num_blocks = (cursor%final-cursor%current)/64+1
 
     ! Iterate through all the edges of h
     do n=1,num_blocks
