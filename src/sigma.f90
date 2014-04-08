@@ -17,10 +17,9 @@ use linear_operators
 use sparse_matrices
 
 ! Use the solver and preconditioner modules
-use iterative_solvers
 use cg_solvers
 use bicgstab_solvers
-use jacobi_preconditioners
+use jacobi_solvers
 
 ! Use the C wrapper module
 use wrapper

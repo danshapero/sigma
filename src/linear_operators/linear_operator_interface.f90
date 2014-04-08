@@ -41,10 +41,14 @@ end type linear_operator_pointer
 !--------------------------------------------------------------------------!
 type, abstract :: linear_solver                                            !
 !--------------------------------------------------------------------------!
-    integer :: nrow, ncol
+    integer :: nn
+    real(dp) :: tolerance
     class(linear_solver), pointer :: next
 contains
-    procedure(linear_solve_ifc), deferred :: solve
+    procedure(init_linear_solver_ifc), deferred :: init
+    procedure(linear_solve_ifc), deferred :: linear_solve
+    procedure :: linear_solve_pc
+    generic :: solve => linear_solve, linear_solve_pc
 end type linear_solver
 
 
@@ -66,6 +70,12 @@ end interface
 !--------------------------------------------------------------------------!
 abstract interface                                                         !
 !--------------------------------------------------------------------------!
+    subroutine init_linear_solver_ifc(solver,A)
+        import :: linear_solver, linear_operator
+        class(linear_solver), intent(inout) :: solver
+        class(linear_operator), intent(in) :: A
+    end subroutine init_linear_solver_ifc
+
     subroutine linear_solve_ifc(solver,A,x,b)
         import :: linear_solver, linear_operator, dp
         class(linear_solver), intent(inout) :: solver
@@ -73,6 +83,15 @@ abstract interface                                                         !
         real(dp), intent(inout) :: x(:)
         real(dp), intent(in) :: b(:)
     end subroutine linear_solve_ifc
+
+    subroutine linear_solve_pc_ifc(solver,A,x,b,pc)
+        import :: linear_solver, linear_operator, dp
+        class(linear_solver), intent(inout) :: solver
+        class(linear_operator), intent(in) :: A
+        real(dp), intent(inout) :: x(:)
+        real(dp), intent(in) :: b(:)
+        class(linear_solver), intent(inout) :: pc
+    end subroutine linear_solve_pc_ifc
 end interface
 
 
@@ -131,6 +150,21 @@ subroutine linear_operator_solve(A,x,b)                                    !
     call solver%solve(A,x,b)
 
 end subroutine linear_operator_solve
+
+
+
+!--------------------------------------------------------------------------!
+subroutine linear_solve_pc(solver,A,x,b,pc)                                !
+!--------------------------------------------------------------------------!
+    class(linear_solver), intent(inout) :: solver
+    class(linear_operator), intent(in)  :: A
+    real(dp), intent(inout)             :: x(:)
+    real(dp), intent(in)                :: b(:)
+    class(linear_solver), intent(inout) :: pc
+
+    call solver%solve(A,x,b)
+
+end subroutine linear_solve_pc
 
 
 

@@ -1,20 +1,20 @@
 module cg_solvers
 
-use types
-use sparse_matrices
-use iterative_solvers
+use types, only: dp
+use linear_operator_interface
 
 implicit none
 
 
 !--------------------------------------------------------------------------!
-type, extends(iterative_solver) :: cg_solver                               !
+type, extends(linear_solver) :: cg_solver                                  !
 !--------------------------------------------------------------------------!
     real(dp), allocatable :: p(:), q(:), r(:), z(:)
+    integer :: iterations
 contains
     procedure :: init => cg_init
-    procedure :: pc_solve => cg_pc_solve
-    procedure :: no_pc_solve => cg_no_pc_solve
+    procedure :: linear_solve => cg_solve
+    procedure :: linear_solve_pc => cg_solve_pc
     procedure :: free => cg_free
 end type cg_solver
 
@@ -24,20 +24,23 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine cg_init(solver,nn,tolerance)                                    !
+subroutine cg_init(solver,A)                                               !
 !--------------------------------------------------------------------------!
     class(cg_solver), intent(inout) :: solver
-    integer, intent(in)             :: nn
-    real(dp), intent(in), optional  :: tolerance
+    class(linear_operator), intent(in) :: A
 
-    solver%nn = nn
-    if (present(tolerance)) then
-        solver%tolerance = tolerance
-    else
-        solver%tolerance = 1.0d-8
+    if (A%nrow/=A%ncol) then
+        print *, 'Cannot make a CG solver for a non-square matrix.'
+        print *, 'Terminating.'
+        call exit(1)
     endif
 
-    allocate( solver%p(nn), solver%q(nn), solver%r(nn), solver%z(nn) )
+    solver%nn = A%nrow
+    solver%tolerance = 1.0d-8
+    solver%iterations = 0
+
+    allocate( solver%p(solver%nn), solver%q(solver%nn), &
+        & solver%r(solver%nn), solver%z(solver%nn) )
 
     solver%p = 0.0_dp
     solver%q = 0.0_dp
@@ -49,57 +52,13 @@ end subroutine cg_init
 
 
 !--------------------------------------------------------------------------!
-subroutine cg_pc_solve(solver,A,x,b,pc)                                    !
+subroutine cg_solve(solver,A,x,b)                                          !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(cg_solver), intent(inout)         :: solver
-    class(sparse_matrix), intent(in)        :: A
-    real(dp), intent(inout)                 :: x(:)
-    real(dp), intent(in)                    :: b(:)
-    class(preconditioner), intent(inout)    :: pc
-    ! local variables
-    real(dp) :: alpha, beta, dpr, res2
-
-    associate( p=>solver%p, q=>solver%q, r=>solver%r, z=>solver%z )
-
-    z = x
-    call A%matvec(z,q)
-    r = b-q
-    call pc%precondition(A,z,r)
-    p = z
-    res2 = dot_product(r,z)
-
-    do while( dsqrt(res2)>solver%tolerance )
-        call A%matvec(p,q)
-        dpr = dot_product(p,q)
-        alpha = res2/dpr
-        x = x+alpha*p
-        r = r-alpha*q
-
-        call pc%precondition(A,z,r)
-
-        dpr = dot_product(r,z)
-        beta = dpr/res2
-        p = z+beta*p
-        res2 = dpr
-
-        solver%iterations = solver%iterations+1
-    enddo
-
-    end associate
-
-end subroutine cg_pc_solve
-
-
-
-!--------------------------------------------------------------------------!
-subroutine cg_no_pc_solve(solver,A,x,b)                                    !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(cg_solver), intent(inout)     :: solver
-    class(sparse_matrix), intent(in)    :: A
-    real(dp), intent(inout)             :: x(:)
-    real(dp), intent(in)                :: b(:)
+    class(cg_solver), intent(inout)    :: solver
+    class(linear_operator), intent(in) :: A
+    real(dp), intent(inout)            :: x(:)
+    real(dp), intent(in)               :: b(:)
     ! local variables
     real(dp) :: alpha, beta, res2, dpr
 
@@ -127,7 +86,51 @@ subroutine cg_no_pc_solve(solver,A,x,b)                                    !
 
     end associate
 
-end subroutine cg_no_pc_solve
+end subroutine cg_solve
+
+
+
+!--------------------------------------------------------------------------!
+subroutine cg_solve_pc(solver,A,x,b,pc)                                    !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(cg_solver), intent(inout)     :: solver
+    class(linear_operator), intent(in)  :: A
+    real(dp), intent(inout)             :: x(:)
+    real(dp), intent(in)                :: b(:)
+    class(linear_solver), intent(inout) :: pc
+    ! local variables
+    real(dp) :: alpha, beta, dpr, res2
+
+    associate( p=>solver%p, q=>solver%q, r=>solver%r, z=>solver%z )
+
+    z = x
+    call A%matvec(z,q)
+    r = b-q
+    call pc%solve(A,z,r)
+    p = z
+    res2 = dot_product(r,z)
+
+    do while( dsqrt(res2)>solver%tolerance )
+        call A%matvec(p,q)
+        dpr = dot_product(p,q)
+        alpha = res2/dpr
+        x = x+alpha*p
+        r = r-alpha*q
+
+        call pc%solve(A,z,r)
+
+        dpr = dot_product(r,z)
+        beta = dpr/res2
+        p = z+beta*p
+        res2 = dpr
+
+        solver%iterations = solver%iterations+1
+    enddo
+
+    end associate
+
+end subroutine cg_solve_pc
 
 
 
@@ -149,5 +152,3 @@ end subroutine cg_free
 
 
 end module cg_solvers
-
-

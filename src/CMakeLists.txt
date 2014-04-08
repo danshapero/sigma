@@ -11,10 +11,9 @@ matrix/sparse_matrices.f90
 )
 
 set(SOLVER_SRCS
-solver/iterative_solvers.f90
 solver/bicgstab_solvers.f90
 solver/cg_solvers.f90
-solver/jacobi_preconditioners.f90
+solver/jacobi_solvers.f90
 )
 
 set(LINEAR_OPERATOR_SRCS

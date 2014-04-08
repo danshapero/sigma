@@ -22,6 +22,7 @@ implicit none
 
     ! a solver object
     type(cg_solver) :: solver
+    type(jacobi_solver) :: pc
 
     ! some integer indices
     integer :: i,j,k,nn
@@ -116,11 +117,12 @@ implicit none
 
     ! Initialize the solver for a system with nn unknowns and a solution
     ! tolerance of 1.0e-10.
-    call solver%init(nn,tolerance=1.0d-10)
+    call solver%init(A)
+    call pc%init(A)
 
     ! Call the solver on A, with x as the approximate solution and b as 
     ! the right-hand side.
-    call solver%solve(A,x,b)
+    call solver%solve(A,x,b,pc)
 
     ! Report some results.
     write(*,100) solver%iterations
