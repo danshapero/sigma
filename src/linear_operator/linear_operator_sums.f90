@@ -13,12 +13,33 @@ type, extends(linear_operator) :: operator_sum                             !
     integer :: num_summands
     type(linear_operator_pointer), allocatable :: summands(:)
 contains
+    procedure :: get_value => operator_sum_get_value
     procedure :: matvec_add => operator_sum_matvec_add
 end type operator_sum
 
 
 
 contains
+
+
+
+!--------------------------------------------------------------------------!
+function operator_sum_get_value(A,i,j) result(val)                         !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(operator_sum), intent(in) :: A
+    integer, intent(in) :: i,j
+    real(dp) :: val
+    ! local variables
+    integer :: k
+
+    val = 0.0_dp
+
+    do k=1,A%num_summands
+        val = val + A%summands(k)%ap%get_value(i,j)
+    enddo
+
+end function operator_sum_get_value
 
 
 
