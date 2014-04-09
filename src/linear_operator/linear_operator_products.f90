@@ -19,7 +19,57 @@ end type operator_product
 
 
 
+!--------------------------------------------------------------------------!
+interface operator(*)                                                      !
+!--------------------------------------------------------------------------!
+    module procedure multiply_operators
+end interface
+
+
+
 contains
+
+
+
+
+!--------------------------------------------------------------------------!
+function multiply_operators(A,B) result(C)                                 !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(linear_operator), target, intent(in) :: A, B
+    class(linear_operator), pointer :: C
+    ! local variables
+    integer :: d
+
+    ! Do some error checking
+    if (A%ncol/=B%nrow) then
+        print *, 'Dimensions of operators to be multiplied are inconsistent'
+        call exit(1)
+    endif
+
+    ! Make a pointer to an operator_product
+    allocate(operator_product::C)
+
+    ! Set the dimension of C
+    C%nrow = A%nrow
+    C%ncol = B%ncol
+
+    ! Make the factors of C point to A and B
+    select type(C)
+        type is(operator_product)
+            C%num_products = 2
+            allocate(C%products(2))
+
+            ! Make space for temporary vectors in the operator product
+            C%temp_vec_size = maxval([A%nrow, A%ncol, B%nrow, B%ncol])
+            allocate(C%z1(C%temp_vec_size),C%z2(C%temp_vec_size))
+
+            ! Make the operator_product point to its two factors
+            C%products(1)%ap => A
+            C%products(2)%ap => B
+    end select
+
+end function multiply_operators
 
 
 

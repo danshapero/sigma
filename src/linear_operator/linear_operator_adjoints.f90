@@ -22,6 +22,27 @@ contains
 
 
 
+
+!--------------------------------------------------------------------------!
+function adjoint(A) result(B)                                              !
+!--------------------------------------------------------------------------!
+    class(linear_operator), target, intent(in) :: A
+    class(linear_operator), pointer :: B
+
+    allocate(operator_adjoint::B)
+
+    B%nrow = A%ncol
+    B%ncol = A%nrow
+
+    select type(B)
+        type is(operator_adjoint)
+            B%op => A
+    end select
+
+end function adjoint
+
+
+
 !--------------------------------------------------------------------------!
 function operator_adjoint_get_value(A,i,j) result(val)                     !
 !--------------------------------------------------------------------------!

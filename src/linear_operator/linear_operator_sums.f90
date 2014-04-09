@@ -19,7 +19,50 @@ end type operator_sum
 
 
 
+!--------------------------------------------------------------------------!
+interface operator(+)                                                      !
+!--------------------------------------------------------------------------!
+    module procedure add_operators
+end interface
+
+
+
 contains
+
+
+
+
+!--------------------------------------------------------------------------!
+function add_operators(A,B) result(C)                                      !
+!--------------------------------------------------------------------------!
+    class(linear_operator), target, intent(in) :: A, B
+    class(linear_operator), pointer :: C
+
+    ! Do some error checking
+    if (A%nrow/=B%nrow .or. A%ncol/=B%ncol) then
+        print *, 'Dimensions of operators to be summed are not consistent'
+        call exit(1)
+    endif
+
+    ! Make a pointer to an operator_sum
+    allocate(operator_sum::C)
+
+    ! Set the dimension of C
+    C%nrow = A%nrow
+    C%ncol = A%ncol
+
+    ! Make the summands of C point to A and B
+    select type(C)
+        type is(operator_sum)
+            C%num_summands = 2
+            allocate(C%summands(2))
+
+            ! Make the operator_sum point to its two summands
+            C%summands(1)%ap => A
+            C%summands(2)%ap => B
+    end select
+
+end function add_operators
 
 
 
