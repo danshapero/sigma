@@ -14,10 +14,16 @@ use types, only: dp
 implicit none
 
 
-
-
 !--------------------------------------------------------------------------!
 type, abstract :: linear_operator                                          !
+!--------------------------------------------------------------------------!
+!     This is the fundamental data type for the entire SiGMA library. A    !
+! linear operator's role is to be able to multiply itself by a vector and  !
+! produce another vector.                                                  !
+!     Several classes implement the linear operator interface -- sparse    !
+! and dense matrices are the most basic examples. More complex operators   !
+! can be formed as sums, products or adjoints of other operators.  This    !
+! reflects the fact that linear operators form a C*-algebra.               !
 !--------------------------------------------------------------------------!
     integer :: nrow, ncol
     class(linear_solver), pointer :: solver
@@ -33,6 +39,9 @@ end type linear_operator
 !--------------------------------------------------------------------------!
 type :: linear_operator_pointer                                            !
 !--------------------------------------------------------------------------!
+! Auxiliary data type storing a pointer to a linear operator, which is     !
+! necessary when we need an array of pointers to linear operators.         !
+!--------------------------------------------------------------------------!
     class(linear_operator), pointer :: ap
 end type linear_operator_pointer
 
@@ -40,6 +49,8 @@ end type linear_operator_pointer
 
 !--------------------------------------------------------------------------!
 type, abstract :: linear_solver                                            !
+!--------------------------------------------------------------------------!
+! An object to encapsulate data needed for solving linear systems.         !
 !--------------------------------------------------------------------------!
     integer :: nn
     real(dp) :: tolerance
@@ -56,6 +67,8 @@ end type linear_solver
 !--------------------------------------------------------------------------!
 abstract interface                                                         !
 !--------------------------------------------------------------------------!
+! Interfaces for linear operator methods.                                  !
+!--------------------------------------------------------------------------!
     subroutine opvec_add_ifc(A,x,y,trans)
         import :: linear_operator, dp
         class(linear_operator), intent(in) :: A
@@ -69,6 +82,8 @@ end interface
 
 !--------------------------------------------------------------------------!
 abstract interface                                                         !
+!--------------------------------------------------------------------------!
+! Interfaces for linear solver methods.                                    !
 !--------------------------------------------------------------------------!
     subroutine init_linear_solver_ifc(solver,A)
         import :: linear_solver, linear_operator
@@ -96,7 +111,30 @@ end interface
 
 
 
+!--------------------------------------------------------------------------!
+interface assignment(=)                                                    !
+!--------------------------------------------------------------------------!
+! Overload assignment for linear operator pointers.                        !
+!--------------------------------------------------------------------------!
+    module procedure assign_operators
+end interface
+
+
+
 contains
+
+
+
+
+!--------------------------------------------------------------------------!
+subroutine assign_operators(A,B)                                           !
+!--------------------------------------------------------------------------!
+    class(linear_operator), pointer, intent(out) :: A
+    class(linear_operator), target, intent(in) :: B
+
+    A => B
+
+end subroutine assign_operators
 
 
 
