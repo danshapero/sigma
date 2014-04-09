@@ -40,7 +40,7 @@ subroutine operator_product_matvec_add(A,x,y,trans)                        !
 
     z1(1:A%ncol) = x(1:A%ncol)
     z2(:) = 0.0_dp
-    do k=1,A%num_products
+    do k=A%num_products,1,-1
         call A%products(k)%ap%matvec(z1,z2,trans)
         z1(:) = z2(:)
     enddo

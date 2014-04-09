@@ -20,6 +20,7 @@ set(LINEAR_OPERATOR_SRCS
 linear_operator/linear_operator_interface.f90
 linear_operator/linear_operator_sums.f90
 linear_operator/linear_operator_products.f90
+linear_operator/linear_operator_adjoints.f90
 linear_operator/linear_operators.f90
 )
 

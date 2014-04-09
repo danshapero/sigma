@@ -84,11 +84,26 @@ implicit none
     !--------------------------------------------------------------------
     L = A+B
 
+    ! Check that getting the entries of an operator sum works properly
+    do k=1,nn
+        call random_number(q)
+        call random_number(r)
 
+        i = min(int(q*nn)+1,nn)
+        j = min(int(r*nn)+1,nn)
 
-    !--------------------------
-    ! Multiply L by some stuff
-    !--------------------------
+        q = dabs(L%get_value(i,j) - (A%get_value(i,j)+B%get_value(i,j)))
+
+        if (q>1.0e-12) then
+            print *, 'Getting entry',i,j,'from operator sum failed;'
+            print *, 'A+B = ',A%get_value(i,j)+B%get_value(i,j)
+            print *, 'L = ',L%get_value(i,j)
+            call exit(1)
+        endif
+    enddo
+
+    ! Check that operator-vector multiplication works properly if
+    ! an operator is defined as the sum of two operators
     allocate(w(nn),x(nn),y(nn),z(nn))
     x = 1.0_dp
 
@@ -126,8 +141,8 @@ implicit none
     L = A*B
 
     x = 1.0_dp
-    call A%matvec(x,w)
-    call B%matvec(w,z)
+    call B%matvec(x,w)
+    call A%matvec(w,z)
     if (maxval(dabs(z))==0.0_dp) then
         print *, 'Something went way wrong, made random matrices A, B'
         print *, 'and A*B*[1,..,1] = 0. Terminating.'
@@ -146,6 +161,49 @@ implicit none
     if (r>1.0e-14) then
         print *, 'Setting L = A*B and multiplying y = L*[1,..,1] failed;'
         print *, 'computed z = A*(B*x) but ||y-z|| = ',r
+        print *, 'Terminating.'
+        call exit(1)
+    endif
+
+    nullify(L)
+
+
+
+    !----------------------------------------------------------------------!
+    ! Make a linear operator which is the adjoint of another operator      !
+    !----------------------------------------------------------------------!
+    L = adjoint(A)
+
+    x = 1.0_dp
+    call A%matvec(x,y,.true.)
+    call L%matvec(x,z)
+
+    r = maxval(dabs(y-z))
+    if (r>1.0e-12) then
+        print *, 'Constructing adjoint L = A* of operator A failed;'
+        print *, 'For x = [1,..,1], || Lx - A*x || =',r
+        print *, 'Terminating.'
+        call exit(1)
+    endif
+
+    nullify(L)
+
+
+
+    !----------------------------------------------------------------------!
+    ! Form the product A*A of an operator                                  !
+    !----------------------------------------------------------------------!
+    L = adjoint(A)*A
+
+    x = 1.0_dp
+    call L%matvec(x,y)
+    call A%matvec(x,w)
+    call A%matvec(w,z,.true.)
+
+    r = maxval(dabs(y-z))
+    if (r>1.0e-12) then
+        print *, 'Constructor operator L = A*A failed;'
+        print *, 'For x = [1,..,1], || Lx - A*Ax || =',r
         print *, 'Terminating.'
         call exit(1)
     endif

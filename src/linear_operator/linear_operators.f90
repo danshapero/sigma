@@ -3,6 +3,7 @@ module linear_operators
 use linear_operator_interface
 use linear_operator_sums
 use linear_operator_products
+use linear_operator_adjoints
 
 implicit none
 
@@ -110,6 +111,25 @@ function multiply_operators(A,B) result(C)                                 !
 
 end function multiply_operators
 
+
+
+!--------------------------------------------------------------------------!
+function adjoint(A) result(B)                                              !
+!--------------------------------------------------------------------------!
+    class(linear_operator), target, intent(in) :: A
+    class(linear_operator), pointer :: B
+
+    allocate(operator_adjoint::B)
+
+    B%nrow = A%ncol
+    B%ncol = A%nrow
+
+    select type(B)
+        type is(operator_adjoint)
+            B%op => A
+    end select
+
+end function adjoint
 
 
 
