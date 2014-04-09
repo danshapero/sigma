@@ -54,6 +54,8 @@ implicit none
     ! Test adding two matrices with each possible connectivity graph       !
     !----------------------------------------------------------------------!
     do test1=1,4
+        print *, test1
+
         ! Allocate g to each possible graph type
         select case(test1)
             case(1)
@@ -71,6 +73,7 @@ implicit none
         call A%init(nn,nn,'row',g)
 
         do test2=1,4
+            print *, test2
             ! Allocate h to each possible graph type
             select case(test1)
                 case(1)
@@ -136,12 +139,12 @@ implicit none
                 call exit(1)
             endif
 
-            deallocate(h)
             call B%destroy()
+            deallocate(h)
         enddo
 
-        deallocate(g)
         call A%destroy()
+        deallocate(g)
     enddo
 
 
