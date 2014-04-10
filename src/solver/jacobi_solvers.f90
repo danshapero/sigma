@@ -9,7 +9,7 @@ implicit none
 !--------------------------------------------------------------------------!
 type, extends(linear_solver) :: jacobi_solver                              !
 !--------------------------------------------------------------------------!
-    real(dp), allocatable :: diag(:)
+    real(dp), allocatable :: idiag(:)
 contains
     procedure :: init => jacobi_init
     procedure :: linear_solve => jacobi_solve
@@ -33,10 +33,10 @@ subroutine jacobi_init(solver,A)                                           !
 
     solver%nn = A%nrow
 
-    allocate(solver%diag(solver%nn))
+    allocate(solver%idiag(solver%nn))
 
     do i=1,A%nrow
-        solver%diag(i) = A%get_value(i,i)
+        solver%idiag(i) = 1.0_dp/A%get_value(i,i)
     enddo
 
 end subroutine jacobi_init
@@ -46,17 +46,14 @@ end subroutine jacobi_init
 !--------------------------------------------------------------------------!
 subroutine jacobi_solve(solver,A,x,b)                                      !
 !--------------------------------------------------------------------------!
-    ! input/output variables
     class(jacobi_solver), intent(inout) :: solver
     class(linear_operator), intent(in)  :: A
     real(dp), intent(inout)             :: x(:)
     real(dp), intent(in)                :: b(:)
-    ! local variables
-    integer :: k
 
-    associate(diag => solver%diag)
+    associate(idiag => solver%idiag)
 
-    x = b/diag
+    x = idiag*b
 
     end associate
 
@@ -71,7 +68,7 @@ subroutine jacobi_free(solver)                                             !
 
     solver%nn = 0
 
-    deallocate(solver%diag)
+    deallocate(solver%idiag)
 
 end subroutine jacobi_free
 

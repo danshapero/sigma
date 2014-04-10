@@ -84,6 +84,7 @@ implicit none
     ! Make A the graph Laplacian of g + the identity matrix                !
     !----------------------------------------------------------------------!
     call A%init(nn,nn,'row',g)
+    call A%zero()
 
     allocate(neighbors(g%max_degree))
 
