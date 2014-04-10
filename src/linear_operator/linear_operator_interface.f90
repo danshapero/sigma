@@ -26,7 +26,7 @@ type, abstract :: linear_operator                                          !
 ! reflects the fact that linear operators form a C*-algebra.               !
 !--------------------------------------------------------------------------!
     integer :: nrow, ncol
-    class(linear_solver), pointer :: solver
+    class(linear_solver), pointer :: solver => null()
 contains
     procedure :: get_value => linear_operator_get_value
     procedure :: matvec => linear_operator_matvec
@@ -42,7 +42,7 @@ type :: linear_operator_pointer                                            !
 ! Auxiliary data type storing a pointer to a linear operator, which is     !
 ! necessary when we need an array of pointers to linear operators.         !
 !--------------------------------------------------------------------------!
-    class(linear_operator), pointer :: ap
+    class(linear_operator), pointer :: ap => null()
 end type linear_operator_pointer
 
 
@@ -54,7 +54,7 @@ type, abstract :: linear_solver                                            !
 !--------------------------------------------------------------------------!
     integer :: nn
     real(dp) :: tolerance
-    class(linear_solver), pointer :: next
+    class(linear_solver), pointer :: next => null()
 contains
     procedure(init_linear_solver_ifc), deferred :: init
     procedure(linear_solve_ifc), deferred :: linear_solve
