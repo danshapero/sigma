@@ -6,7 +6,7 @@ implicit none
 
     class(graph), pointer :: g
     type(sparse_matrix) :: A
-    class(linear_solver), allocatable :: solver, pc
+    class(linear_solver), pointer :: solver, pc
     integer :: i,n,test,nnz_per_row(99)
     real(dp) :: c,dx
     real(dp), allocatable :: u(:), b(:), u_c(:)
@@ -81,20 +81,35 @@ implicit none
 
         select case(test)
             case(1)
-                allocate(cg_solver::solver)
+                solver => cg(99,1.d-16)
                 if (verbose) print *, 'Test 1: CG solver test'
             case(2)
-                allocate(bicgstab_solver::solver)
+                solver => bicgstab(99,1.d-16)
                 if (verbose) print *, 'Test 2: BiCG-Stab solver test'
         end select
 
-        call solver%init(A)
-        solver%tolerance = 1.0e-16
+        pc => jacobi()
 
-        allocate(jacobi_solver::pc)
+        call solver%init(A)
         call pc%init(A)
 
         call solver%solve(A,u,b,pc)
+
+        if ( maxval(dabs(u-u_c))>1.0e-14 ) then
+            print *, 'Max value of u should be 1/4;'
+            print *, 'Value found:', maxval(u)
+            call exit(1)
+        endif
+
+        if (verbose) then
+            print *, 'Done solving linear system;'
+            print *, 'Range of solution: ',minval(u),maxval(u)
+        endif
+
+        u = 0.0_dp
+        call A%set_solver(solver)
+        call A%set_preconditioner(pc)
+        call A%solve(u,b)
 
         if ( maxval(dabs(u-u_c))>1.0e-14 ) then
             print *, 'Max value of u should be 1/4;'
@@ -133,9 +148,8 @@ implicit none
 
     if (verbose) print *, 'Test 3: BiCG-Stab solver, asymmetric system'
 
-    allocate(bicgstab_solver::solver)
+    solver => bicgstab(99,1.0d-12)
     call solver%init(A)
-    solver%tolerance = 1.0e-12
 
     u = 0.0_dp
 

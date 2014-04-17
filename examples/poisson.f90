@@ -16,7 +16,7 @@ implicit none
     type(sparse_matrix) :: A, B
 
     ! variables for solving the linear system
-    class(linear_solver), allocatable :: solver
+    class(linear_solver), pointer :: solver
     real(dp), allocatable :: u(:), f(:), r(:), z(:), p(:)
 
     ! other variables
@@ -73,8 +73,7 @@ implicit none
 !--------------------------------------------------------------------------!
 ! Solve the linear system                                                  !
 !--------------------------------------------------------------------------!
-    allocate(cg_solver::solver)
-
+    solver => cg(nn,1.0d-12)
     call solver%init(A)
 
     call solver%solve(A,u,f)

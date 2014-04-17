@@ -12,10 +12,13 @@ type, extends(linear_solver) :: cg_solver                                  !
     real(dp), allocatable :: p(:), q(:), r(:), z(:)
     integer :: iterations
 contains
-    procedure :: init => cg_init
+    procedure :: basic_init => cg_basic_init
+    procedure :: full_init => cg_full_init
     procedure :: linear_solve => cg_solve
     procedure :: linear_solve_pc => cg_solve_pc
     procedure :: free => cg_free
+
+    generic :: init => full_init
 end type cg_solver
 
 
@@ -24,30 +27,71 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine cg_init(solver,A)                                               !
+function cg(nn,tolerance)                                                  !
 !--------------------------------------------------------------------------!
+    integer, intent(in) :: nn
+    real(dp), intent(in), optional :: tolerance
+    class(linear_solver), pointer :: cg
+
+    allocate(cg_solver::cg)
+    select type(cg)
+        type is(cg_solver)
+            cg%nn = nn
+            cg%tolerance = 1.0d-16
+            if (present(tolerance)) cg%tolerance = tolerance
+    end select
+
+end function cg
+
+
+
+!--------------------------------------------------------------------------!
+subroutine cg_basic_init(solver,A)                                         !
+!--------------------------------------------------------------------------!
+    ! input/output variables
     class(cg_solver), intent(inout) :: solver
     class(linear_operator), intent(in) :: A
+    ! local variables
+    integer :: nn
 
-    if (A%nrow/=A%ncol) then
-        print *, 'Cannot make a CG solver for a non-square matrix.'
+    if (A%ncol/=A%nrow) then
+        print *, 'Cannot make a CG solver for a non-square matrix'
         print *, 'Terminating.'
         call exit(1)
     endif
 
-    solver%nn = A%nrow
-    solver%tolerance = 1.0d-8
+    nn = A%nrow
+
+    solver%nn = nn
+    solver%tolerance = 1.0d-16
     solver%iterations = 0
 
-    allocate( solver%p(solver%nn), solver%q(solver%nn), &
-        & solver%r(solver%nn), solver%z(solver%nn) )
+    if (.not.solver%initialized) then
+        allocate( solver%p(nn), solver%q(nn), solver%r(nn), solver%z(nn) )
+
+        solver%initialized = .true.
+    endif
 
     solver%p = 0.0_dp
     solver%q = 0.0_dp
     solver%r = 0.0_dp
     solver%z = 0.0_dp
 
-end subroutine cg_init
+end subroutine cg_basic_init
+
+
+
+!--------------------------------------------------------------------------!
+subroutine cg_full_init(solver,A,tolerance)                                !
+!--------------------------------------------------------------------------!
+    class(cg_solver), intent(inout) :: solver
+    class(linear_operator), intent(in) :: A
+    real(dp), intent(in) :: tolerance
+
+    call solver%basic_init(A)
+    solver%tolerance = tolerance
+
+end subroutine cg_full_init
 
 
 
@@ -140,10 +184,12 @@ subroutine cg_free(solver)                                                 !
     class(cg_solver), intent(inout) :: solver
 
     solver%nn = 0
-    solver%iterations = 0
     solver%tolerance = 0.0_dp
+    solver%iterations = 0
 
     deallocate( solver%p, solver%q, solver%r, solver%z )
+
+    solver%initialized = .false.
 
 end subroutine cg_free
 

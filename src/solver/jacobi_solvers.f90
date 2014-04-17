@@ -11,7 +11,7 @@ type, extends(linear_solver) :: jacobi_solver                              !
 !--------------------------------------------------------------------------!
     real(dp), allocatable :: idiag(:)
 contains
-    procedure :: init => jacobi_init
+    procedure :: basic_init => jacobi_basic_init
     procedure :: linear_solve => jacobi_solve
     procedure :: free => jacobi_free
 end type jacobi_solver
@@ -21,9 +21,19 @@ contains
 
 
 
+!--------------------------------------------------------------------------!
+function jacobi()                                                          !
+!--------------------------------------------------------------------------!
+    class(linear_solver), pointer :: jacobi
+
+    allocate(jacobi_solver::jacobi)
+
+end function jacobi
+
+
 
 !--------------------------------------------------------------------------!
-subroutine jacobi_init(solver,A)                                           !
+subroutine jacobi_basic_init(solver,A)                                     !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(jacobi_solver), intent(inout) :: solver
@@ -33,13 +43,23 @@ subroutine jacobi_init(solver,A)                                           !
 
     solver%nn = A%nrow
 
-    allocate(solver%idiag(solver%nn))
+    if (A%ncol/=A%nrow) then
+        print *, 'Cannot make a Jacobi solver for a non-square matrix'
+        print *, 'Terminating.'
+        call exit(1)
+    endif
+
+    if (.not.solver%initialized) then
+        allocate(solver%idiag(solver%nn))
+
+        solver%initialized = .true.
+    endif
 
     do i=1,A%nrow
         solver%idiag(i) = 1.0_dp/A%get_value(i,i)
     enddo
 
-end subroutine jacobi_init
+end subroutine jacobi_basic_init
 
 
 

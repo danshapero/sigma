@@ -26,12 +26,14 @@ type, abstract :: linear_operator                                          !
 ! reflects the fact that linear operators form a C*-algebra.               !
 !--------------------------------------------------------------------------!
     integer :: nrow, ncol
-    class(linear_solver), pointer :: solver => null()
+    class(linear_solver), pointer :: solver => null(), pc => null()
 contains
     procedure :: get_value => linear_operator_get_value
     procedure :: matvec => linear_operator_matvec
     procedure(opvec_add_ifc), deferred :: matvec_add
     procedure :: solve => linear_operator_solve
+    procedure :: set_solver
+    procedure :: set_preconditioner
 end type linear_operator
 
 
@@ -54,11 +56,12 @@ type, abstract :: linear_solver                                            !
 !--------------------------------------------------------------------------!
     integer :: nn
     real(dp) :: tolerance
-    class(linear_solver), pointer :: next => null()
+    logical :: initialized = .false.
 contains
-    procedure(init_linear_solver_ifc), deferred :: init
+    procedure(linear_solver_init_ifc), deferred :: basic_init
     procedure(linear_solve_ifc), deferred :: linear_solve
     procedure :: linear_solve_pc
+    generic :: init => basic_init
     generic :: solve => linear_solve, linear_solve_pc
 end type linear_solver
 
@@ -85,11 +88,11 @@ abstract interface                                                         !
 !--------------------------------------------------------------------------!
 ! Interfaces for linear solver methods.                                    !
 !--------------------------------------------------------------------------!
-    subroutine init_linear_solver_ifc(solver,A)
+    subroutine linear_solver_init_ifc(solver,A)
         import :: linear_solver, linear_operator
         class(linear_solver), intent(inout) :: solver
         class(linear_operator), intent(in) :: A
-    end subroutine init_linear_solver_ifc
+    end subroutine linear_solver_init_ifc
 
     subroutine linear_solve_ifc(solver,A,x,b)
         import :: linear_solver, linear_operator, dp
@@ -179,13 +182,18 @@ subroutine linear_operator_solve(A,x,b)                                    !
     real(dp), intent(inout) :: x(:)
     real(dp), intent(in) :: b(:)
     ! local variables
-    class(linear_solver), pointer :: solver
+    class(linear_solver), pointer :: solver, pc
 
     solver => A%solver
+    pc => A%pc
 
     ! This subroutine is a facade for more complex operations that occur
     ! in a dedicated solver object contained in the operator itself
-    call solver%solve(A,x,b)
+    if (associated(A%pc)) then
+        call solver%solve(A,x,b,pc)
+    else
+        call solver%solve(A,x,b)
+    endif
 
 end subroutine linear_operator_solve
 
@@ -203,6 +211,32 @@ subroutine linear_solve_pc(solver,A,x,b,pc)                                !
     call solver%solve(A,x,b)
 
 end subroutine linear_solve_pc
+
+
+
+!--------------------------------------------------------------------------!
+subroutine set_solver(A,solver)                                            !
+!--------------------------------------------------------------------------!
+    class(linear_operator), intent(inout) :: A
+    class(linear_solver), target, intent(inout) :: solver
+
+    A%solver => solver
+    call solver%init(A)
+
+end subroutine set_solver
+
+
+
+!--------------------------------------------------------------------------!
+subroutine set_preconditioner(A,pc)                                        !
+!--------------------------------------------------------------------------!
+    class(linear_operator), intent(inout) :: A
+    class(linear_solver), target, intent(inout) :: pc
+
+    A%pc => pc
+    call pc%init(A)
+
+end subroutine set_preconditioner
 
 
 

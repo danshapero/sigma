@@ -12,10 +12,13 @@ type, extends(linear_solver) :: bicgstab_solver                            !
     real(dp), allocatable :: p(:), q(:), r(:), r0(:), v(:), s(:), t(:), z(:)
     real(dp) :: alpha, beta, omega, rho, rho_old
 contains
-    procedure :: init => bicgstab_init
+    procedure :: basic_init => bicgstab_basic_init
+    procedure :: full_init => bicgstab_full_init
     procedure :: linear_solve => bicgstab_solve
     procedure :: linear_solve_pc => bicgstab_solve_pc
     procedure :: free => bicgstab_free
+
+    generic :: init => full_init
 end type bicgstab_solver
 
 contains
@@ -23,27 +26,77 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine bicgstab_init(solver,A)                                         !
+function bicgstab(nn,tolerance)                                            !
 !--------------------------------------------------------------------------!
-    class(bicgstab_solver), intent(inout) :: solver
-    class(linear_operator), intent(in) :: A
+    integer, intent(in) :: nn
+    real(dp), intent(in), optional :: tolerance
+    class(linear_solver), pointer :: bicgstab
 
-    if (A%nrow/=A%ncol) then
-        print *, 'Cannot make a BiCG solver for a non-square matrix.'
+    allocate(bicgstab_solver::bicgstab)
+    select type(bicgstab)
+        type is(bicgstab_solver)
+            bicgstab%nn = nn
+            bicgstab%tolerance = 1.0d-16
+            if (present(tolerance)) bicgstab%tolerance = 1.0d-16
+    end select
+
+end function bicgstab
+
+
+
+!--------------------------------------------------------------------------!
+subroutine bicgstab_basic_init(solver,A)                                   !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(bicgstab_solver), intent(inout) :: solver
+    clasS(linear_operator), intent(in) :: A
+    ! local variables
+    integer :: nn
+
+    if (A%ncol/=A%nrow) then
+        print *, 'Cannot make a BiCG-Stab solver for non-square matrix.'
         print *, 'Terminating.'
         call exit(1)
     endif
 
-    solver%nn = A%nrow
-    solver%tolerance = 1.0d-8
+    nn = A%nrow
+
+    solver%nn = nn
+    solver%tolerance = 1.0d-16
+
+    if (.not.solver%initialized) then
+        allocate( solver%p(nn), solver%q(nn), &
+            & solver%r(nn), solver%r0(nn), &
+            & solver%v(nn), solver%s(nn), &
+            & solver%t(nn), solver%z(nn) )
+
+        solver%initialized = .true.
+    endif
+
+    solver%p = 0.0_dp
+    solver%q = 0.0_dp
+    solver%r = 0.0_dp
+    solver%r0 = 0.0_dp
+    solver%v = 0.0_dp
+    solver%s = 0.0_dp
+    solver%t = 0.0_dp
+    solver%z = 0.0_dp
+
+end subroutine bicgstab_basic_init
 
 
-    allocate( solver%p(solver%nn), solver%q(solver%nn), &
-        & solver%r(solver%nn), solver%r0(solver%nn), &
-        & solver%v(solver%nn), solver%s(solver%nn), &
-        & solver%t(solver%nn), solver%z(solver%nn) )
 
-end subroutine bicgstab_init
+!--------------------------------------------------------------------------!
+subroutine bicgstab_full_init(solver,A,tolerance)                          !
+!--------------------------------------------------------------------------!
+    class(bicgstab_solver), intent(inout) :: solver
+    class(linear_operator), intent(in) :: A
+    real(dp), intent(in) :: tolerance
+
+    call solver%basic_init(A)
+    solver%tolerance = tolerance
+
+end subroutine bicgstab_full_init
 
 
 
@@ -172,6 +225,8 @@ subroutine bicgstab_free(solver)                                           !
     solver%rho = 0.0_dp
     solver%rho_old = 0.0_dp
     solver%omega = 0.0_dp
+
+    solver%initialized = .false.
 
 end subroutine bicgstab_free
 
