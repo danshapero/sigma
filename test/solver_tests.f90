@@ -81,17 +81,17 @@ implicit none
 
         select case(test)
             case(1)
-                solver => cg(99,1.d-16)
+                solver => cg(1.d-16)
                 if (verbose) print *, 'Test 1: CG solver test'
             case(2)
-                solver => bicgstab(99,1.d-16)
+                solver => bicgstab(1.d-16)
                 if (verbose) print *, 'Test 2: BiCG-Stab solver test'
         end select
 
         pc => jacobi()
 
-        call solver%init(A)
-        call pc%init(A)
+        call solver%setup(A)
+        call pc%setup(A)
 
         call solver%solve(A,u,b,pc)
 
@@ -148,8 +148,8 @@ implicit none
 
     if (verbose) print *, 'Test 3: BiCG-Stab solver, asymmetric system'
 
-    solver => bicgstab(99,1.0d-12)
-    call solver%init(A)
+    solver => bicgstab(1.0d-12)
+    call solver%setup(A)
 
     u = 0.0_dp
 

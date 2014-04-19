@@ -9,16 +9,22 @@ implicit none
 !--------------------------------------------------------------------------!
 type, extends(linear_solver) :: bicgstab_solver                            !
 !--------------------------------------------------------------------------!
+    ! scratch vectors and scalars for BiCG algorithm
     real(dp), allocatable :: p(:), q(:), r(:), r0(:), v(:), s(:), t(:), z(:)
     real(dp) :: alpha, beta, omega, rho, rho_old
+
+    ! parameters determining the behavior of the solver
+    real(dp) :: tolerance
+    logical, private :: params_set = .false.
 contains
-    procedure :: basic_init => bicgstab_basic_init
-    procedure :: full_init => bicgstab_full_init
+    ! Methods required by the linear solver interface
+    procedure :: setup => bicgstab_setup
     procedure :: linear_solve => bicgstab_solve
     procedure :: linear_solve_pc => bicgstab_solve_pc
     procedure :: free => bicgstab_free
 
-    generic :: init => full_init
+    ! Methods specific to BiCG-Stab solvers
+    procedure :: set_params => bicgstab_set_params
 end type bicgstab_solver
 
 contains
@@ -26,18 +32,15 @@ contains
 
 
 !--------------------------------------------------------------------------!
-function bicgstab(nn,tolerance)                                            !
+function bicgstab(tolerance)                                               !
 !--------------------------------------------------------------------------!
-    integer, intent(in) :: nn
     real(dp), intent(in), optional :: tolerance
     class(linear_solver), pointer :: bicgstab
 
     allocate(bicgstab_solver::bicgstab)
     select type(bicgstab)
         type is(bicgstab_solver)
-            bicgstab%nn = nn
-            bicgstab%tolerance = 1.0d-16
-            if (present(tolerance)) bicgstab%tolerance = 1.0d-16
+            call bicgstab%set_params(tolerance)
     end select
 
 end function bicgstab
@@ -45,7 +48,7 @@ end function bicgstab
 
 
 !--------------------------------------------------------------------------!
-subroutine bicgstab_basic_init(solver,A)                                   !
+subroutine bicgstab_setup(solver,A)                                        !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(bicgstab_solver), intent(inout) :: solver
@@ -53,17 +56,22 @@ subroutine bicgstab_basic_init(solver,A)                                   !
     ! local variables
     integer :: nn
 
+    ! Error handling
     if (A%ncol/=A%nrow) then
         print *, 'Cannot make a BiCG-Stab solver for non-square matrix.'
         print *, 'Terminating.'
         call exit(1)
     endif
 
+    ! Set the matrix dimension for this solver
     nn = A%nrow
-
     solver%nn = nn
-    solver%tolerance = 1.0d-16
 
+    ! If the solver parameters have not been set, call the set_params
+    ! subroutine to set them all to defaults
+    if (.not.solver%params_set) call solver%set_params()
+
+    ! If the solver hasn't yet been initialized, allocate the work vectors
     if (.not.solver%initialized) then
         allocate( solver%p(nn), solver%q(nn), &
             & solver%r(nn), solver%r0(nn), &
@@ -73,6 +81,7 @@ subroutine bicgstab_basic_init(solver,A)                                   !
         solver%initialized = .true.
     endif
 
+    ! Zero out the work vectors
     solver%p = 0.0_dp
     solver%q = 0.0_dp
     solver%r = 0.0_dp
@@ -82,21 +91,28 @@ subroutine bicgstab_basic_init(solver,A)                                   !
     solver%t = 0.0_dp
     solver%z = 0.0_dp
 
-end subroutine bicgstab_basic_init
+end subroutine bicgstab_setup
 
 
 
 !--------------------------------------------------------------------------!
-subroutine bicgstab_full_init(solver,A,tolerance)                          !
+subroutine bicgstab_set_params(solver,tolerance)                           !
 !--------------------------------------------------------------------------!
     class(bicgstab_solver), intent(inout) :: solver
-    class(linear_operator), intent(in) :: A
-    real(dp), intent(in) :: tolerance
+    real(dp), intent(in), optional :: tolerance
 
-    call solver%basic_init(A)
-    solver%tolerance = tolerance
+    ! If the user has specified a tolerane for the iterative solver, then
+    ! set the solver's tolerane accordingly,
+    if (present(tolerance)) then
+        solver%tolerance = tolerance
+    else
+    ! Otherwise, set the tolerance to 1.0e-16.
+        solver%tolerance = 1.0d-16
+    endif
 
-end subroutine bicgstab_full_init
+    solver%params_set = .true.
+
+end subroutine bicgstab_set_params
 
 
 
@@ -227,6 +243,7 @@ subroutine bicgstab_free(solver)                                           !
     solver%omega = 0.0_dp
 
     solver%initialized = .false.
+    solver%params_set = .false.
 
 end subroutine bicgstab_free
 

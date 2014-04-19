@@ -118,8 +118,8 @@ implicit none
 
     ! Initialize the solver for a system with nn unknowns and a solution
     ! tolerance of 1.0e-10.
-    call solver%init(A)
-    call pc%init(A)
+    call solver%setup(A)
+    call pc%setup(A)
 
     ! Call the solver on A, with x as the approximate solution and b as 
     ! the right-hand side.

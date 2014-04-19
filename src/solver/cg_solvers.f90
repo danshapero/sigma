@@ -9,16 +9,22 @@ implicit none
 !--------------------------------------------------------------------------!
 type, extends(linear_solver) :: cg_solver                                  !
 !--------------------------------------------------------------------------!
+    ! scratch vectors for CG iteration
     real(dp), allocatable :: p(:), q(:), r(:), z(:)
     integer :: iterations
+
+    ! parameters determining solver behavior
+    real(dp) :: tolerance
+    logical, private :: params_set = .false.
 contains
-    procedure :: basic_init => cg_basic_init
-    procedure :: full_init => cg_full_init
+    ! Methods requiredby linear solver interface
+    procedure :: setup => cg_setup
     procedure :: linear_solve => cg_solve
     procedure :: linear_solve_pc => cg_solve_pc
     procedure :: free => cg_free
 
-    generic :: init => full_init
+    ! Methods specific to CG solvers
+    procedure :: set_params => cg_set_params
 end type cg_solver
 
 
@@ -27,18 +33,15 @@ contains
 
 
 !--------------------------------------------------------------------------!
-function cg(nn,tolerance)                                                  !
+function cg(tolerance)                                                     !
 !--------------------------------------------------------------------------!
-    integer, intent(in) :: nn
     real(dp), intent(in), optional :: tolerance
     class(linear_solver), pointer :: cg
 
     allocate(cg_solver::cg)
     select type(cg)
         type is(cg_solver)
-            cg%nn = nn
-            cg%tolerance = 1.0d-16
-            if (present(tolerance)) cg%tolerance = tolerance
+            call cg%set_params(tolerance)
     end select
 
 end function cg
@@ -46,7 +49,7 @@ end function cg
 
 
 !--------------------------------------------------------------------------!
-subroutine cg_basic_init(solver,A)                                         !
+subroutine cg_setup(solver,A)                                              !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cg_solver), intent(inout) :: solver
@@ -54,44 +57,58 @@ subroutine cg_basic_init(solver,A)                                         !
     ! local variables
     integer :: nn
 
+    ! Error handling
     if (A%ncol/=A%nrow) then
         print *, 'Cannot make a CG solver for a non-square matrix'
         print *, 'Terminating.'
         call exit(1)
     endif
 
+    ! Set the matrix dimension for this solver
     nn = A%nrow
-
     solver%nn = nn
-    solver%tolerance = 1.0d-16
+
+    ! Set the iteration count to 0
     solver%iterations = 0
 
+    ! If the solver parameters have not been set, call the set_params
+    ! subroutine to set them all to their defaults
+    if (.not.solver%params_set) call solver%set_params()
+
+    ! If the solver hasn't been initialized yet, allocate the work vectors
     if (.not.solver%initialized) then
         allocate( solver%p(nn), solver%q(nn), solver%r(nn), solver%z(nn) )
-
         solver%initialized = .true.
     endif
 
+    ! Zero out all the work vectors
     solver%p = 0.0_dp
     solver%q = 0.0_dp
     solver%r = 0.0_dp
     solver%z = 0.0_dp
 
-end subroutine cg_basic_init
+end subroutine cg_setup
 
 
 
 !--------------------------------------------------------------------------!
-subroutine cg_full_init(solver,A,tolerance)                                !
+subroutine cg_set_params(solver,tolerance)                                 !
 !--------------------------------------------------------------------------!
     class(cg_solver), intent(inout) :: solver
-    class(linear_operator), intent(in) :: A
-    real(dp), intent(in) :: tolerance
+    real(dp), intent(in), optional :: tolerance
 
-    call solver%basic_init(A)
-    solver%tolerance = tolerance
+    ! If the user has specified a tolerance for the iterative solver, then
+    ! set the solver's tolerance accordingly,
+    if (present(tolerance)) then
+        solver%tolerance = tolerance
+    else
+    ! Otherwise, set the tolerance to 1.0e-16.
+        solver%tolerance = 1.0d-16
+    endif
 
-end subroutine cg_full_init
+    solver%params_set = .true.
+
+end subroutine cg_set_params
 
 
 
@@ -190,6 +207,7 @@ subroutine cg_free(solver)                                                 !
     deallocate( solver%p, solver%q, solver%r, solver%z )
 
     solver%initialized = .false.
+    solver%params_set = .false.
 
 end subroutine cg_free
 

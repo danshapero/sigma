@@ -73,8 +73,8 @@ implicit none
 !--------------------------------------------------------------------------!
 ! Solve the linear system                                                  !
 !--------------------------------------------------------------------------!
-    solver => cg(nn,1.0d-12)
-    call solver%init(A)
+    solver => cg(1.0d-12)
+    call solver%setup(A)
 
     call solver%solve(A,u,f)
 !    print *, 'CG iterations to solve system:',solver%iterations

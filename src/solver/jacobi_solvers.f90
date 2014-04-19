@@ -9,9 +9,10 @@ implicit none
 !--------------------------------------------------------------------------!
 type, extends(linear_solver) :: jacobi_solver                              !
 !--------------------------------------------------------------------------!
+    ! inverse of diagonal entries of matrix
     real(dp), allocatable :: idiag(:)
 contains
-    procedure :: basic_init => jacobi_basic_init
+    procedure :: setup => jacobi_setup
     procedure :: linear_solve => jacobi_solve
     procedure :: free => jacobi_free
 end type jacobi_solver
@@ -33,7 +34,7 @@ end function jacobi
 
 
 !--------------------------------------------------------------------------!
-subroutine jacobi_basic_init(solver,A)                                     !
+subroutine jacobi_setup(solver,A)                                          !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(jacobi_solver), intent(inout) :: solver
@@ -59,7 +60,7 @@ subroutine jacobi_basic_init(solver,A)                                     !
         solver%idiag(i) = 1.0_dp/A%get_value(i,i)
     enddo
 
-end subroutine jacobi_basic_init
+end subroutine jacobi_setup
 
 
 

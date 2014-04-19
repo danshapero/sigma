@@ -55,13 +55,11 @@ type, abstract :: linear_solver                                            !
 ! An object to encapsulate data needed for solving linear systems.         !
 !--------------------------------------------------------------------------!
     integer :: nn
-    real(dp) :: tolerance
     logical :: initialized = .false.
 contains
-    procedure(linear_solver_init_ifc), deferred :: basic_init
+    procedure(linear_solver_setup_ifc), deferred :: setup
     procedure(linear_solve_ifc), deferred :: linear_solve
     procedure :: linear_solve_pc
-    generic :: init => basic_init
     generic :: solve => linear_solve, linear_solve_pc
 end type linear_solver
 
@@ -88,11 +86,11 @@ abstract interface                                                         !
 !--------------------------------------------------------------------------!
 ! Interfaces for linear solver methods.                                    !
 !--------------------------------------------------------------------------!
-    subroutine linear_solver_init_ifc(solver,A)
+    subroutine linear_solver_setup_ifc(solver,A)
         import :: linear_solver, linear_operator
         class(linear_solver), intent(inout) :: solver
         class(linear_operator), intent(in) :: A
-    end subroutine linear_solver_init_ifc
+    end subroutine linear_solver_setup_ifc
 
     subroutine linear_solve_ifc(solver,A,x,b)
         import :: linear_solver, linear_operator, dp
@@ -221,7 +219,7 @@ subroutine set_solver(A,solver)                                            !
     class(linear_solver), target, intent(inout) :: solver
 
     A%solver => solver
-    call solver%init(A)
+    call solver%setup(A)
 
 end subroutine set_solver
 
@@ -234,7 +232,7 @@ subroutine set_preconditioner(A,pc)                                        !
     class(linear_solver), target, intent(inout) :: pc
 
     A%pc => pc
-    call pc%init(A)
+    call pc%setup(A)
 
 end subroutine set_preconditioner
 
