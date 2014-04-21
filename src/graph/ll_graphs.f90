@@ -143,20 +143,32 @@ end subroutine ll_init_variable_degree
 
 
 !--------------------------------------------------------------------------!
-subroutine ll_graph_copy(g,h)                                              !
+subroutine ll_graph_copy(g,h,trans)                                        !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(ll_graph), intent(inout) :: g
     class(graph), intent(in)       :: h
+    logical, intent(in), optional :: trans
     ! local variables
-    integer :: i,j,k,n,num_returned,num_blocks,edges(2,64)
+    integer :: ind(2),order(2),nv(2),k,n,num_returned,num_blocks,edges(2,64)
     type(graph_edge_cursor) :: cursor
+
+    ! Check if we're copying h or h with all directed edges reversed
+    nv = [h%n, h%m]
+    order = [1, 2]
+
+    if (present(trans)) then
+        if (trans) then
+            nv = [h%m, h%n]
+            order = [2,1]
+        endif
+    endif
 
     ! Mark the graph as mutable
     g%mutable = .true.
 
     ! Initialize g to have the same number of left- and right-nodes as h
-    call g%init(h%n,h%m)
+    call g%init(nv(1),nv(2))
 
     ! Get a cursor from h with which to iterate through its edges
     cursor = h%make_cursor(0)
@@ -171,13 +183,12 @@ subroutine ll_graph_copy(g,h)                                              !
 
         ! For each edge,
         do k=1,num_returned
-            i = edges(1,k)
-            j = edges(2,k)
+            ind = edges(order,k)
 
             ! If that edge isn't null,
-            if (i/=0 .and. j/=0) then
+            if (ind(1)/=0 .and. ind(2)/=0) then
                 ! Add it to g
-                call g%add_edge(i,j)
+                call g%add_edge(ind(1),ind(2))
             endif
         enddo
     enddo

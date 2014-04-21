@@ -172,21 +172,33 @@ end subroutine cs_init_variable_degree
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_graph_copy(g,h)                                              !
+subroutine cs_graph_copy(g,h,trans)                                        !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_graph), intent(inout) :: g
     class(graph), intent(in)       :: h
+    logical, intent(in), optional :: trans
     ! local variables
-    integer :: i,j,k,n,num_blocks,num_returned,edges(2,64)
+    integer :: ind(2),order(2),nv(2),k,n,num_blocks,num_returned,edges(2,64)
     type(graph_edge_cursor) :: cursor
+
+    nv = [h%n, h%m]
+    order = [1, 2]
+
+    ! Check whether we're copying h or h with all directed edes reversed
+    if (present(trans)) then
+        if (trans) then
+            nv = [h%m, h%n]
+            order = [2, 1]
+        endif
+    endif
 
     ! Mark the graph as mutable
     g%mutable = .true.
 
     ! Copy all of h's attributes to g
-    g%n = h%n
-    g%m = h%m
+    g%n = nv(1)
+    g%m = nv(2)
     g%ne = 0
     g%capacity = h%ne
     g%max_degree = h%max_degree
@@ -208,20 +220,19 @@ subroutine cs_graph_copy(g,h)                                              !
 
         ! For each edge,
         do k=1,num_returned
-            i = edges(1,k)
-            j = edges(2,k)
+            ind = edges(order,k)
 
             ! If that edge isn't null
-            if (i/=0 .and. j/=0) then
+            if (ind(1)/=0 .and. ind(2)/=0) then
                 ! Increment a counter
-                g%ptr(i+1) = g%ptr(i+1)+1
+                g%ptr(ind(1)+1) = g%ptr(ind(1)+1)+1
             endif
         enddo
     enddo
 
     g%ptr(1) = 1
-    do i=1,g%n
-        g%ptr(i+1) = g%ptr(i)+g%ptr(i+1)
+    do k=1,g%n
+        g%ptr(k+1) = g%ptr(k)+g%ptr(k+1)
     enddo
 
     ! Iterate through the edges of h again to fill the node array of g
@@ -233,11 +244,10 @@ subroutine cs_graph_copy(g,h)                                              !
         edges = h%get_edges(cursor,64,num_returned)
 
         do k=1,num_returned
-            i = edges(1,k)
-            j = edges(2,k)
+            ind = edges(order,k)
 
-            if (i/=0 .and. j/=0) then
-                call g%add_edge(i,j)
+            if (ind(1)/=0 .and. ind(2)/=0) then
+                call g%add_edge(ind(1),ind(2))
             endif
         enddo
     enddo

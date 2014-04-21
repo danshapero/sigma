@@ -164,10 +164,11 @@ abstract interface                                                         !
         integer, intent(in), optional :: m
     end subroutine init_graph_var_deg_ifc
 
-    subroutine copy_graph_ifc(g,h)
+    subroutine copy_graph_ifc(g,h,trans)
         import :: graph
         class(graph), intent(inout) :: g
         class(graph), intent(in)    :: h
+        logical, intent(in), optional :: trans
     end subroutine copy_graph_ifc
 
     function degree_ifc(g,i) result(d)

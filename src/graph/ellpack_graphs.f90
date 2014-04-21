@@ -131,21 +131,33 @@ end subroutine ellpack_init_variable_degree
 
 
 !--------------------------------------------------------------------------!
-subroutine ellpack_graph_copy(g,h)                                         !
+subroutine ellpack_graph_copy(g,h,trans)                                   !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(ellpack_graph), intent(inout) :: g
     class(graph), intent(in)            :: h
+    logical, intent(in), optional :: trans
     ! local variables
-    integer :: i,j,k,n,num_blocks,num_returned,edges(2,64)
+    integer :: ind(2),order(2),nv(2),k,n,num_blocks,num_returned,edges(2,64)
     type(graph_edge_cursor) :: cursor
+
+    nv = [h%n, h%m]
+    order = [1, 2]
+
+    ! Check if we're copying h or h with all directed edges reversed
+    if (present(trans)) then
+        if (trans) then
+            nv = [h%m, h%n]
+            order = [2, 1]
+        endif
+    endif
 
     ! Mark the graph as mutable
     g%mutable = .true.
 
     ! Copy all the attributes of g from those of h
-    g%n = h%n
-    g%m = h%m
+    g%n = nv(1)
+    g%m = nv(2)
     g%ne = 0
     g%max_degree = h%max_degree
     g%max_neighbors = g%max_degree
@@ -166,11 +178,10 @@ subroutine ellpack_graph_copy(g,h)                                         !
 
         ! Add each edge from the chunk into g
         do k=1,num_returned
-            i = edges(1,k)
-            j = edges(2,k)
+            ind = edges(order,k)
 
-            if (i/=0 .and. j/=0) then
-                call g%add_edge(i,j)
+            if (ind(1)/=0 .and. ind(2)/=0) then
+                call g%add_edge(ind(1),ind(2))
             endif
         enddo
     enddo
