@@ -177,7 +177,7 @@ subroutine ll_graph_copy(g,h)                                              !
             ! If that edge isn't null,
             if (i/=0 .and. j/=0) then
                 ! Add it to g
-                call g%lists(i)%push(j)
+                call g%add_edge(i,j)
             endif
         enddo
     enddo

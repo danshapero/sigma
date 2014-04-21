@@ -14,6 +14,7 @@ use types, only: dp
 use linear_operator_interface
 use graphs
 use ll_graphs
+use cs_graphs
 
 implicit none
 
@@ -40,6 +41,9 @@ contains
     ! Initialize a sparse matrix given the number of rows and columns,
     ! and the desired ordering, e.g. row- or column-major ordering.
 
+    procedure :: add_mats => sparse_mat_add_mats
+    ! Initialize a sparse matrix as the sum of two other sparse matrices.
+
 
     !-----------
     ! Accessors
@@ -57,7 +61,7 @@ contains
     procedure :: add_value => sparse_mat_add_value
     ! Add a number to a matrix entry
 
-    procedure :: add => sparse_mat_add_mats
+    procedure :: add_mat_to_self => sparse_mat_add_mat_to_self
     ! Compute the sum A <- A+B
 
     procedure :: zero => sparse_mat_zero
@@ -94,6 +98,12 @@ contains
     ! Auxiliary routines
     !--------------------
     procedure, private :: set_value_with_reallocation
+
+
+    !----------
+    ! Generics
+    !----------
+    generic :: add => add_mats, add_mat_to_self
 
 end type sparse_matrix
 
@@ -206,6 +216,158 @@ end subroutine sparse_mat_init
 
 
 
+!--------------------------------------------------------------------------!
+subroutine sparse_mat_add_mats(A,B,C,g,orientation)                        !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(inout) :: A
+    class(sparse_matrix), intent(in) :: B, C
+    class(graph), pointer, intent(inout), optional :: g
+    character(len=3), intent(in), optional :: orientation
+    ! local variables
+    integer :: i,j,k,n,ind(2),nv(2)
+    integer :: num_blocks, num_returned, edges(2,64)
+    type(graph_edge_cursor) :: cursor
+    class(graph), pointer :: ga
+    character(len=3) :: ori
+    integer, allocatable :: degrees(:)
+
+    !------------------------
+    ! Do some error checking
+    if (B%nrow/=C%nrow .or. B%ncol/=C%ncol) then
+        print *, 'Dimensions for sparse matrix sum are inconsistent.'
+        print *, 'Terminating.'
+        call exit(1)
+    endif
+
+
+    !---------------------
+    ! Check optional args
+
+    ! First, check if the user has supplied a graph to use for the
+    ! connectivity structure of A
+    if (present(g)) then
+        ! If the graph pointer isn't associated, allocate it to a CS graph
+        if (.not.associated(g)) allocate(cs_graph::g)
+
+        ! Make our local graph pointer ga point to g
+        ga => g
+    else
+        ! If the user hasn't supplied a graph, make the local graph pointer
+        ! ga a CS graph.
+        allocate(cs_graph::ga)
+    endif
+
+    ! Next, check if the user has supplied an orientation for the output
+    ! matrix A; if not, default to row orientation
+    ori = "row"
+    if (present(orientation)) ori = orientation
+
+    ! Decide what dimension to make ga depending on the matrix orientation
+    select case(ori)
+        case("row")
+            nv = [B%nrow, B%ncol]
+            A%order = [1,2]
+        case("col")
+            nv = [B%ncol, B%nrow]
+            A%order = [2,1]
+    end select
+
+
+    !------------------------------
+    ! Build the connectivity graph
+
+    ! Compute the degree that each vertex in ga will have so we can
+    ! pre-allocate it without wasting space
+    allocate( degrees(nv(1)) )
+    degrees = 0
+
+    ! First, add up the contributions from B
+    cursor = B%g%make_cursor(0)
+    num_blocks = (cursor%final-cursor%current)/64+1
+    do n=1,num_blocks
+        edges = B%g%get_edges(cursor,64,num_returned)
+
+        do k=1,num_returned
+            ind = edges(B%order,k)
+            ind = ind(A%order)
+
+            degrees(ind(1)) = degrees(ind(1))+1
+        enddo
+    enddo
+
+    ! Next, add up the contributions from C
+    cursor = C%g%make_cursor(0)
+    num_blocks = (cursor%final-cursor%current)/64+1
+    do n=1,num_blocks
+        edges = C%g%get_edges(cursor,64,num_returned)
+
+        do k=1,num_returned
+            ind = edges(C%order,k)
+            ind = ind(A%order)
+
+            degrees(ind(1)) = degrees(ind(1))+1
+        enddo
+    enddo
+
+    ! Finally, initialize the graph ga
+    call ga%init(nv(1),nv(2),degrees)
+    deallocate(degrees)
+
+    ! Add in entries to the graph ga
+    cursor = B%g%make_cursor(0)
+    num_blocks = (cursor%final-cursor%current)/64+1
+    do n=1,num_blocks
+        edges = B%g%get_edges(cursor,64,num_returned)
+
+        do k=1,num_returned
+            ind = edges(B%order,k)
+            ind = ind(A%order)
+
+            if (ind(1)/=0 .and. ind(2)/=0) call ga%add_edge(ind(1),ind(2))
+        enddo
+    enddo
+
+    cursor = C%g%make_cursor(0)
+    num_blocks = (cursor%final-cursor%current)/64+1
+    do n=1,num_blocks
+        edges = C%g%get_edges(cursor,64,num_returned)
+
+        do k=1,num_returned
+            ind = edges(C%order,k)
+            ind = ind(A%order)
+
+            if (ind(1)/=0 .and. ind(2)/=0) call ga%add_edge(ind(1),ind(2))
+        enddo
+    enddo
+
+    ! Initialize A with the connectivity structure ga
+    call A%init(B%nrow,B%ncol,ori,ga)
+
+
+    !-----------------------
+    ! Fill the entries of A
+
+    cursor = A%g%make_cursor(0)
+    num_blocks = (cursor%final-cursor%current)/64+1
+    do n=1,num_blocks
+        edges = A%g%get_edges(cursor,64,num_returned)
+
+        do k=1,num_returned
+            i = edges(A%order(1),k)
+            j = edges(A%order(2),k)
+
+            if (i/=0 .and. j/=0) then
+                A%val(64*(n-1)+k) = B%get_value(i,j)+C%get_value(i,j)
+            endif
+        enddo
+    enddo
+
+end subroutine sparse_mat_add_mats
+
+
+
+
 !==========================================================================!
 !==== Accessors                                                        ====!
 !==========================================================================!
@@ -302,7 +464,7 @@ end subroutine sparse_mat_add_value
 
 
 !--------------------------------------------------------------------------!
-subroutine sparse_mat_add_mats(A,B)                                        !
+subroutine sparse_mat_add_mat_to_self(A,B)                                 !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(sparse_matrix), intent(inout) :: A
@@ -362,7 +524,7 @@ subroutine sparse_mat_add_mats(A,B)                                        !
         call exit(1)
     endif
 
-end subroutine sparse_mat_add_mats
+end subroutine sparse_mat_add_mat_to_self
 
 
 

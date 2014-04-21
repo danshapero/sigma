@@ -7,6 +7,7 @@ test/graph_tests_3.f90
 test/matrix_tests_1.f90
 test/matrix_tests_2.f90
 test/matrix_tests_3.f90
+test/matrix_tests_4.f90
 test/linear_operator_tests_1.f90
 #test/block_matrix_tests.f90
 test/solver_tests.f90

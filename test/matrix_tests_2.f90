@@ -34,7 +34,7 @@ implicit none
         call random_number(y)
         ! Connect each pair (i,j) in gr with probability p
         do j=i+1,nn
-            if (z(j)>p) then
+            if (z(j)<p) then
                 call gr%add_edge(i,j)
                 call gr%add_edge(j,i)
 
