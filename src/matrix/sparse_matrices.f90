@@ -284,7 +284,7 @@ subroutine sparse_mat_add_mats(A,B,C,g,orientation)                        !
 
     ! First, add up the contributions from B
     cursor = B%g%make_cursor(0)
-    num_blocks = (cursor%final-cursor%current)/64+1
+    num_blocks = (cursor%final-cursor%start)/64+1
     do n=1,num_blocks
         edges = B%g%get_edges(cursor,64,num_returned)
 
@@ -298,7 +298,7 @@ subroutine sparse_mat_add_mats(A,B,C,g,orientation)                        !
 
     ! Next, add up the contributions from C
     cursor = C%g%make_cursor(0)
-    num_blocks = (cursor%final-cursor%current)/64+1
+    num_blocks = (cursor%final-cursor%start)/64+1
     do n=1,num_blocks
         edges = C%g%get_edges(cursor,64,num_returned)
 
@@ -316,7 +316,7 @@ subroutine sparse_mat_add_mats(A,B,C,g,orientation)                        !
 
     ! Add in entries to the graph ga
     cursor = B%g%make_cursor(0)
-    num_blocks = (cursor%final-cursor%current)/64+1
+    num_blocks = (cursor%final-cursor%start)/64+1
     do n=1,num_blocks
         edges = B%g%get_edges(cursor,64,num_returned)
 
@@ -329,7 +329,7 @@ subroutine sparse_mat_add_mats(A,B,C,g,orientation)                        !
     enddo
 
     cursor = C%g%make_cursor(0)
-    num_blocks = (cursor%final-cursor%current)/64+1
+    num_blocks = (cursor%final-cursor%start)/64+1
     do n=1,num_blocks
         edges = C%g%get_edges(cursor,64,num_returned)
 
@@ -349,7 +349,7 @@ subroutine sparse_mat_add_mats(A,B,C,g,orientation)                        !
     ! Fill the entries of A
 
     cursor = A%g%make_cursor(0)
-    num_blocks = (cursor%final-cursor%current)/64+1
+    num_blocks = (cursor%final-cursor%start)/64+1
     do n=1,num_blocks
         edges = A%g%get_edges(cursor,64,num_returned)
 
