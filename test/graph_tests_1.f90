@@ -1,4 +1,11 @@
-program graph_tests_1
+!--------------------------------------------------------------------------!
+program graph_tests_1                                                      !
+!--------------------------------------------------------------------------!
+!     This program is for testing the correctness of various basic graph   !
+! operations: initialization, adding and removing edges, checking the      !
+! connectedness of two vertices, returning all the neighbors of a given    !
+! vertex, iterating through all edges and permuting the vertex numbering.  !
+!--------------------------------------------------------------------------!
 
 use sigma
 

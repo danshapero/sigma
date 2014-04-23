@@ -1,4 +1,11 @@
-program graph_tests_2
+!--------------------------------------------------------------------------!
+program graph_tests_2                                                      !
+!--------------------------------------------------------------------------!
+!     This program is for testing whether the graph copy constructor works !
+! properly. To do this, a random linked-list graph `h` is generated. A     !
+! graph `g` is copied from `h` for each graph type, and the two are        !
+! checked for isomorphism.                                                 !
+!--------------------------------------------------------------------------! 
 
 use sigma
 
@@ -147,12 +154,6 @@ implicit none
 
         deallocate(g)
     enddo
-
-
-
-    !----------------------------------------------------------------------!
-    ! Make another random sparse graph and add the two graphs              !
-    !----------------------------------------------------------------------!
 
 
 end program graph_tests_2

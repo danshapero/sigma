@@ -1,4 +1,10 @@
-program matrix_tests_1
+!--------------------------------------------------------------------------!
+program matrix_tests_1                                                     !
+!--------------------------------------------------------------------------!
+!     This program performs tests of basic matrix operations, namely:      !
+! initialization, getting and setting entries, matrix multiplication,      !
+! storage compression and permutation.                                     !
+!--------------------------------------------------------------------------!
 
 use sigma
 

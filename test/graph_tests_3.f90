@@ -1,4 +1,10 @@
-program graph_tests_3
+!--------------------------------------------------------------------------!
+program graph_tests_3                                                      !
+!--------------------------------------------------------------------------!
+!     This program performs further tests for adding new edges to a graph, !
+! in the exceptional case where a graph no longer has any storage space    !
+! and re-allocation of the graph's internal structure may be necessary.    !
+!--------------------------------------------------------------------------!
 
 use sigma
 

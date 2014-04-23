@@ -867,8 +867,10 @@ subroutine set_value_with_reallocation(A,i,j,val)                          !
             ind(1) = edges(A%order(1),k)
             ind(2) = edges(A%order(2),k)
 
-            indx = g%find_edge(ind(1),ind(2))
-            vals(indx) = A%val(k)
+            if (ind(1)/=0 .and. ind(2)/=0) then
+                indx = g%find_edge(ind(1),ind(2))
+                vals(indx) = A%val(64*(n-1)+k)
+            endif
         enddo
     enddo
 

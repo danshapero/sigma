@@ -175,6 +175,7 @@ subroutine coo_graph_copy(g,h,trans)                                       !
     g%capacity = g%ne
 
     allocate(g%degrees(g%capacity))
+    g%degrees = 0
 
     ! Allocate space in the two dynamic arrays for the edges of g
     call g%edges(1)%init(capacity=g%capacity)

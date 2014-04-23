@@ -159,17 +159,16 @@ subroutine ellpack_graph_copy(g,h,trans)                                   !
     g%n = nv(1)
     g%m = nv(2)
     g%ne = 0
-    g%max_degree = h%max_degree
-    g%max_neighbors = g%max_degree
-    g%capacity = g%max_degree * g%n
+    g%max_neighbors = h%max_degree
+    g%capacity = g%max_neighbors * g%n
 
     ! Allocate space for the main node array of g
-    allocate(g%node(g%max_degree,g%n))
+    allocate(g%node(g%max_neighbors,g%n))
     g%node = 0
 
     ! Make an edge iterator for the copied graph h
     cursor = h%make_cursor(0)
-    num_blocks = (cursor%final-cursor%current)/64+1
+    num_blocks = (cursor%final-cursor%start)/64+1
 
     ! Iterate through all the edges of h
     do n=1,num_blocks
@@ -262,7 +261,7 @@ function ellpack_find_edge(g,i,j)                                          !
     ellpack_find_edge = -1
 
     do k=g%max_degree,1,-1
-        if (g%node(k,i)==j) ellpack_find_edge = (i-1)*g%max_degree+k
+        if (g%node(k,i)==j) ellpack_find_edge = (i-1)*g%max_neighbors+k
     enddo
 
 end function ellpack_find_edge
@@ -319,7 +318,7 @@ function ellpack_get_edges(g,cursor,num_edges,num_returned) result(edges)  !
     ! Loop from the starting node to the ending node
     do i=i1,i2
         ! Find how many edges we're retrieving from this row
-        num_from_this_row = min(g%max_degree-cursor%indx, &
+        num_from_this_row = min(g%max_neighbors-cursor%indx, &
                                 & num_returned-num_added)
 
         ! Fill in the return array
@@ -331,7 +330,7 @@ function ellpack_get_edges(g,cursor,num_edges,num_returned) result(edges)  !
         num_added = num_added+num_from_this_row
 
         ! Modify the index storing the place within the row that we left off
-        cursor%indx = mod(cursor%indx+num_from_this_row,g%max_degree)
+        cursor%indx = mod(cursor%indx+num_from_this_row,g%max_neighbors)
     enddo
 
     cursor%current = cursor%current+num_returned

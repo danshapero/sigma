@@ -1,4 +1,14 @@
-program matrix_tests_2
+!--------------------------------------------------------------------------!
+program matrix_tests_2                                                     !
+!--------------------------------------------------------------------------!
+!     This program tests adding one sparse matrix into another matrix. To  !
+! do this, two random graphs `gr`, `hr` and generated, for which `hr` is   !
+! a sub-graph of `gr`. For each graph type, a matrix `A` is constructed    !
+! which is the Laplacian of `gr`, while another matrix `B` is built as     !
+! an anti-symmetric matrix on `hr`. The correctness of the addition is     !
+! tested by multiplying `A`, `B` and `A+B` by a random vector and checking !
+! that (A+B)*x = A*x+B*x.                                                  !
+!--------------------------------------------------------------------------!
 
 use sigma
 
