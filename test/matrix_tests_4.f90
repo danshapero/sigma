@@ -1,18 +1,42 @@
-program matrix_tests_4
+!--------------------------------------------------------------------------!
+program matrix_tests_4                                                     !
+!--------------------------------------------------------------------------!
+!     This program tests creating a new matrix as the sum of two other     !
+! random matrices with each possible graph type.                           !
+!--------------------------------------------------------------------------!
 
 use sigma
 
 implicit none
 
+    ! Matrices and graphs
     type(sparse_matrix) :: A, B, C
     class(graph), pointer :: g, h, gr, hr
-
+    ! Integer indices
     integer :: i, j, k, nn, test1, test2
     integer, allocatable :: neighbors(:)
-
+    ! Random numbers and vectors
     real(dp) :: p, q, error
     real(dp), allocatable :: u(:), x(:), y(:), z(:)
+    ! command-line arguments
+    character(len=16) :: arg
+    logical verbose
 
+
+    ! Get command line arguments to see if we're running in verbose mode
+    verbose = .false.
+    call getarg(1,arg)
+    select case(trim(arg))
+        case("-v")
+            verbose = .true.
+        case("-V")
+            verbose = .true.
+        case("--verbose")
+            verbose = .true.
+    end select
+
+
+    ! Initialize a random seed
     call init_seed()
     nn = 64
     p = 8.0/nn
@@ -42,18 +66,20 @@ implicit none
 
 
     do test1=1,4
-        print *, test1
-
         ! Allocate g to each possible graph type
         select case(test1)
             case(1)
                 allocate(ll_graph::g)
+                if (verbose) print *, 'Test 1, linked-list graph'
             case(2)
                 allocate(coo_graph::g)
+                if (verbose) print *, 'Test 2, coordinate graph'
             case(3)
                 allocate(cs_graph::g)
+                if (verbose) print *, 'Test 3, compressed sparse graph'
             case(4)
                 allocate(ellpack_graph::g)
+                if (verbose) print *, 'Test 4, ellpack graph'
         end select
         call g%init(gr)
 
@@ -71,17 +97,20 @@ implicit none
         enddo
 
         do test2=1,4
-            print *, test2
             ! Allocate h to each possible graph type
-            select case(test1)
+            select case(test2)
                 case(1)
                     allocate(ll_graph::h)
+                    if (verbose) print *, '  Sub-test 1, linked-list graph'
                 case(2)
                     allocate(coo_graph::h)
+                    if (verbose) print *, '  Sub-test 2, coordinate graph'
                 case(3)
                     allocate(cs_graph::h)
+                    if (verbose) print *, '  Sub-test 3, compressed graph'
                 case(4)
                     allocate(ellpack_graph::h)
+                    if (verbose) print *, '  Sub-test 4, ellpack graph'
             end select
             call h%init(hr)
 
@@ -118,7 +147,11 @@ implicit none
 
             error = maxval(dabs(y+z-u))
             if (error>1.0e-12) then
-                print *, test1,test2,error
+                print *, 'On test',test1,test2
+                print *, 'Matrix sum A = B+C failed; should have'
+                print *, 'A*x = B*x+C*x, but error is',error
+                print *, 'Terminating.'
+                call exit(1)
             endif
 
             call C%destroy()
