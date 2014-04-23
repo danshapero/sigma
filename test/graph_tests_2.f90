@@ -12,8 +12,9 @@ use sigma
 implicit none
 
     class(graph), allocatable :: g, h
-    integer :: i, j, k, l, n, degree, test, min_degree
+    integer :: i, j, k, l, n, degree, test1, test2, min_degree, ord(2)
     real(dp) :: z(16)
+    logical :: trans
     ! variables for graph edge iteration
     integer :: num_blocks, num_returned, edges(2,64)
     type(graph_edge_cursor) :: cursor
@@ -61,7 +62,6 @@ implicit none
 
             ! Make (i,j) connected in h
             call h%add_edge(i,j)
-            call h%add_edge(j,i)
         enddo
     enddo
 
@@ -86,73 +86,87 @@ implicit none
     !----------------------------------------------------------------------!
     if (verbose) print *, 'Testing copy constructor'
 
-    do test=1,4
-        select case(test)
-            case(1)
-                allocate(ll_graph::g)
-                if (verbose) print *, '  Test 1: linked-list graph'
-            case(2)
-                allocate(coo_graph::g)
-                if (verbose) print *, '  Test 2: coordinate graph'
-            case(3)
-                allocate(cs_graph::g)
-                if (verbose) print *, '  Test 3: compressed sparse graph'
-            case(4)
-                allocate(ellpack_graph::g)
-                if (verbose) print *, '  Test 4: ellpack graph'
-        end select
+    do test1=1,4
+        do test2=1,2
+            ! Iterate over every graph format
+            select case(test1)
+                case(1)
+                    allocate(ll_graph::g)
+                    if (verbose) print *, '  Test 1: linked-list graph'
+                case(2)
+                    allocate(coo_graph::g)
+                    if (verbose) print *, '  Test 2: coordinate graph'
+                case(3)
+                    allocate(cs_graph::g)
+                    if (verbose) print *, '  Test 3: compressed sparse graph'
+                case(4)
+                    allocate(ellpack_graph::g)
+                    if (verbose) print *, '  Test 4: ellpack graph'
+            end select
 
-        call g%copy(h)
+            ! Iterate over each graph orientation, i.e. test copying both h
+            ! and h with all directed edges reversed
+            trans = .false.
+            ord = [1, 2]
+            if (test2==2) then
+                trans = .true.
+                ord = [2, 1]
+            endif
 
-        ! Iterate through all the edges of g and make sure they all are
-        ! connected in h
-        cursor = g%make_cursor(0)
-        num_blocks = (cursor%final-cursor%start)/64+1
+            call g%copy(h, trans)
 
-        do n=1,num_blocks
-            edges = g%get_edges(cursor,64,num_returned)
+            ! Iterate through all the edges of g and make sure they all are
+            ! connected in h
+            cursor = g%make_cursor(0)
+            num_blocks = (cursor%final-cursor%start)/64+1
 
-            do k=1,num_returned
-                i = edges(1,k)
-                j = edges(2,k)
+            do n=1,num_blocks
+                edges = g%get_edges(cursor,64,num_returned)
 
-                if (i/=0 .and. j/=0) then
-                    l = h%find_edge(i,j)
-                    if (l==-1) then
-                        print *, '    On test',test,'vertices',i,j
-                        print *, '    not connected in reference graph,'
-                        print *, '    but are connected in copied graph.'
-                        call exit(1)
+                do k=1,num_returned
+                    i = edges(ord(1),k)
+                    j = edges(ord(2),k)
+
+                    if (i/=0 .and. j/=0) then
+                        l = h%find_edge(i,j)
+                        if (l==-1) then
+                            print *, '    On test',test1,test2
+                            print *, '    Vertices',i,j
+                            print *, '    not connected in reference graph,'
+                            print *, '    but are connected in copy graph.'
+                            call exit(1)
+                        endif
                     endif
-                endif
+                enddo
             enddo
-        enddo
 
-        ! Iterate through all the edges of h and make sure they all are
-        ! connected in g
-        cursor = h%make_cursor(0)
-        num_blocks = (cursor%final-cursor%start)/64+1
+            ! Iterate through all the edges of h and make sure they all are
+            ! connected in g
+            cursor = h%make_cursor(0)
+            num_blocks = (cursor%final-cursor%start)/64+1
 
-        do n=1,num_blocks
-            edges = h%get_edges(cursor,64,num_returned)
+            do n=1,num_blocks
+                edges = h%get_edges(cursor,64,num_returned)
 
-            do k=1,num_returned
-                i = edges(1,k)
-                j = edges(2,k)
+                do k=1,num_returned
+                    i = edges(ord(1),k)
+                    j = edges(ord(2),k)
 
-                if (i/=0 .and. j/=0) then
-                    l = g%find_edge(i,j)
-                    if (l==-1) then
-                        print *, '    On test',test,'vertices',i,j
-                        print *, '    are connected in reference graph,'
-                        print *, '    but not connected in copied graph.'
-                        call exit(1)
+                    if (i/=0 .and. j/=0) then
+                        l = g%find_edge(i,j)
+                        if (l==-1) then
+                            print *, '    On test',test1,test2
+                            print *, '    Vertices',i,j
+                            print *, '    are connected in reference graph,'
+                            print *, '    but not connected in copy graph.'
+                            call exit(1)
+                        endif
                     endif
-                endif
+                enddo
             enddo
-        enddo
 
-        deallocate(g)
+            deallocate(g)
+        enddo
     enddo
 
 

@@ -195,8 +195,8 @@ subroutine coo_graph_copy(g,h,trans)                                       !
             ind = edges(order,k)
 
             if (ind(1)/=0 .and. ind(2)/=0) then
-                call g%edges(order(1))%push(ind(1))
-                call g%edges(order(2))%push(ind(2))
+                call g%edges(1)%push(ind(1))
+                call g%edges(2)%push(ind(2))
 
                 g%degrees(ind(1)) = g%degrees(ind(1))+1
             endif
