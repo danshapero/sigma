@@ -1,6 +1,6 @@
 module ellpack_graphs
 
-use graphs
+use graph_interface
 use util
 
 implicit none

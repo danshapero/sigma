@@ -12,7 +12,7 @@ module sparse_matrices                                                     !
 
 use types, only: dp
 use linear_operator_interface
-use graphs
+use graph_interface
 use ll_graphs
 use cs_graphs
 

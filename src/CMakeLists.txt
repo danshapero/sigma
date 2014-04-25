@@ -1,9 +1,10 @@
 set(GRAPH_SRCS
-graph/graphs.f90
+graph/graph_interface.f90
 graph/coo_graphs.f90
 graph/cs_graphs.f90
 graph/ellpack_graphs.f90
 graph/ll_graphs.f90
+graph/graphs.f90
 )
 
 set(MATRIX_SRCS

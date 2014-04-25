@@ -1,6 +1,6 @@
 module coo_graphs
 
-use graphs
+use graph_interface
 use types, only: dynamic_array
 
 implicit none

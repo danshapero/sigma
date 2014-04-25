@@ -1,11 +1,12 @@
 module sigma
 
 ! Use all the graph modules
-use graphs
+use graph_interface
 use ll_graphs
 use coo_graphs
 use cs_graphs
 use ellpack_graphs
+use graphs
 
 ! Use all the linear operator modules
 use linear_operator_interface
