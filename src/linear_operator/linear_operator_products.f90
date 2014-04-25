@@ -35,11 +35,8 @@ contains
 !--------------------------------------------------------------------------!
 function multiply_operators(A,B) result(C)                                 !
 !--------------------------------------------------------------------------!
-    ! input/output variables
     class(linear_operator), target, intent(in) :: A, B
     class(linear_operator), pointer :: C
-    ! local variables
-    integer :: d
 
     ! Do some error checking
     if (A%ncol/=B%nrow) then

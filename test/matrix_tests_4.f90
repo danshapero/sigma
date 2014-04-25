@@ -15,10 +15,9 @@ implicit none
     character(len=3) :: orientation1, orientation2, orientation3
     ! Graph edge iterators
     type(graph_edge_cursor) :: cursor
-    integer :: num_blocks, num_returned, edges(2,64), vertex(2)
+    integer :: num_blocks, num_returned, edges(2,64)
     ! Integer indices
     integer :: i, j, k, n, nn, test1, test2, test3, frmt1, frmt2, frmt3
-    integer, allocatable :: neighbors(:)
     ! Random numbers and vectors
     real(dp) :: p, q, error
     real(dp), allocatable :: u(:), x(:), y(:), z(:)
@@ -67,8 +66,6 @@ implicit none
             if (y(j)<p) call hr%add_edge(i,j)
         enddo
     enddo
-
-    allocate(neighbors(max(gr%max_degree,hr%max_degree)))
 
 
     !----------------------------------------------------------------------!

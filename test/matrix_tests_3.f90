@@ -12,7 +12,7 @@ implicit none
     type(sparse_matrix) :: A
     class(graph), pointer :: g, h
     integer :: test
-    integer :: i,j,k,nn,neighbors(7)
+    integer :: i,j,nn
     real(dp), allocatable :: x(:), y(:)
     ! command-line arguments
     character(len=16) :: arg

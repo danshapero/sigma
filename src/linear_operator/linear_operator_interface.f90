@@ -200,6 +200,12 @@ end subroutine linear_operator_solve
 !--------------------------------------------------------------------------!
 subroutine linear_solve_pc(solver,A,x,b,pc)                                !
 !--------------------------------------------------------------------------!
+!     This is a lazy, default implementation of a preconditioned solver.   !
+! It's required in the linear_solver contract that every solver override   !
+! the the `solve` method with no preconditioner. However, some solvers,    !
+! like a direct solver, cannot be preconditioned; this method just calls   !
+! the un-preconditioned version.                                           !
+!--------------------------------------------------------------------------!
     class(linear_solver), intent(inout) :: solver
     class(linear_operator), intent(in)  :: A
     real(dp), intent(inout)             :: x(:)
