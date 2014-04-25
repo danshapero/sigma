@@ -11,8 +11,8 @@ module sparse_matrices                                                     !
 
 
 use types, only: dp
+use linear_operator_interface
 use graphs
-use ll_graphs
 
 implicit none
 
@@ -20,11 +20,11 @@ implicit none
 
 
 !--------------------------------------------------------------------------!
-type :: sparse_matrix                                                      !
+type, extends(linear_operator) :: sparse_matrix                            !
 !--------------------------------------------------------------------------!
     real(dp), allocatable :: val(:)
     class(graph), pointer :: g
-    integer :: nrow, ncol, nnz, max_degree, order(2)
+    integer :: nnz, max_degree, order(2)
     character(len=3) :: orientation
     logical :: pos_def
     logical :: assembled
@@ -38,6 +38,9 @@ contains
     procedure :: init => sparse_mat_init
     ! Initialize a sparse matrix given the number of rows and columns,
     ! and the desired ordering, e.g. row- or column-major ordering.
+
+    procedure :: add_mats => sparse_mat_add_mats
+    ! Initialize a sparse matrix as the sum of two other sparse matrices.
 
 
     !-----------
@@ -56,7 +59,7 @@ contains
     procedure :: add_value => sparse_mat_add_value
     ! Add a number to a matrix entry
 
-    procedure :: add => sparse_mat_add_mats
+    procedure :: add_mat_to_self => sparse_mat_add_mat_to_self
     ! Compute the sum A <- A+B
 
     procedure :: zero => sparse_mat_zero
@@ -93,6 +96,12 @@ contains
     ! Auxiliary routines
     !--------------------
     procedure, private :: set_value_with_reallocation
+
+
+    !----------
+    ! Generics
+    !----------
+    generic :: add => add_mats, add_mat_to_self
 
 end type sparse_matrix
 
@@ -205,6 +214,103 @@ end subroutine sparse_mat_init
 
 
 
+!--------------------------------------------------------------------------!
+subroutine sparse_mat_add_mats(A,B,C,g,orientation)                        !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(inout) :: A
+    class(sparse_matrix), intent(in) :: B, C
+    class(graph), pointer, intent(inout), optional :: g
+    character(len=3), intent(in), optional :: orientation
+    ! local variables
+    integer :: i,j,k,n,nv(2)
+    logical :: trans1, trans2
+    integer :: num_blocks, num_returned, edges(2,64)
+    type(graph_edge_cursor) :: cursor
+    class(graph), pointer :: ga
+    character(len=3) :: ori
+
+    !------------------------
+    ! Do some error checking
+
+    if (B%nrow/=C%nrow .or. B%ncol/=C%ncol) then
+        print *, 'Dimensions for sparse matrix sum are inconsistent.'
+        print *, 'Terminating.'
+        call exit(1)
+    endif
+
+
+    !---------------------
+    ! Check optional args
+
+    ! First, check if the user has supplied a graph to use for the
+    ! connectivity structure of A
+    if (present(g)) then
+        ! If the graph pointer isn't associated, allocate it to a CS graph
+        if (.not.associated(g)) allocate(cs_graph::g)
+
+        ! Make our local graph pointer ga point to g
+        ga => g
+    else
+        ! If the user hasn't supplied a graph, make the local graph pointer
+        ! ga a CS graph.
+        allocate(cs_graph::ga)
+    endif
+
+    ! Next, check if the user has supplied an orientation for the output
+    ! matrix A; if not, default to row orientation
+    ori = "row"
+    if (present(orientation)) ori = orientation
+
+
+    !---------------------------------
+    ! Build the connectivity graph ga
+
+    ! Decide what dimension to make ga depending on the matrix orientation
+    select case(ori)
+        case("row")
+            nv = [B%nrow, B%ncol]
+            A%order = [1,2]
+        case("col")
+            nv = [B%ncol, B%nrow]
+            A%order = [2,1]
+    end select
+
+    ! The orientation of ga is flipped relative to B%g, C%g if A has a
+    ! different orientation to each matrix
+    trans1 = .not.(A%order(1)==B%order(1) .and. A%order(2)==B%order(2))
+    trans2 = .not.(A%order(1)==C%order(1) .and. A%order(2)==C%order(2))
+
+    ! Compute the union of the graphs B%g, C%g and put it into ga
+    call graph_union(ga,B%g,C%g,trans1,trans2)
+
+    ! Initialize A with the connectivity structure ga
+    call A%init(B%nrow,B%ncol,ori,ga)
+
+
+    !-----------------------
+    ! Fill the entries of A
+
+    cursor = A%g%make_cursor(0)
+    num_blocks = (cursor%final-cursor%start)/64+1
+    do n=1,num_blocks
+        edges = A%g%get_edges(cursor,64,num_returned)
+
+        do k=1,num_returned
+            i = edges(A%order(1),k)
+            j = edges(A%order(2),k)
+
+            if (i/=0 .and. j/=0) then
+                A%val(64*(n-1)+k) = B%get_value(i,j)+C%get_value(i,j)
+            endif
+        enddo
+    enddo
+
+end subroutine sparse_mat_add_mats
+
+
+
+
 !==========================================================================!
 !==== Accessors                                                        ====!
 !==========================================================================!
@@ -301,7 +407,7 @@ end subroutine sparse_mat_add_value
 
 
 !--------------------------------------------------------------------------!
-subroutine sparse_mat_add_mats(A,B)                                        !
+subroutine sparse_mat_add_mat_to_self(A,B)                                 !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(sparse_matrix), intent(inout) :: A
@@ -361,7 +467,7 @@ subroutine sparse_mat_add_mats(A,B)                                        !
         call exit(1)
     endif
 
-end subroutine sparse_mat_add_mats
+end subroutine sparse_mat_add_mat_to_self
 
 
 
@@ -704,8 +810,10 @@ subroutine set_value_with_reallocation(A,i,j,val)                          !
             ind(1) = edges(A%order(1),k)
             ind(2) = edges(A%order(2),k)
 
-            indx = g%find_edge(ind(1),ind(2))
-            vals(indx) = A%val(k)
+            if (ind(1)/=0 .and. ind(2)/=0) then
+                indx = g%find_edge(ind(1),ind(2))
+                vals(indx) = A%val(64*(n-1)+k)
+            endif
         enddo
     enddo
 

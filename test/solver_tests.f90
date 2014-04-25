@@ -6,12 +6,30 @@ implicit none
 
     class(graph), pointer :: g
     type(sparse_matrix) :: A
-    class(iterative_solver), allocatable :: solver
-    class(preconditioner), allocatable :: pc
+    class(linear_solver), pointer :: solver, pc
     integer :: i,n,test,nnz_per_row(99)
     real(dp) :: c,dx
     real(dp), allocatable :: u(:), b(:), u_c(:)
+    ! command-line arguments
+    character(len=16) :: arg
+    logical :: verbose
 
+
+
+    !----------------------------------------------------------------------!
+    ! Get command line arguments to see if we're running in verbose mode   !
+    !----------------------------------------------------------------------!
+    verbose = .false.
+    call getarg(1,arg)
+    if (trim(arg)=="-v" .or. trim(arg)=="--verbose") then
+        verbose = .true.
+    endif
+
+
+
+    !----------------------------------------------------------------------!
+    ! Create a tridiagonal matrix                                          !
+    !----------------------------------------------------------------------!
     nnz_per_row = 3
     allocate(coo_graph::g)
     call g%init(99,99,nnz_per_row)
@@ -31,6 +49,16 @@ implicit none
     enddo
     call A%set_value(99,99,2.0_dp)
 
+
+    if (verbose) then
+        print *, 'Done creating matrix for 1d Laplace operator'
+    endif
+
+
+
+    !----------------------------------------------------------------------!
+    ! Create a reference solution for the linear system                    !
+    !----------------------------------------------------------------------!
     allocate(u(99),b(99),u_c(99))
     dx = 0.01_dp
     b = 2.0*dx**2
@@ -39,22 +67,31 @@ implicit none
         u_c(n) = n*dx*(1.0_dp-n*dx)
     enddo
 
+    if (verbose) then
+        print *, 'Done creating reference solution'
+    endif
+
+
+
+    !----------------------------------------------------------------------!
+    ! Run tests for solvers and preconditioners for symmetric problems     !
+    !----------------------------------------------------------------------!
     do test=1,2
         u = 0.0_dp
 
         select case(test)
             case(1)
-                allocate(cg_solver::solver)
-                print *, 'CG solver test'
+                solver => cg(1.d-16)
+                if (verbose) print *, 'Test 1: CG solver test'
             case(2)
-                allocate(bicgstab_solver::solver)
-                print *, 'BiCG solver test'
+                solver => bicgstab(1.d-16)
+                if (verbose) print *, 'Test 2: BiCG-Stab solver test'
         end select
 
-        call solver%init(99,tolerance=1.0d-16)
+        pc => jacobi()
 
-        allocate(jacobi_preconditioner::pc)
-        call pc%init(A,0)
+        call solver%setup(A)
+        call pc%setup(A)
 
         call solver%solve(A,u,b,pc)
 
@@ -64,10 +101,35 @@ implicit none
             call exit(1)
         endif
 
-        deallocate(solver,pc)
+        if (verbose) then
+            print *, 'Done solving linear system;'
+            print *, 'Range of solution: ',minval(u),maxval(u)
+        endif
+
+        u = 0.0_dp
+        call A%set_solver(solver)
+        call A%set_preconditioner(pc)
+        call A%solve(u,b)
+
+        if ( maxval(dabs(u-u_c))>1.0e-14 ) then
+            print *, 'Max value of u should be 1/4;'
+            print *, 'Value found:', maxval(u)
+            call exit(1)
+        endif
+
+        if (verbose) then
+            print *, 'Done solving linear system;'
+            print *, 'Range of solution: ',minval(u),maxval(u)
+        endif
+
+        deallocate(solver, pc)
     enddo
 
-    ! Tests for non-symmetric matrices
+
+
+    !----------------------------------------------------------------------!
+    ! Test solvers and preconditioners for asymmetric problems             !
+    !----------------------------------------------------------------------!
     c = 0.5_dp
     do n=1,98
         call A%set_value(n,n,2.0_dp)
@@ -76,24 +138,32 @@ implicit none
     enddo
     call A%set_value(99,99,2.0_dp)
 
+    if (verbose) print *, 'Creating asymmetric matrix'
+
+
     do n=1,99
         u_c(n) = exp(0.5*c*n*dx)*sin(pi*n*dx)
     enddo
     call A%matvec(u_c,b)
 
-    allocate(bicgstab_solver::solver)
-    allocate(jacobi_preconditioner::pc)
-    call solver%init(99,tolerance=1.0d-14)
-    call pc%init(A,0)
+    if (verbose) print *, 'Test 3: BiCG-Stab solver, asymmetric system'
+
+    solver => bicgstab(1.0d-12)
+    call solver%setup(A)
 
     u = 0.0_dp
 
-    call solver%solve(A,u,b,pc)
+    call solver%solve(A,u,b)
 
-    if( maxval(dabs(u-u_c))>1.0e-12 ) then
+    if( maxval(dabs(u-u_c))>1.0e-8 ) then
         print *, 'BiCG-Stab solver failed for non-symmetric matrix'
         print *, maxval(dabs(u-u_c)),maxval(dabs(u))
         call exit(1)
+    endif
+
+    if (verbose) then
+        print *, 'Done solving asymmetric system;'
+        print *, 'Range of solution:',minval(u),maxval(u)
     endif
 
 

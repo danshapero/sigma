@@ -1,8 +1,6 @@
 module meshes
 
 use graphs
-use ll_graphs
-use cs_graphs
 use conversions
 
 implicit none

@@ -9,7 +9,7 @@ module permutations                                                        !
 !==========================================================================!
 !==========================================================================!
 
-use graphs
+use graph_interface
 use types, only: dynamic_array, circular_array
 
 implicit none

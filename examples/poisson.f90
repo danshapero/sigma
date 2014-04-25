@@ -16,8 +16,7 @@ implicit none
     type(sparse_matrix) :: A, B
 
     ! variables for solving the linear system
-    class(iterative_solver), allocatable :: solver
-    class(preconditioner), allocatable :: pc
+    class(linear_solver), pointer :: solver
     real(dp), allocatable :: u(:), f(:), r(:), z(:), p(:)
 
     ! other variables
@@ -74,14 +73,11 @@ implicit none
 !--------------------------------------------------------------------------!
 ! Solve the linear system                                                  !
 !--------------------------------------------------------------------------!
-    allocate(cg_solver::solver)
-    allocate(jacobi_preconditioner::pc)
+    solver => cg(1.0d-12)
+    call solver%setup(A)
 
-    call solver%init(nn)
-    call pc%init(A)
-
-    call solver%solve(A,u,f,pc)
-    print *, 'CG iterations to solve system:',solver%iterations
+    call solver%solve(A,u,f)
+!    print *, 'CG iterations to solve system:',solver%iterations
     print *, 'Range of solution:',minval(u),maxval(u)
 
 

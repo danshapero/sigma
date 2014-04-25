@@ -2,10 +2,6 @@ module conversions
 
 ! Use all the graph modules
 use graphs
-use ll_graphs
-use coo_graphs
-use cs_graphs
-use ellpack_graphs
 
 implicit none
 

@@ -1,20 +1,26 @@
 module sigma
 
 ! Use all the graph modules
-use graphs
+use graph_interface
 use ll_graphs
 use coo_graphs
 use cs_graphs
 use ellpack_graphs
+use graphs
+
+! Use all the linear operator modules
+use linear_operator_interface
+use linear_operator_sums
+use linear_operator_products
+use linear_operators
 
 ! Use all the matrix modules
 use sparse_matrices
 
 ! Use the solver and preconditioner modules
-use iterative_solvers
 use cg_solvers
 use bicgstab_solvers
-use jacobi_preconditioners
+use jacobi_solvers
 
 ! Use the C wrapper module
 use wrapper

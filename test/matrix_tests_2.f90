@@ -1,4 +1,14 @@
-program matrix_tests_2
+!--------------------------------------------------------------------------!
+program matrix_tests_2                                                     !
+!--------------------------------------------------------------------------!
+!     This program tests adding one sparse matrix into another matrix. To  !
+! do this, two random graphs `gr`, `hr` and generated, for which `hr` is   !
+! a sub-graph of `gr`. For each graph type, a matrix `A` is constructed    !
+! which is the Laplacian of `gr`, while another matrix `B` is built as     !
+! an anti-symmetric matrix on `hr`. The correctness of the addition is     !
+! tested by multiplying `A`, `B` and `A+B` by a random vector and checking !
+! that (A+B)*x = A*x+B*x.                                                  !
+!--------------------------------------------------------------------------!
 
 use sigma
 
@@ -34,7 +44,7 @@ implicit none
         call random_number(y)
         ! Connect each pair (i,j) in gr with probability p
         do j=i+1,nn
-            if (z(j)>p) then
+            if (z(j)<p) then
                 call gr%add_edge(i,j)
                 call gr%add_edge(j,i)
 
@@ -54,6 +64,8 @@ implicit none
     ! Test adding two matrices with each possible connectivity graph       !
     !----------------------------------------------------------------------!
     do test1=1,4
+        print *, test1
+
         ! Allocate g to each possible graph type
         select case(test1)
             case(1)
@@ -71,6 +83,7 @@ implicit none
         call A%init(nn,nn,'row',g)
 
         do test2=1,4
+            print *, test2
             ! Allocate h to each possible graph type
             select case(test1)
                 case(1)
@@ -136,12 +149,12 @@ implicit none
                 call exit(1)
             endif
 
-            deallocate(h)
             call B%destroy()
+            deallocate(h)
         enddo
 
-        deallocate(g)
         call A%destroy()
+        deallocate(g)
     enddo
 
 
