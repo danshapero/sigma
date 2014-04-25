@@ -292,7 +292,9 @@ subroutine sparse_mat_add_mats(A,B,C,g,orientation)                        !
             ind = edges(B%order,k)
             ind = ind(A%order)
 
-            degrees(ind(1)) = degrees(ind(1))+1
+            if (ind(1)/=0 .and. ind(2)/=0) then
+                degrees(ind(1)) = degrees(ind(1))+1
+            endif
         enddo
     enddo
 
@@ -306,7 +308,9 @@ subroutine sparse_mat_add_mats(A,B,C,g,orientation)                        !
             ind = edges(C%order,k)
             ind = ind(A%order)
 
-            degrees(ind(1)) = degrees(ind(1))+1
+            if (ind(1)/=0 .and. ind(2)/=0) then
+                degrees(ind(1)) = degrees(ind(1))+1
+            endif
         enddo
     enddo
 
