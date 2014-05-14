@@ -131,6 +131,7 @@ subroutine graph_product(g,h1,h2,trans1,trans2)                            !
     ! an extra graph, for which querying all neighbors occurs in O(degree)
     type(ll_graph) :: hp
 
+
     ! Get optional arguments
     tr1 = .false.
     tr2 = .false.
@@ -149,13 +150,25 @@ subroutine graph_product(g,h1,h2,trans1,trans2)                            !
     nv1 = nv1(order1)
     nv2 = nv2(order2)
 
-    ! Check that the graph dimensions are consistent
+
+    !------------------------------------------
+    ! Check that the dimensions are consistent
+    if (nv1(2)/=nv2(1)) then
+        print *, 'Inconsistent dimensions for graph product:'
+        print *, 'graph 1:',nv1
+        print *, 'graph 2:',nv2
+        print *, 'Terminating.'
+        call exit(1)
+    endif
+
 
     ! Check and see if one of the graphs is in a nice enough format that
     ! the `neighbors` query takes O(degree) operations.
 
     ! If that's the case, we can use the `nice` version of the algorithm
     ! defined below.
+    call graph_product_optimized(g,h1,h2, &
+        & trans_h1=tr1, trans_h2=tr2, trans_g=.false.)
 
     ! If it's not the case, we will, at the expense of extra memory usage,
     ! make a copy of one of the graphs which is in a convenient format.
@@ -212,16 +225,7 @@ subroutine graph_product_optimized(g,h1,h2,trans_h1,trans_h2,trans_g)      !
     nv1 = nv1(order1)
     nv2 = nv2(order2)
 
-
-    !------------------------------------------
-    ! Check that the dimensions are consistent
-    if (nv1(2)/=nv2(1)) then
-        print *, 'Inconsistent dimensions for graph product:'
-        print *, 'graph 1:',nv1
-        print *, 'graph 2:',nv2
-        print *, 'Terminating.'
-        call exit(1)
-    endif
+    allocate(neighbors(h2%max_degree))
 
 
     !-----------------------------------------------
@@ -233,6 +237,7 @@ subroutine graph_product_optimized(g,h1,h2,trans_h1,trans_h2,trans_g)      !
     ! Iterate through all the edges of h1
     cursor = h1%make_cursor(0)
     num_blocks = (cursor%final-cursor%start)/64+1
+
     do n=1,num_blocks
         edges = h1%get_edges(cursor,64,num_returned)
         do l=1,num_returned
@@ -251,6 +256,7 @@ subroutine graph_product_optimized(g,h1,h2,trans_h1,trans_h2,trans_g)      !
             endif
         enddo
     enddo
+
 
 
     !------------------------------------------------
