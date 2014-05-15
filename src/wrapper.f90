@@ -6,6 +6,7 @@ use graphs
 use sparse_matrices
 use conversions
 
+implicit none
 
 contains
 
@@ -126,8 +127,8 @@ subroutine graph_neighbors_c(cgp,nbrs,i,d) bind(c,name='graph_neighbors')  !
 !--------------------------------------------------------------------------!
     ! input/output variables
     type(c_ptr), intent(in) :: cgp
-    integer(c_int), intent(in), value :: i,d
     integer(c_int), intent(out) :: nbrs(d)
+    integer(c_int), intent(in), value :: i,d
     ! local variables
     class(graph), pointer :: g
 
