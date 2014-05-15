@@ -88,7 +88,7 @@ subroutine watts_strogatz(g,nn,k,p)                                        !
     print *, cursor%final,cursor%start
     num_blocks = (cursor%final-cursor%start)/64+1
     do n=1,num_blocks
-        edges = g_ring%get_edges(cursor,64,num_returned)
+        call g_ring%get_edges(edges,cursor,64,num_returned)
 
         do m=1,num_returned
             ! Get the next edge (i,j) from the ring graph

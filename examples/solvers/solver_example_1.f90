@@ -94,7 +94,7 @@ implicit none
         call A%set_value(i,i,1.0_dp)
 
         d = g%degree(i)
-        call g%neighbors(i,neighbors)
+        call g%get_neighbors(neighbors,i)
 
         ! For each neighbor j of i,
         do k=1,d

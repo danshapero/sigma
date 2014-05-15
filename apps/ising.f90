@@ -145,7 +145,7 @@ implicit none
     allocate(mag(nn))
     do iter=1,100*nn
         do i=1,nn
-            call g%neighbors(i,neighbors)
+            call g%get_neighbors(neighbors,i)
             d = g%degree(i)
             do k=1,d
                 j = neighbors(k)

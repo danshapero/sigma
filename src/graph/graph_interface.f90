@@ -50,7 +50,7 @@ contains
     procedure(degree_ifc), deferred    :: degree
     ! Return the degree of a given vertex
 
-    procedure(neighbors_ifc), deferred :: neighbors
+    procedure(get_neighbors_ifc), deferred :: get_neighbors
     ! Return all neighbors of a given vertex
 
     procedure(connected_ifc), deferred :: connected
@@ -178,12 +178,12 @@ abstract interface                                                         !
         integer :: d
     end function degree_ifc
 
-    subroutine neighbors_ifc(g,i,nbrs)
+    subroutine get_neighbors_ifc(g,neighbors,i)
         import :: graph
         class(graph), intent(in) :: g
         integer, intent(in) :: i
-        integer, intent(out) :: nbrs(:)
-    end subroutine neighbors_ifc
+        integer, intent(out) :: neighbors(:)
+    end subroutine get_neighbors_ifc
 
     function connected_ifc(g,i,j)
         import :: graph
@@ -206,14 +206,14 @@ abstract interface                                                         !
         type(graph_edge_cursor) :: cursor
     end function make_cursor_ifc
 
-    function get_edges_ifc(g,cursor,num_edges,num_returned) result(edges)
+    subroutine get_edges_ifc(g,edges,cursor,num_edges,num_returned)
         import :: graph, graph_edge_cursor
         class(graph), intent(in) :: g
+        integer, intent(out) :: edges(2,num_edges)
         type(graph_edge_cursor), intent(inout) :: cursor
         integer, intent(in) :: num_edges
         integer, intent(out) :: num_returned
-        integer :: edges(2,num_edges)
-    end function get_edges_ifc
+    end subroutine get_edges_ifc
 
     subroutine change_edge_ifc(g,i,j)
         import :: graph

@@ -88,7 +88,7 @@ implicit none
         d = g%degree(i)
 
         ! Find all the neighbors of i.
-        call g%neighbors(i,neighbors)
+        call g%get_neighbors(neighbors,i)
 
         ! For each neighbor j,
         do k=1,d

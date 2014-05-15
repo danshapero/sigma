@@ -64,7 +64,7 @@ implicit none
     call graph_product(g,gr,hr)
 
     allocate(neighbors(g%max_degree))
-    call g%neighbors(16,neighbors)
+    call g%get_neighbors(neighbors,16)
 
     correct = .true.
     do k=1,5

@@ -38,7 +38,7 @@ subroutine convert(g,storage_format)                                       !
     num_blocks = (cursor%final-cursor%start+1)/64+1
 
     do n=1,num_blocks
-        edges = gc%get_edges(cursor,64,num_returned)
+        call gc%get_edges(edges,cursor,64,num_returned)
 
         do k=1,num_returned
             i = edges(1,k)
@@ -68,7 +68,7 @@ subroutine convert(g,storage_format)                                       !
     cursor = gc%make_cursor(0)
 
     do n=1,num_blocks
-        edges = gc%get_edges(cursor,64,num_returned)
+        call gc%get_edges(edges,cursor,64,num_returned)
 
         do k=1,num_returned
             i = edges(1,k)

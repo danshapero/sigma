@@ -21,7 +21,7 @@ contains
     !-----------
     ! Accessors
     procedure :: degree => cs_degree
-    procedure :: neighbors => cs_neighbors
+    procedure :: get_neighbors => cs_get_neighbors
     procedure :: connected => cs_connected
     procedure :: find_edge => cs_find_edge
 
@@ -216,7 +216,7 @@ subroutine cs_graph_copy(g,h,trans)                                        !
     ! Iterate through the edges of h first to fill out the ptr array of g
     do n=1,num_blocks
         ! Get a chunk of edges from h
-        edges = h%get_edges(cursor,64,num_returned)
+        call h%get_edges(edges,cursor,64,num_returned)
 
         ! For each edge,
         do k=1,num_returned
@@ -241,7 +241,7 @@ subroutine cs_graph_copy(g,h,trans)                                        !
     g%node = 0
 
     do n=1,num_blocks
-        edges = h%get_edges(cursor,64,num_returned)
+        call h%get_edges(edges,cursor,64,num_returned)
 
         do k=1,num_returned
             ind = edges(order,k)
@@ -282,12 +282,12 @@ end function cs_degree
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_neighbors(g,i,nbrs)                                          !
+subroutine cs_get_neighbors(g,neighbors,i)                                 !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_graph), intent(in) :: g
+    integer, intent(out) :: neighbors(:)
     integer, intent(in) :: i
-    integer, intent(out) :: nbrs(:)
     ! local variables
     integer :: start,finish,degree
 
@@ -295,10 +295,10 @@ subroutine cs_neighbors(g,i,nbrs)                                          !
     start = g%ptr(i)
     finish = g%ptr(i+1)-1
 
-    nbrs = 0
-    nbrs(1:degree) = g%node(start:finish)
+    neighbors = 0
+    neighbors(1:degree) = g%node(start:finish)
 
-end subroutine cs_neighbors
+end subroutine cs_get_neighbors
 
 
 
@@ -373,14 +373,14 @@ end function cs_make_cursor
 
 
 !--------------------------------------------------------------------------!
-function cs_get_edges(g,cursor,num_edges,num_returned) result(edges)       !
+subroutine cs_get_edges(g,edges,cursor,num_edges,num_returned)             !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_graph), intent(in) :: g
+    integer, intent(out) :: edges(2,num_edges)
     type(graph_edge_cursor), intent(inout) :: cursor
     integer, intent(in) :: num_edges
     integer, intent(out) :: num_returned
-    integer :: edges(2,num_edges)
     ! local variables
     integer :: i, k
 
@@ -414,7 +414,7 @@ function cs_get_edges(g,cursor,num_edges,num_returned) result(edges)       !
 
     cursor%edge = edges(:,num_returned)
 
-end function cs_get_edges
+end subroutine cs_get_edges
 
 
 

@@ -174,7 +174,7 @@ implicit none
             d = g%degree(i)
 
             ! find all the neighbors of vertex i
-            call g%neighbors(i,neighbors)
+            call g%get_neighbors(neighbors,i)
 
             ! for each of those neighbors j,
             do k=1,d

@@ -80,7 +80,7 @@ implicit none
     num_blocks = (cursor%final-cursor%start)/64+1
     do n=1,num_blocks
         ! Get a chunk of edges from the ring lattice
-        edges = g_ring%get_edges(cursor,64,num_returned)
+        call g_ring%get_edges(edges,cursor,64,num_returned)
 
         do k=1,num_returned
             ! For each edge,
@@ -128,7 +128,7 @@ implicit none
     do k=1,nn
         ! find all the neighbors of k
         d = g%degree(k)
-        call g%neighbors(k,neighbors)
+        call g%get_neighbors(neighbors,k)
 
         ! Fill the adjacency matrix of the sub-graph of g consisting of
         ! vertex k and all its neighbors

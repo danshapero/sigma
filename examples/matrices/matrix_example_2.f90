@@ -119,7 +119,7 @@ implicit none
     do i=1,A%nrow
         di = g%degree(i)-1
         call A%set_value(i,i,1.0_dp)
-        call g%neighbors(i,neighbors)
+        call g%get_neighbors(neighbors,i)
         do k=1,di+1
             j = neighbors(k)
             if (j/=0 .and. j/=i) then
@@ -150,7 +150,7 @@ implicit none
     open(unit=20,file="graph.txt")
     write(20,*) nx*ny
     do i=1,nx*ny
-        call g%neighbors(i,neighbors)
+        call g%get_neighbors(neighbors,i)
         d = g%degree(i)
         write(20,*) i,neighbors(1:d)
     enddo

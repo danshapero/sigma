@@ -21,7 +21,7 @@ contains
     !-----------
     ! Accessors
     procedure :: degree => ellpack_degree
-    procedure :: neighbors => ellpack_neighbors
+    procedure :: get_neighbors => ellpack_get_neighbors
     procedure :: connected => ellpack_connected
     procedure :: find_edge => ellpack_find_edge
 
@@ -173,7 +173,7 @@ subroutine ellpack_graph_copy(g,h,trans)                                   !
     ! Iterate through all the edges of h
     do n=1,num_blocks
         ! Get a chunk of edges from h
-        edges = h%get_edges(cursor,64,num_returned)
+        call h%get_edges(edges,cursor,64,num_returned)
 
         ! Add each edge from the chunk into g
         do k=1,num_returned
@@ -215,16 +215,16 @@ end function ellpack_degree
 
 
 !--------------------------------------------------------------------------!
-subroutine ellpack_neighbors(g,i,nbrs)                                     !
+subroutine ellpack_get_neighbors(g,neighbors,i)                            !
 !--------------------------------------------------------------------------!
     class(ellpack_graph), intent(in) :: g
+    integer, intent(out) :: neighbors(:)
     integer, intent(in) :: i
-    integer, intent(out) :: nbrs(:)
 
-    nbrs = 0
-    nbrs(1:g%max_degree) = g%node(:,i)
+    neighbors = 0
+    neighbors(1:g%max_degree) = g%node(:,i)
 
-end subroutine ellpack_neighbors
+end subroutine ellpack_get_neighbors
 
 
 
@@ -291,14 +291,14 @@ end function ellpack_make_cursor
 
 
 !--------------------------------------------------------------------------!
-function ellpack_get_edges(g,cursor,num_edges,num_returned) result(edges)  !
+subroutine ellpack_get_edges(g,edges,cursor,num_edges,num_returned)        !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(ellpack_graph), intent(in) :: g
+    integer, intent(out) :: edges(2,num_edges)
     type(graph_edge_cursor), intent(inout) :: cursor
     integer, intent(in) :: num_edges
     integer, intent(out) :: num_returned
-    integer :: edges(2,num_edges)
     ! local variables
     integer :: i,i1,i2,num_added,num_from_this_row
 
@@ -335,7 +335,7 @@ function ellpack_get_edges(g,cursor,num_edges,num_returned) result(edges)  !
 
     cursor%current = cursor%current+num_returned
 
-end function ellpack_get_edges
+end subroutine ellpack_get_edges
 
 
 

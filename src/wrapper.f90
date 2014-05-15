@@ -122,7 +122,7 @@ end subroutine graph_init_c
 
 
 !--------------------------------------------------------------------------!
-subroutine graph_neighbors_c(cgp,i,nbrs,d) bind(c,name='graph_neighbors')  !
+subroutine graph_neighbors_c(cgp,nbrs,i,d) bind(c,name='graph_neighbors')  !
 !--------------------------------------------------------------------------!
     ! input/output variables
     type(c_ptr), intent(in) :: cgp
@@ -132,7 +132,7 @@ subroutine graph_neighbors_c(cgp,i,nbrs,d) bind(c,name='graph_neighbors')  !
     class(graph), pointer :: g
 
     g => cgraph_to_fgraph(cgp)
-    call g%neighbors(i+1,nbrs)
+    call g%get_neighbors(nbrs,i+1)
     nbrs = nbrs-1
 
 end subroutine graph_neighbors_c

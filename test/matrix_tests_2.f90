@@ -103,7 +103,7 @@ implicit none
             ! Make A the graph Laplacian
             call A%zero()
             do i=1,nn
-                call A%g%neighbors(i,neighbors)
+                call A%g%get_neighbors(neighbors,i)
 
                 do k=1,A%max_degree
                     j = neighbors(k)
@@ -117,7 +117,7 @@ implicit none
             ! Make B anti-symmetric
             call B%zero()
             do i=1,nn
-                call B%g%neighbors(i,neighbors)
+                call B%g%get_neighbors(neighbors,i)
 
                 do k=1,B%max_degree
                     j = neighbors(k)

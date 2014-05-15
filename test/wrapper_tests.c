@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
     int *nbrs;
     nbrs = (int *)malloc( 4 * sizeof(int) );
 
-    graph_neighbors(&cgp,50,nbrs,4);
+    graph_neighbors(&cgp,nbrs,50,4);
     if ( !((nbrs[0]==51 && nbrs[1]==49) || (nbrs[0]==49 && nbrs[1]==51)) ) {
         printf("Getting neighbors of a node unsuccessful\n");
         return 1;
@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
     // Try compressing the graph to a more efficient format
     convert(&cgp,1);
 
-    graph_neighbors(&cgp,50,nbrs,4);
+    graph_neighbors(&cgp,nbrs,50,4);
     if ( !((nbrs[0]==51 && nbrs[1]==49) || (nbrs[0]==49 && nbrs[1]==51)) ) {
         printf("Getting neighbors of a node unsuccessful\n");
         return 1;

@@ -20,7 +20,7 @@ contains
     !-----------
     ! Accessors
     procedure :: degree => ll_degree
-    procedure :: neighbors => ll_neighbors
+    procedure :: get_neighbors => ll_get_neighbors
     procedure :: connected => ll_connected
     procedure :: find_edge => ll_find_edge
 
@@ -179,7 +179,7 @@ subroutine ll_graph_copy(g,h,trans)                                        !
     ! Iterate through all the chunks
     do n=1,num_blocks
         ! Get a chunk of edges from h
-        edges = h%get_edges(cursor,64,num_returned)
+        call h%get_edges(edges,cursor,64,num_returned)
 
         ! For each edge,
         do k=1,num_returned
@@ -216,21 +216,21 @@ end function ll_degree
 
 
 !--------------------------------------------------------------------------!
-subroutine ll_neighbors(g,i,nbrs)                                          !
+subroutine ll_get_neighbors(g,neighbors,i)                                 !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(ll_graph), intent(in) :: g
+    integer, intent(out) :: neighbors(:)
     integer, intent(in) :: i
-    integer, intent(out) :: nbrs(:)
     ! local variables
     integer :: k
 
-    nbrs = 0
+    neighbors = 0
     do k=1,g%lists(i)%length
-        nbrs(k) = g%lists(i)%get_entry(k)
+        neighbors(k) = g%lists(i)%get_entry(k)
     enddo
 
-end subroutine ll_neighbors
+end subroutine ll_get_neighbors
 
 
 
@@ -316,14 +316,14 @@ end function ll_make_cursor
 
 
 !--------------------------------------------------------------------------!
-function ll_get_edges(g,cursor,num_edges,num_returned) result(edges)       !
+subroutine ll_get_edges(g,edges,cursor,num_edges,num_returned)             !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(ll_graph), intent(in) :: g
+    integer, intent(out) :: edges(2,num_edges)
     type(graph_edge_cursor), intent(inout) :: cursor
     integer, intent(in) :: num_edges
     integer, intent(out) :: num_returned
-    integer :: edges(2,num_edges)
     ! local variables
     integer :: i,k,num_added,num_from_this_row
 
@@ -367,7 +367,7 @@ function ll_get_edges(g,cursor,num_edges,num_returned) result(edges)       !
     cursor%current = cursor%current+num_returned
     cursor%edge(1) = i
 
-end function ll_get_edges
+end subroutine ll_get_edges
 
 
 

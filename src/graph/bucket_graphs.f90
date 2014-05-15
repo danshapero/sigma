@@ -23,7 +23,7 @@ contains
     !-----------
     ! Accessors
     procedure :: degree => bucket_degree
-    procedure :: neighbors => bucket_neighbors
+    procedure :: get_neighbors => bucket_get_neighbors
     procedure :: connected => bucket_connected
     procedure :: find_edge => bucket_find_edge
 
@@ -132,16 +132,16 @@ end function bucket_degree
 
 
 !--------------------------------------------------------------------------!
-subroutine bucket_neighbors(g,i,nbrs)                                      !
+subroutine bucket_get_neighbors(g,neighbors,i)                             !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(bucket_graph), intent(inout) :: g
+    integer, intent(out) :: neighbors(:)
     integer, intent(in) :: i
-    integer, intent(out) :: nbrs(:)
     ! local variables
     integer :: j,k,l,bucket,next
 
-    nbrs = 0
+    neighbors = 0
     next = 0
     do k=1,g%buckets(i)%length
         bucket = g%buckets(i)%get_entry(k)
@@ -154,7 +154,7 @@ subroutine bucket_neighbors(g,i,nbrs)                                      !
         enddo
     enddo
 
-end subroutine
+end subroutine bucket_get_neighbors
 
 
 
@@ -226,14 +226,14 @@ end function bucket_make_cursor
 
 
 !--------------------------------------------------------------------------!
-function bucket_get_edges(g,cursor,num_edges,num_returned) result(edges)   !
+subroutine bucket_get_edges(g,edges,cursor,num_edges,num_returned)         !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(bucket_graph), intent(inout) :: g
+    integer, intent(out) :: edges(2,num_edges)
     type(graph_edge_cursor), intent(inout) :: cursor
     integer, intent(in) :: num_edges
     integer, intent(out) :: num_returned
-    integer :: edges(2,num_edges)
     ! local variables
     integer :: i,k,l,num_added,num_from_this_row
 
@@ -245,7 +245,7 @@ function bucket_get_edges(g,cursor,num_edges,num_returned) result(edges)   !
 
     ! 
 
-end function bucket_get_edges
+end subroutine bucket_get_edges
 
 
 

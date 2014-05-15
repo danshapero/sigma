@@ -25,7 +25,7 @@ subroutine breadth_first_search(g,p)                                       !
     class(graph), intent(in) :: g
     integer, intent(out) :: p(:)
     ! local variables
-    integer :: i,j,k,num,nbrs(g%max_degree)
+    integer :: i,j,k,num,neighbors(g%max_degree)
     type(circular_array) :: queue
 
     num = 0
@@ -48,11 +48,11 @@ subroutine breadth_first_search(g,p)                                       !
         p(i) = num
 
         ! Find all neighbors of node i
-        call g%neighbors(i,nbrs)
+        call g%get_neighbors(neighbors,i)
 
         ! For each neighbor,
         do k=1,g%max_degree
-            j = nbrs(k)
+            j = neighbors(k)
             if (j/=0) then
                 ! if that neighbor has not been visited,
                 if (p(j)==-1) then
@@ -101,7 +101,7 @@ subroutine greedy_coloring(g,colors)                                       !
         i = queue%pop()
 
         ! Find all the neighbors of node i
-        call g%neighbors(i,nbrs)
+        call g%get_neighbors(nbrs,i)
 
         ! Tally up how many neighbors there are of each color
         do k=1,g%max_degree

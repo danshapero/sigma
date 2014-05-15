@@ -294,7 +294,7 @@ subroutine sparse_mat_add_mats(A,B,C,g,orientation)                        !
     cursor = A%g%make_cursor(0)
     num_blocks = (cursor%final-cursor%start)/64+1
     do n=1,num_blocks
-        edges = A%g%get_edges(cursor,64,num_returned)
+        call A%g%get_edges(edges,cursor,64,num_returned)
 
         do k=1,num_returned
             i = edges(A%order(1),k)
@@ -430,7 +430,7 @@ subroutine sparse_mat_add_mat_to_self(A,B)                                 !
     ! Iterate through all the non-zero entries of B.
     do n=1,num_blocks
         ! Get a chunk of edges.
-        edges = B%g%get_edges(cursor,64,num_returned)
+        call B%g%get_edges(edges,cursor,64,num_returned)
 
         ! For each edge,
         do k=1,num_returned
@@ -682,7 +682,7 @@ subroutine sparse_matvec_add_compressed(A,x,y,trans)                       !
 
     do n=1,num_blocks
         ! Get the next 64 edges of the graph
-        edges = A%g%get_edges(cursor,64,num_returned)
+        call A%g%get_edges(edges,cursor,64,num_returned)
 
         ! Go through all the edges (i,j) that we just plucked from A%g
         do k=1,num_returned
@@ -726,7 +726,7 @@ subroutine sparse_matvec_add_decompressed(A,x,y,trans)                     !
 
     do n=1,num_blocks
         ! Get the next 64 edges of the graph
-        edges = A%g%get_edges(cursor,64,num_returned)
+        call A%g%get_edges(edges,cursor,64,num_returned)
 
         ! Go through all the edges (i,j) that we just plucked from A%g
         do k=1,num_returned
@@ -804,7 +804,7 @@ subroutine set_value_with_reallocation(A,i,j,val)                          !
     num_blocks = (cursor%final-cursor%start)/64+1
 
     do n=1,num_blocks
-        edges = A%g%get_edges(cursor,64,num_returned)
+        call A%g%get_edges(edges,cursor,64,num_returned)
 
         do k=1,num_returned
             ind(1) = edges(A%order(1),k)

@@ -15,12 +15,12 @@ implicit none
     integer :: i,j,k,frmt,ordering
     real(dp) :: z
     logical :: correct
-    integer, allocatable :: edges(:,:), nbrs(:), p(:)
+    integer, allocatable :: edges(:,:), neighbors(:), p(:)
     real(dp), allocatable :: x(:), y(:)
     character(len=3) :: orientation
     real(dp), allocatable :: B(:,:)
 
-    allocate(edges(2,31), x(7), y(7), nbrs(8), B(7,7))
+    allocate(edges(2,31), x(7), y(7), neighbors(8), B(7,7))
 
     ! Loop through all formats
     do frmt=1,4
@@ -61,10 +61,10 @@ implicit none
             call A%init(7,7,orientation,g)
 
             do i=1,7
-                call A%g%neighbors(i,nbrs)
+                call A%g%get_neighbors(neighbors,i)
 
                 do k=1,A%max_degree
-                    j = nbrs(k)
+                    j = neighbors(k)
                     if (j/=0 .and. j/=i) then
                         call A%set_value(i,j,-1.0_dp)
                         call A%add_value(i,i,1.0_dp)
@@ -111,9 +111,9 @@ implicit none
             ! matrix to check against
             B = 0.0_dp
             do i=1,7
-                call A%g%neighbors(i,nbrs)
+                call A%g%get_neighbors(neighbors,i)
                 do k=1,A%max_degree
-                    j = nbrs(k)
+                    j = neighbors(k)
                     if (j/=0) then
                         call A%set_value(i,j,1.0_dp*(7*(i-1)+j))
                         B(i,j) = 1.0_dp*(7*(i-1)+j)
@@ -164,6 +164,6 @@ implicit none
         enddo
     enddo
 
-    deallocate(x,y,nbrs,edges)
+    deallocate(x,y,neighbors,edges)
 
 end program matrix_tests_1

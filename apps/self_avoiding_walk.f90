@@ -149,7 +149,7 @@ implicit none
 
             ! Check to see which neighbors of i have not been visited
             d = g%degree(i)
-            call g%neighbors(i,neighbors)
+            call g%get_neighbors(neighbors,i)
 
             do k=1,d
                 j = neighbors(k)

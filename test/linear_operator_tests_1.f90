@@ -47,7 +47,7 @@ implicit none
     num_blocks = (cursor%final-cursor%start)/64+1
 
     do n=1,num_blocks
-        edges = g%get_edges(cursor,64,num_returned)
+        call g%get_edges(edges,cursor,64,num_returned)
 
         do k=1,num_returned
             i = edges(1,k)
@@ -65,7 +65,7 @@ implicit none
     num_blocks = (cursor%final-cursor%start)/64+1
 
     do n=1,num_blocks
-        edges = h%get_edges(cursor,64,num_returned)
+        call h%get_edges(edges,cursor,64,num_returned)
 
         do k=1,num_returned
             i = edges(2,k)

@@ -14,7 +14,7 @@ implicit none
     ! variables for testing correctness of sundry graph operations
     class(graph), allocatable :: g
     integer :: i,j,k,l,n,test
-    integer, allocatable :: edges(:,:), nbrs(:), p(:)
+    integer, allocatable :: edges(:,:), neighbors(:), p(:)
     logical :: correct
     ! variables for testing graph edge iterator
     type(graph_edge_cursor) :: cursor
@@ -164,13 +164,13 @@ implicit none
             call exit(1)
         endif
 
-        allocate(nbrs(g%max_degree))
+        allocate(neighbors(g%max_degree))
 
         ! Check that finding all neighbors of a given edge works
-        call g%neighbors(1,nbrs)
+        call g%get_neighbors(neighbors,1)
         correct = .true.
         do i=1,g%max_degree
-            if (nbrs(i)/=i+1) correct = .false.
+            if (neighbors(i)/=i+1) correct = .false.
         enddo
         if (.not.correct) then
             print *, 'Node 1 should neighbor all other nodes'
@@ -184,7 +184,7 @@ implicit none
         num_blocks = (cursor%final-cursor%start)/12+1
         found_by_iterator = .false.
         do n=1,num_blocks
-            edges = g%get_edges(cursor,12,num_returned)
+            call g%get_edges(edges,cursor,12,num_returned)
 
             if (verbose) then
                 print *, edges(1,:)
@@ -233,10 +233,10 @@ implicit none
 
         ! Check that permutation works properly; node 7 should neighbor
         ! all other nodes
-        call g%neighbors(7,nbrs)
+        call g%get_neighbors(neighbors,7)
         found = .false.
         do k=1,g%max_degree
-            i = nbrs(k)
+            i = neighbors(k)
             if (i/=0) found(i) = .true.
         enddo
 
@@ -330,7 +330,7 @@ implicit none
         cursor = g%make_cursor(0)
         num_blocks = (cursor%final-cursor%start)/12+1
         do n=1,num_blocks
-            edges = g%get_edges(cursor,12,num_returned)
+            call g%get_edges(edges,cursor,12,num_returned)
 
             do k=1,num_returned
                 i = edges(1,k)
@@ -348,7 +348,7 @@ implicit none
 
         call g%free()
 
-        deallocate(g,nbrs,p)
+        deallocate(g,neighbors,p)
 
         if (verbose) print *, ' '
 

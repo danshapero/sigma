@@ -109,7 +109,7 @@ implicit none
         cursor = B%g%make_cursor(0)
         num_blocks = (cursor%start-cursor%final)/64+1
         do n=1,num_blocks
-            edges = B%g%get_edges(cursor,64,num_returned)
+            call B%g%get_edges(edges,cursor,64,num_returned)
 
             do k=1,num_returned
                 i = edges(B%order(1),k)
@@ -164,7 +164,7 @@ implicit none
             cursor = C%g%make_cursor(0)
             num_blocks = (cursor%final-cursor%start)/64+1
             do n=1,num_blocks
-                edges = C%g%get_edges(cursor,64,num_returned)
+                call C%g%get_edges(edges,cursor,64,num_returned)
 
                 do k=1,num_returned
                     i = edges(C%order(1),k)

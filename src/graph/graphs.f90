@@ -77,7 +77,7 @@ subroutine graph_union(g,h1,h2,trans1,trans2)                              !
     cursor = h1%make_cursor(0)
     num_blocks = (cursor%final-cursor%start)/64+1
     do n=1,num_blocks
-        edges = h1%get_edges(cursor,64,num_returned)
+        call h1%get_edges(edges,cursor,64,num_returned)
 
         do k=1,num_returned
             i = edges(order1(1),k)
@@ -93,7 +93,7 @@ subroutine graph_union(g,h1,h2,trans1,trans2)                              !
     cursor = h2%make_cursor(0)
     num_blocks = (cursor%final-cursor%start)/64+1
     do n=1,num_blocks
-        edges = h2%get_edges(cursor,64,num_returned)
+        call h2%get_edges(edges,cursor,64,num_returned)
 
         do k=1,num_returned
             i = edges(order2(1),k)
@@ -239,7 +239,7 @@ subroutine graph_product_optimized(g,h1,h2,trans_h1,trans_h2,trans_g)      !
     num_blocks = (cursor%final-cursor%start)/64+1
 
     do n=1,num_blocks
-        edges = h1%get_edges(cursor,64,num_returned)
+        call h1%get_edges(edges,cursor,64,num_returned)
         do l=1,num_returned
             ind = edges(order1,l)
 
@@ -247,7 +247,7 @@ subroutine graph_product_optimized(g,h1,h2,trans_h1,trans_h2,trans_g)      !
                 i = ind(order2(1))
                 k = ind(order2(2))
 
-                call h2%neighbors(k,neighbors)
+                call h2%get_neighbors(neighbors,k)
                 d = h2%degree(k)
                 do m=1,d
                     j = neighbors(m)
