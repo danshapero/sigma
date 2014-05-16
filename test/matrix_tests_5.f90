@@ -11,12 +11,14 @@ implicit none
     ! Matrices and graphs
     class(graph), pointer :: gr, hr, g
     ! Graph edge iterators
-
+    type(graph_edge_cursor) :: cursor
+    integer :: num_blocks, num_returned, edges(2,64)
     ! Integer indices
-    integer :: i,j,k,di,nn
-    integer, allocatable :: neighbors(:)
+    integer :: i,j,k,l,m,n,d,di,d1,d2,nn
+    integer, allocatable :: neighbors(:), more_neighbors(:)
     ! Random numbers and vectors
     real(dp) :: p
+    real(dp), allocatable :: x(:), y(:), z(:)
     ! other variables
     logical :: correct, found
     ! command-line arguments
@@ -132,6 +134,7 @@ implicit none
     enddo
 
 
+
     !----------------------------------------------------------------------!
     ! And some more graphs                                                 !
     !----------------------------------------------------------------------!
@@ -153,6 +156,84 @@ implicit none
 
     call graph_product(g,gr,hr)
 
+
+
+    !----------------------------------------------------------------------!
+    ! And this time a random graph                                         !
+    !----------------------------------------------------------------------!
+    call g%free()
+    call gr%free()
+    call hr%free()
+    call gr%init(nn,nn)
+    call hr%init(nn,nn)
+
+    allocate(y(nn), z(nn))
+    deallocate(neighbors)
+
+    do i=1,nn
+        call random_number(y)
+        call random_number(z)
+        do j=1,nn
+            if (y(j)<p) call gr%add_edge(i,j)
+            if (z(j)<p) call hr%add_edge(i,j)
+        enddo
+    enddo
+
+    allocate(neighbors(gr%max_degree), more_neighbors(hr%max_degree))
+
+    call graph_product(g,gr,hr)
+
+    ! First test that every edge of gr*hr is in g
+    do i=1,nn
+        d1 = gr%degree(i)
+        call gr%get_neighbors(neighbors,i)
+        do l=1,d1
+            k = neighbors(l)
+
+            d2 = hr%degree(k)
+            call hr%get_neighbors(more_neighbors,k)
+            do m=1,d2
+                j = more_neighbors(m)
+
+                if (.not.g%connected(i,j)) then
+                    print *, 'Have nodes',i,k,'connected in gr'
+                    print *, ' and nodes',k,j,'connected in hr'
+                    print *, 'so we should have nodes',i,j
+                    print *, 'connected in g = gr*hr, but they are not!'
+                    call exit(1)
+                endif
+            enddo
+        enddo
+    enddo
+
+    ! Then test that every edge of g is in gr*hr
+    cursor = g%make_cursor(0)
+    num_blocks = (cursor%final-cursor%start)/64+1
+    do n=1,num_blocks
+        call g%get_edges(edges,cursor,64,num_returned)
+
+        do l=1,num_returned
+            i = edges(1,l)
+            j = edges(2,l)
+
+            found = .false.
+
+            d = gr%degree(i)
+            call gr%get_neighbors(neighbors,i)
+            do m=1,d
+                k = neighbors(m)
+
+                if (hr%connected(k,j)) found = .true.
+            enddo
+
+            if (.not.found) then
+                print *, 'Have nodes',i,j,'connected in g, but there is no'
+                print *, 'node k such that ',i,'<-> k in gr, k<->',j,'in hr'
+                print *, 'Terminating.'
+                call exit(1)
+            endif
+        enddo
+    enddo
 
 
 end program matrix_tests_5

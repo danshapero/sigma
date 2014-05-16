@@ -258,7 +258,6 @@ subroutine graph_product_optimized(g,h1,h2,trans_h1,trans_h2,trans_g)      !
     enddo
 
 
-
     !------------------------------------------------
     ! Copy the linked list graph to the output graph
     call g%copy(gl,trg)
