@@ -84,14 +84,37 @@ implicit none
 
         if (verbose) print *, '    Done adding more edges to ring graph.'
 
+        ! Check if the degrees of the nodes have been updated properly
         do i=1,nn
             if (g%degree(i)/=2*d) then
                 print *, 'Test',test
                 print *, 'Should have a regular graph where degree of'
                 print *, 'every vertex is',2*d
                 print *, 'Degree of',i,'is',g%degree(i)
+                print *, 'Terminating.'
                 call exit(1)
             endif
+        enddo
+
+        ! Check if the edges are connected properly
+        do i=1,nn
+            do k=2,d
+                j = mod(i+k,nn)+1
+                if (.not.g%connected(i,j)) then
+                    print *, 'Test',test
+                    print *, 'Edges',i,j,'not connected, even though they'
+                    print *, 'were added to g! Terminating.'
+                    call exit(1)
+                endif
+
+                j = mod(i+127-k,nn)+1
+                if (.not.g%connected(i,j)) then
+                    print *, 'Test',test
+                    print *, 'Edges',i,j,'not connected, even though they'
+                    print *, 'were added to g! Terminating.'
+                    call exit(1)
+                endif
+            enddo
         enddo
 
         call g%free()
