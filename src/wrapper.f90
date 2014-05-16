@@ -123,7 +123,24 @@ end subroutine graph_init_c
 
 
 !--------------------------------------------------------------------------!
-subroutine graph_neighbors_c(cgp,nbrs,i,d) bind(c,name='graph_neighbors')  !
+subroutine graph_degree_c(cgp,i,d) bind(c,name='degree')                   !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    type(c_ptr), intent(in) :: cgp
+    integer(c_int), intent(in), value :: i
+    integer(c_int), intent(out) :: d
+    ! local variables
+    class(graph), pointer :: g
+
+    g => cgraph_to_fgraph(cgp)
+    d = g%degree(i)
+
+end subroutine graph_degree_c
+
+
+
+!--------------------------------------------------------------------------!
+subroutine graph_neighbors_c(cgp,nbrs,i,d) bind(c,name='get_neighbors')    !
 !--------------------------------------------------------------------------!
     ! input/output variables
     type(c_ptr), intent(in) :: cgp
@@ -190,6 +207,40 @@ subroutine delete_edge_c(cgp,i,j) bind(c,name='delete_edge')               !
     call g%delete_edge(i+1,j+1)
 
 end subroutine delete_edge_c
+
+
+
+!--------------------------------------------------------------------------!
+subroutine graph_left_permute_c(cgp,p,n) bind(c,name='left_permute')       !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    type(c_ptr), intent(in) :: cgp
+    integer(c_int), intent(in) :: p(n)
+    integer(c_int), intent(in), value :: n
+    ! local variables
+    class(graph), pointer :: g
+
+    g => cgraph_to_fgraph(cgp)
+    call g%left_permute(p+1)
+
+end subroutine graph_left_permute_c
+
+
+
+!--------------------------------------------------------------------------!
+subroutine graph_right_permute_c(cgp,p,m) bind(c,name='right_permute')     !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    type(c_ptr), intent(in) :: cgp
+    integer(c_int), intent(in) :: p(m)
+    integer(c_int), intent(in), value :: m
+    ! local variables
+    class(graph), pointer :: g
+
+    g => cgraph_to_fgraph(cgp)
+    call g%right_permute(p+1)
+
+end subroutine graph_right_permute_c
 
 
 

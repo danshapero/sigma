@@ -48,22 +48,38 @@ int main(int argc, char *argv[]) {
         add_edge(&cgp,i+1,i);
     }
 
+    // Find the degree of a node
+    int d = 0;
+    degree(&cgp,5,&d);
+    if ( d!=2 ) {
+        printf("Getting degree of a node unsuccessful\n");
+        return 1;
+    }
+
     // Find the neighbors of a given node and check that they are correct
     int *nbrs;
     nbrs = (int *)malloc( 4 * sizeof(int) );
 
-    graph_neighbors(&cgp,nbrs,50,4);
+    get_neighbors(&cgp,nbrs,50,4);
     if ( !((nbrs[0]==51 && nbrs[1]==49) || (nbrs[0]==49 && nbrs[1]==51)) ) {
         printf("Getting neighbors of a node unsuccessful\n");
         return 1;
     }
 
-    // Try compressing the graph to a more efficient format
-    convert(&cgp,1);
+    // Permute the entries of the graph
+    int *p;
+    p = (int *)malloc( 100 * sizeof(int) );
+    for (i=0; i<100; i++) {
+        p[i] = i+1;
+    }
+    p[99] = 0;
 
-    graph_neighbors(&cgp,nbrs,50,4);
-    if ( !((nbrs[0]==51 && nbrs[1]==49) || (nbrs[0]==49 && nbrs[1]==51)) ) {
-        printf("Getting neighbors of a node unsuccessful\n");
+    left_permute(&cgp,p,100);
+    right_permute(&cgp,p,100);
+
+    get_neighbors(&cgp,nbrs,1,4);
+    if (nbrs[0]!=2 || nbrs[1]!=-1) {
+        printf("Permuting graph unsuccessful\n");
         return 1;
     }
 
