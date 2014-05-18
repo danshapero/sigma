@@ -15,6 +15,7 @@ set(SOLVER_SRCS
 solver/bicgstab_solvers.f90
 solver/cg_solvers.f90
 solver/jacobi_solvers.f90
+solver/ldu_solvers.f90
 )
 
 set(LINEAR_OPERATOR_SRCS

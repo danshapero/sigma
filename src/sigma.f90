@@ -21,6 +21,7 @@ use sparse_matrices
 use cg_solvers
 use bicgstab_solvers
 use jacobi_solvers
+use ldu_solvers
 
 ! Use the C wrapper module
 use wrapper
