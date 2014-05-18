@@ -89,20 +89,30 @@ subroutine sparse_ldu_setup(solver,A)                                      !
     class(ldu_solver), intent(inout) :: solver
     class(linear_operator), intent(in) :: A
     ! local variables
-    class(graph), pointer :: g
-    integer :: i,j,k
+    class(graph), pointer :: g, gL, gU
+    integer :: i,j,k,nn
 
-    associate(L => solver%L, U => solver%U, D => solver%D)
+    nn = A%nrow
 
     ! First, check to make sure A is a sparse matrix, and not block-sparse
     ! or a general linear operator
     select type(A)
         type is(sparse_matrix)
             g => A%g
-            call incomplete_ldu_sparsity_pattern( L%g, U%g, g, 0)
-    end select
 
-    end associate
+            ! Build the sparsity pattern for the factorization
+            call incomplete_ldu_sparsity_pattern( gL, gU, g, 0)
+
+            ! Initialize the L, U factors and allocate space for the
+            ! diagonal elements D
+            call solver%L%init(nn,nn,'row',gL)
+            call solver%U%init(nn,nn,'row',gU)
+            allocate(solver%D(nn))
+
+            ! Fill the L, D, U factors
+            call sparse_static_pattern_ldu_factorization(A, &
+                & solver%L, solver%D, solver%U)
+    end select
 
 end subroutine sparse_ldu_setup
 
@@ -248,7 +258,7 @@ end subroutine upper_triangular_solve
 !============================
 
 !--------------------------------------------------------------------------!
-subroutine sparse_static_pattern_ldu_factorization(A,L,U,D)                !
+subroutine sparse_static_pattern_ldu_factorization(A,L,D,U)                !
 !--------------------------------------------------------------------------!
 !     This routine takes in a sparse matrix A and computes a factorization !
 ! into L, D, U, where L is lower triangular, U is upper triangular, and D  !
@@ -277,11 +287,37 @@ subroutine sparse_static_pattern_ldu_factorization(A,L,U,D)                !
     integer :: i,j,k,n,dl,du,ind1,ind2,row
     integer, allocatable :: lneighbors(:),uneighbors(:)
     real(dp) :: Lik, Uki, Uik, Ukj
+    ! graph edge iterators
+    type(graph_edge_cursor) :: cursor
+    integer :: num_blocks, num_returned, edges(2,64), order(2)
+
+    n = A%nrow
+
+    ! Copy A into L, D and U
+    order = A%order
+    cursor = A%g%make_cursor(0)
+    num_blocks = (cursor%final-cursor%start)/64+1
+    do n=1,num_blocks
+        call A%g%get_edges(edges,cursor,64,num_returned)
+
+        do k=1,num_returned
+            i = edges(order(1),k)
+            j = edges(order(2),k)
+
+            if (i/=0 .and. j/=0) then
+                if (i>j) then
+                    call L%set_value(i,j,A%val(64*(n-1)+k))
+                elseif(j>i) then
+                    call U%set_value(i,j,A%val(64*(n-1)+k))
+                else
+                    D(i) = A%val(64*(n-1)+k)
+                endif
+            endif
+        enddo
+    enddo
 
     ! Allocate a neighbors array
     allocate(lneighbors(L%g%max_degree), uneighbors(U%g%max_degree))
-
-    n = A%nrow
 
     ! Compute the factorization using the IKJ-variant of Gaussian
     ! elimination
