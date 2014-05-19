@@ -12,13 +12,17 @@ implicit none
 
 
 !--------------------------------------------------------------------------!
-type, extends(linear_solver) :: ldu_solver                                 !
+type, extends(linear_solver) :: sparse_ldu_solver                          !
 !--------------------------------------------------------------------------!
     ! Triangular factors L and U, stored in one matrix
-    type(sparse_matrix), private :: L, U
+    !TODO: make these attributes private once testing is complete
+    !type(sparse_matrix), private :: L, U
+    type(sparse_matrix) :: L, U
 
     ! Diagonal entries D
-    real(dp), allocatable, private :: D(:)
+    !TODO: make these attributes private once testing is complete
+    !real(dp), allocatable, private :: D(:)
+    real(dp), allocatable :: D(:)
 
     ! Scratch vector for intermediate computations
     real(dp), allocatable :: z(:)
@@ -39,14 +43,15 @@ contains
 
     ! Methods specific to LDU solvers
     procedure :: set_params => ldu_set_params
-end type ldu_solver
+end type sparse_ldu_solver
 
 
 
+!TODO: make these methods private once testing is complete
 !--------------------------------------------------------------------------!
-private :: lower_triangular_solve, upper_triangular_solve                  !
-private :: sparse_static_pattern_ldu_factorization                         !
-private :: incomplete_ldu_sparsity_pattern                                 !
+!private :: lower_triangular_solve, upper_triangular_solve                  !
+!private :: sparse_static_pattern_ldu_factorization                         !
+!private :: incomplete_ldu_sparsity_pattern                                 !
 !--------------------------------------------------------------------------!
 
 
@@ -67,9 +72,9 @@ function ldu(incomplete,level)                                             !
     integer, intent(in), optional :: level
     class(linear_solver), pointer :: ldu
 
-    allocate(ldu_solver::ldu)
+    allocate(sparse_ldu_solver::ldu)
     select type(ldu)
-        type is(ldu_solver)
+        type is(sparse_ldu_solver)
             call ldu%set_params(incomplete,level)
     end select
 
@@ -86,7 +91,7 @@ end function ldu
 subroutine sparse_ldu_setup(solver,A)                                      !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(ldu_solver), intent(inout) :: solver
+    class(sparse_ldu_solver), intent(inout) :: solver
     class(linear_operator), intent(in) :: A
     ! local variables
     class(graph), pointer :: g, gL, gU
@@ -121,7 +126,7 @@ end subroutine sparse_ldu_setup
 !--------------------------------------------------------------------------!
 subroutine ldu_set_params(solver,incomplete,level)                         !
 !--------------------------------------------------------------------------!
-    class(ldu_solver), intent(inout) :: solver
+    class(sparse_ldu_solver), intent(inout) :: solver
     logical, intent(in), optional :: incomplete
     integer, intent(in), optional :: level
 
@@ -152,7 +157,7 @@ end subroutine
 !--------------------------------------------------------------------------!
 subroutine ldu_solve(solver,A,x,b)                                         !
 !--------------------------------------------------------------------------!
-    class(ldu_solver), intent(inout) :: solver
+    class(sparse_ldu_solver), intent(inout) :: solver
     class(linear_operator), intent(in) :: A
     real(dp), intent(inout) :: x(:)
     real(dp), intent(in)    :: b(:)
@@ -173,7 +178,7 @@ end subroutine ldu_solve
 !--------------------------------------------------------------------------!
 subroutine ldu_free(solver)                                                !
 !--------------------------------------------------------------------------!
-    class(ldu_solver), intent(inout) :: solver
+    class(sparse_ldu_solver), intent(inout) :: solver
 
     call solver%L%destroy()
     call solver%U%destroy()

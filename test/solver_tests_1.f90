@@ -1,4 +1,4 @@
-program solver_tests
+program solver_tests_1
 
 use sigma
 
@@ -168,4 +168,4 @@ implicit none
 
 
 
-end program solver_tests
+end program solver_tests_1
