@@ -289,14 +289,14 @@ subroutine sparse_static_pattern_ldu_factorization(A,L,D,U)                !
     type(sparse_matrix), intent(inout) :: L, U
     real(dp), intent(inout) :: D(:)
     ! local variables
-    integer :: i,j,k,n,dl,du,ind1,ind2,row
+    integer :: i,j,k,n,nn,dl,du,ind1,ind2,row
     integer, allocatable :: lneighbors(:),uneighbors(:)
     real(dp) :: Lik, Uki, Uik, Ukj
     ! graph edge iterators
     type(graph_edge_cursor) :: cursor
     integer :: num_blocks, num_returned, edges(2,64), order(2)
 
-    n = A%nrow
+    nn = A%nrow
 
     ! Copy A into L, D and U
     order = A%order
@@ -326,7 +326,7 @@ subroutine sparse_static_pattern_ldu_factorization(A,L,D,U)                !
 
     ! Compute the factorization using the IKJ-variant of Gaussian
     ! elimination
-    do i=1,n
+    do i=1,nn
         ! Get the degree and neighbors of node i in L
         call L%g%get_neighbors(lneighbors,i)
         dl = L%g%degree(i)
@@ -345,6 +345,7 @@ subroutine sparse_static_pattern_ldu_factorization(A,L,D,U)                !
 
             ! Divide the L(i,k) by D(k)
             call L%set_value(i,k,Lik/D(k))
+            Lik = Lik/D(k)
 
             ! Now loop through all neighbors j of vertex i in the matrix L
             ! such that j > k
@@ -360,14 +361,14 @@ subroutine sparse_static_pattern_ldu_factorization(A,L,D,U)                !
             enddo
 
             ! Adjust the diagonal
-            D(i) = D(i)-Lik*Uki
+            D(i) = D(i)-Lik*D(k)*Uki
 
             ! And finally loop through all the neighbors j of vertex i in
             ! the matrix U
             do ind2=1,du
                 j = uneighbors(ind2)
                 Ukj = U%get_value(k,j)
-                call U%add_value(i,j,-Lik*Ukj)
+                call U%add_value(i,j,-Lik*D(k)*Ukj)
             enddo
         enddo
 
@@ -376,7 +377,7 @@ subroutine sparse_static_pattern_ldu_factorization(A,L,D,U)                !
             ! Scale them by the diagonal
             k = uneighbors(ind2)
             Uik = U%get_value(i,k)
-            call U%set_value(i,k,Uik/D(k))
+            call U%set_value(i,k,Uik/D(i))
         enddo
     enddo
 
