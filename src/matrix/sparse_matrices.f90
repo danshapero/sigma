@@ -92,6 +92,12 @@ contains
     procedure :: destroy => sparse_mat_destroy
 
 
+    !--------------------------
+    ! Testing, debugging & I/O
+    !--------------------------
+    procedure :: write_to_file => write_sparse_matrix_to_file
+
+
     !--------------------
     ! Auxiliary routines
     !--------------------
@@ -767,6 +773,48 @@ subroutine sparse_mat_destroy(A)                                           !
     nullify(A%g)
 
 end subroutine sparse_mat_destroy
+
+
+
+
+!==========================================================================!
+!==== Testing, debugging and I/O                                       ====!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
+subroutine write_sparse_matrix_to_file(A,filename)                         !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(in) :: A
+    character(len=*), intent(in) :: filename
+    ! local variables
+    integer :: i,j,k,n
+    real(dp) :: val
+    type(graph_edge_cursor) :: cursor
+    integer :: num_blocks, num_returned, edges(2,64)
+
+    open(unit=10, file=trim(filename))
+
+    write(10,*) A%g%n, A%g%m, A%g%capacity
+
+    cursor = A%g%make_cursor(0)
+    num_blocks = (cursor%final-cursor%start)/64+1
+    do n=1,num_blocks
+        call A%g%get_edges(edges,cursor,64,num_returned)
+
+        do k=1,num_returned
+            i = edges(A%order(1),k)
+            j = edges(A%order(2),k)
+
+            val = A%val(64*(n-1)+k)
+
+            write(10,*) i,j,val
+        enddo
+    enddo
+
+    close(10)
+
+end subroutine write_sparse_matrix_to_file
 
 
 

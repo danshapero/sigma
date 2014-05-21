@@ -131,7 +131,7 @@ contains
     procedure(dump_edges_ifc), deferred :: dump_edges
     ! Write all of the graph's edges to an array.
 
-    procedure :: write_to_file
+    procedure :: write_to_file => write_graph_to_file
     ! Write to a file the number of left- and right-vertices of the
     ! graph, the number of edges, and then all of the edges.
 
@@ -289,24 +289,35 @@ end subroutine remove_reference
 
 
 !--------------------------------------------------------------------------!
-subroutine write_to_file(g,filename)                                       !
+subroutine write_graph_to_file(g,filename)                                 !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(graph), intent(in) :: g
     character(len=*), intent(in) :: filename
     ! local variables
-    integer :: n,edges(2,g%ne)
-
-    call g%dump_edges(edges)
+    integer :: i,j,k,n
+    type(graph_edge_cursor) :: cursor
+    integer :: num_blocks, num_returned, edges(2,64)
 
     open(unit=10,file=trim(filename))
-    write(10,*) g%n, g%ne
-    do n=1,g%ne
-        write(10,*) edges(:,n)
+    write(10,*) g%n, g%m, g%capacity
+
+    cursor = g%make_cursor(0)
+    num_blocks = (cursor%final-cursor%start)/64+1
+    do n=1,num_blocks
+        call g%get_edges(edges,cursor,64,num_returned)
+
+        do k=1,num_returned
+            i = edges(1,k)
+            j = edges(2,k)
+
+            write(10,*) i, j
+        enddo
     enddo
+
     close(10)
 
-end subroutine write_to_file
+end subroutine write_graph_to_file
 
 
 
