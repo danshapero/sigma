@@ -21,7 +21,7 @@ contains
     procedure :: setup => bicgstab_setup
     procedure :: linear_solve => bicgstab_solve
     procedure :: linear_solve_pc => bicgstab_solve_pc
-    procedure :: free => bicgstab_free
+    procedure :: destroy => bicgstab_destroy
 
     ! Methods specific to BiCG-Stab solvers
     procedure :: set_params => bicgstab_set_params
@@ -231,7 +231,7 @@ end subroutine bicgstab_solve_pc
 
 
 !--------------------------------------------------------------------------!
-subroutine bicgstab_free(solver)                                           !
+subroutine bicgstab_destroy(solver)                                        !
 !--------------------------------------------------------------------------!
     class(bicgstab_solver), intent(inout) :: solver
 
@@ -245,7 +245,7 @@ subroutine bicgstab_free(solver)                                           !
     solver%initialized = .false.
     solver%params_set = .false.
 
-end subroutine bicgstab_free
+end subroutine bicgstab_destroy
 
 
 

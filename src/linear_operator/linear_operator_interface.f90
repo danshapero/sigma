@@ -60,6 +60,7 @@ contains
     procedure(linear_solver_setup_ifc), deferred :: setup
     procedure(linear_solve_ifc), deferred :: linear_solve
     procedure :: linear_solve_pc
+    procedure(linear_solver_destroy_ifc), deferred :: destroy
     generic :: solve => linear_solve, linear_solve_pc
 end type linear_solver
 
@@ -108,6 +109,11 @@ abstract interface                                                         !
         real(dp), intent(in) :: b(:)
         class(linear_solver), intent(inout) :: pc
     end subroutine linear_solve_pc_ifc
+
+    subroutine linear_solver_destroy_ifc(solver)
+        import :: linear_solver
+        class(linear_solver), intent(inout) :: solver
+    end subroutine linear_solver_destroy_ifc
 end interface
 
 

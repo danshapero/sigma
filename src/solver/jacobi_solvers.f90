@@ -14,7 +14,7 @@ type, extends(linear_solver) :: jacobi_solver                              !
 contains
     procedure :: setup => jacobi_setup
     procedure :: linear_solve => jacobi_solve
-    procedure :: free => jacobi_free
+    procedure :: destroy => jacobi_destroy
 end type jacobi_solver
 
 
@@ -83,15 +83,16 @@ end subroutine jacobi_solve
 
 
 !--------------------------------------------------------------------------!
-subroutine jacobi_free(solver)                                             !
+subroutine jacobi_destroy(solver)                                          !
 !--------------------------------------------------------------------------!
     class(jacobi_solver), intent(inout) :: solver
 
     solver%nn = 0
+    solver%initialized = .false.
 
     deallocate(solver%idiag)
 
-end subroutine jacobi_free
+end subroutine jacobi_destroy
 
 
 

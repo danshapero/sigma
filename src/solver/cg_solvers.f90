@@ -21,7 +21,7 @@ contains
     procedure :: setup => cg_setup
     procedure :: linear_solve => cg_solve
     procedure :: linear_solve_pc => cg_solve_pc
-    procedure :: free => cg_free
+    procedure :: destroy => cg_destroy
 
     ! Methods specific to CG solvers
     procedure :: set_params => cg_set_params
@@ -196,7 +196,7 @@ end subroutine cg_solve_pc
 
 
 !--------------------------------------------------------------------------!
-subroutine cg_free(solver)                                                 !
+subroutine cg_destroy(solver)                                              !
 !--------------------------------------------------------------------------!
     class(cg_solver), intent(inout) :: solver
 
@@ -209,7 +209,7 @@ subroutine cg_free(solver)                                                 !
     solver%initialized = .false.
     solver%params_set = .false.
 
-end subroutine cg_free
+end subroutine cg_destroy
 
 
 

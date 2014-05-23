@@ -39,7 +39,7 @@ contains
     ! Methods required by the linear solver interface
     procedure :: setup => sparse_ldu_setup
     procedure :: linear_solve => ldu_solve
-    procedure :: free => ldu_free
+    procedure :: destroy => ldu_destroy
 
     ! Methods specific to LDU solvers
     procedure :: set_params => ldu_set_params
@@ -186,18 +186,18 @@ end subroutine ldu_solve
 
 
 !--------------------------------------------------------------------------!
-subroutine ldu_free(solver)                                                !
+subroutine ldu_destroy(solver)                                             !
 !--------------------------------------------------------------------------!
     class(sparse_ldu_solver), intent(inout) :: solver
 
     call solver%L%destroy()
     call solver%U%destroy()
 
-    deallocate(solver%D,solver%z,solver%p)
+    deallocate(solver%D)
 
     solver%initialized = .false.
 
-end subroutine ldu_free
+end subroutine ldu_destroy
 
 
 
