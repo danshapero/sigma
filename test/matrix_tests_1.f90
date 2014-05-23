@@ -158,7 +158,8 @@ implicit none
                 call exit(1)
             endif
 
-            ! Deallocate the graph and free the matrix
+            ! Deallocate the graph and destroy the matrix
+            call g%destroy()
             deallocate(g,p)
             call A%destroy()
         enddo

@@ -117,7 +117,7 @@ implicit none
             enddo
         enddo
 
-        call g%free()
+        call g%destroy()
         deallocate(g)
         if (verbose) print *, ' '
     enddo

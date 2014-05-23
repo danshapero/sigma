@@ -90,9 +90,9 @@ implicit none
     !----------------------------------------------------------------------!
     ! Try it with different graphs                                         !
     !----------------------------------------------------------------------!
-    call g%free()
-    call gr%free()
-    call hr%free()
+    call g%destroy()
+    call gr%destroy()
+    call hr%destroy()
     call gr%init(nn,nn,degree=2)
 
     do i=1,nn
@@ -138,9 +138,9 @@ implicit none
     !----------------------------------------------------------------------!
     ! And some more graphs                                                 !
     !----------------------------------------------------------------------!
-    call g%free()
-    call gr%free()
-    call hr%free()
+    call g%destroy()
+    call gr%destroy()
+    call hr%destroy()
     call gr%init(nn,nn,degree=2)
     call hr%init(nn,nn,degree=2)
 
@@ -161,9 +161,9 @@ implicit none
     !----------------------------------------------------------------------!
     ! And this time a random graph                                         !
     !----------------------------------------------------------------------!
-    call g%free()
-    call gr%free()
-    call hr%free()
+    call g%destroy()
+    call gr%destroy()
+    call hr%destroy()
     call gr%init(nn,nn)
     call hr%init(nn,nn)
 

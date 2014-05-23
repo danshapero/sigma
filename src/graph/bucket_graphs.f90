@@ -43,7 +43,7 @@ contains
 
     !-------------
     ! Destructors
-    procedure :: free => bucket_free
+    procedure :: destroy => bucket_destroy
 
     !--------------------------
     ! Testing, debugging & I/O

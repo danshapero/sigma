@@ -150,10 +150,12 @@ implicit none
             endif
 
             call B%destroy()
+            call h%destroy()
             deallocate(h)
         enddo
 
         call A%destroy()
+        call g%destroy()
         deallocate(g)
     enddo
 

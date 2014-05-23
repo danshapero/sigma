@@ -346,7 +346,7 @@ implicit none
             enddo
         enddo        
 
-        call g%free()
+        call g%destroy()
 
         deallocate(g,neighbors,p)
 

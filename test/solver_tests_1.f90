@@ -167,5 +167,8 @@ implicit none
     endif
 
 
+    call g%destroy()
+    call A%destroy()
+    deallocate(g)
 
 end program solver_tests_1

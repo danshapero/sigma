@@ -41,7 +41,7 @@ contains
 
     !-------------
     ! Destructors
-    procedure :: free => ellpack_free
+    procedure :: destroy => ellpack_destroy
 
     !--------------------------
     ! Testing, debugging & I/O
@@ -584,7 +584,7 @@ end subroutine ellpack_graph_decompress
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine ellpack_free(g)                                                 !
+subroutine ellpack_destroy(g)                                              !
 !--------------------------------------------------------------------------!
     class(ellpack_graph), intent(inout) :: g
 
@@ -597,7 +597,7 @@ subroutine ellpack_free(g)                                                 !
 
     g%mutable = .true.
 
-end subroutine ellpack_free
+end subroutine ellpack_destroy
 
 
 

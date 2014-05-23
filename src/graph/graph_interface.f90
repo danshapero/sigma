@@ -121,7 +121,7 @@ contains
     !-------------
     ! Destructors
     !-------------
-    procedure(free_ifc), deferred :: free
+    procedure(destroy_graph_ifc), deferred :: destroy
     ! Set all graph attributes to 0 and deallocate any internal data.
 
 
@@ -239,10 +239,10 @@ abstract interface                                                         !
         class(graph), intent(inout) :: g
     end subroutine decompress_graph_ifc
 
-    subroutine free_ifc(g)
+    subroutine destroy_graph_ifc(g)
         import :: graph
         class(graph), intent(inout) :: g
-    end subroutine free_ifc
+    end subroutine destroy_graph_ifc
 
     subroutine dump_edges_ifc(g,edges)
         import :: graph

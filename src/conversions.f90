@@ -81,7 +81,7 @@ subroutine convert(g,storage_format)                                       !
     enddo
 
     ! Free up the space used for the original graph format
-    call gc%free()
+    call gc%destroy()
     deallocate(gc)
 
 end subroutine convert

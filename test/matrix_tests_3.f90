@@ -162,6 +162,7 @@ implicit none
 
         ! Clear all data for the next test
         call A%destroy()
+        call g%destroy()
         deallocate(g)
     enddo
 

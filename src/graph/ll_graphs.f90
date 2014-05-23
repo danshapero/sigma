@@ -40,7 +40,7 @@ contains
 
     !-------------
     ! Destructors
-    procedure :: free => ll_free
+    procedure :: destroy => ll_destroy
 
     !--------------------------
     ! Testing, debugging & I/O
@@ -577,7 +577,7 @@ end subroutine ll_graph_decompress
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine ll_free(g)                                                      !
+subroutine ll_destroy(g)                                                   !
 !--------------------------------------------------------------------------!
     class(ll_graph), intent(inout) :: g
     integer :: i
@@ -596,7 +596,7 @@ subroutine ll_free(g)                                                      !
 
     g%mutable = .true.
 
-end subroutine ll_free
+end subroutine ll_destroy
 
 
 

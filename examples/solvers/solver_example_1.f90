@@ -132,4 +132,11 @@ implicit none
 120 format('Range of solution: (',e12.6,', ',e12.6,').')
 
 
+
+    call g%destroy()
+    call A%destroy()
+    deallocate(g)
+    deallocate(x,b)
+
+
 end program solver_example_1

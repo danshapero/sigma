@@ -168,7 +168,7 @@ implicit none
     enddo
 
 
-    call g%free()
+    call g%destroy()
 
 
 end program ising

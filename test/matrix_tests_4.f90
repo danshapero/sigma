@@ -239,16 +239,19 @@ implicit none
                 endif
 
                 call A%destroy()
+                call gph%destroy()
                 deallocate(gph)
             enddo
             enddo
 
             call C%destroy()
+            call h%destroy()
             deallocate(h)
         enddo
         enddo
 
         call B%destroy()
+        call g%destroy()
         deallocate(g)
     enddo
     enddo

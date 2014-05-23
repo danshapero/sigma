@@ -41,7 +41,7 @@ contains
 
     !-------------
     ! Destructors
-    procedure :: free => cs_free
+    procedure :: destroy => cs_destroy
 
     !--------------------------
     ! Testing, debugging & I/O
@@ -677,7 +677,7 @@ end subroutine cs_graph_decompress
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine cs_free(g)                                                      !
+subroutine cs_destroy(g)                                                   !
 !--------------------------------------------------------------------------!
     class(cs_graph), intent(inout) :: g
 
@@ -690,7 +690,7 @@ subroutine cs_free(g)                                                      !
 
     g%mutable = .true.
 
-end subroutine cs_free
+end subroutine cs_destroy
 
 
 

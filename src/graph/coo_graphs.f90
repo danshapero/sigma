@@ -42,7 +42,7 @@ contains
 
     !-------------
     ! Destructors
-    procedure :: free => coo_free
+    procedure :: destroy => coo_destroy
 
     !--------------------------
     ! Testing, debugging & I/O
@@ -501,7 +501,7 @@ end subroutine coo_graph_decompress
 
 
 !--------------------------------------------------------------------------!
-subroutine coo_free(g)                                                     !
+subroutine coo_destroy(g)                                                  !
 !--------------------------------------------------------------------------!
     class(coo_graph), intent(inout) :: g
 
@@ -515,7 +515,7 @@ subroutine coo_free(g)                                                     !
 
     g%mutable = .true.
 
-end subroutine coo_free
+end subroutine coo_destroy
 
 
 
