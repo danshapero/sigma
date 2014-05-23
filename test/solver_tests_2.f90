@@ -14,7 +14,10 @@ implicit none
     ! indices and miscellaneous
     integer :: i,j,k,d,nn,iter
     integer, allocatable :: neighbors(:)
-    real(dp) :: p, z, misfit
+    real(dp) :: p, z, z1, z2, misfit
+    ! graph edge iterator
+    type(graph_edge_cursor) :: cursor
+    integer :: n, num_blocks, num_returned, edges(2,64)
     ! command-line arguments
     character(len=16) :: arg
     logical :: verbose
@@ -134,6 +137,84 @@ implicit none
         print *, 'o Done solving linear system.'
         print *, '    Error:',misfit
     endif
-    
+
+
+
+    !----------------------------------------------------------------------!
+    ! Add a random skew-symmetric perturbation to A                        !
+    !----------------------------------------------------------------------!
+    cursor = g%make_cursor(0)
+    num_blocks = (cursor%final-cursor%start)/64+1
+
+    do n=1,num_blocks
+        call g%get_edges(edges,cursor,64,num_returned)
+
+        do k=1,num_returned
+            i = edges(1,k)
+            j = edges(2,k)
+
+            if (i/=0 .and. j/=0) then
+                call random_number(z1)
+                call random_number(z2)
+
+                z = dsqrt(-2*log(z1))*sin(2*pi*z2)/3
+                if (j>i) then
+                    call A%add_value(i,j,+z)
+                    call A%add_value(j,i,-z)
+                endif
+            endif
+        enddo
+    enddo
+
+    if (verbose) then
+        print *, 'o Random skew-symmetric perturbation '
+        print *, '    added to A.'
+    endif
+
+
+
+    !----------------------------------------------------------------------!
+    ! Rebuild the LDU solver                                               !
+    !----------------------------------------------------------------------!
+    call ildu%setup(A)
+
+    if (verbose) then
+        print *, 'o ILDU factorization of A re-computed'
+    endif
+
+
+
+    !----------------------------------------------------------------------!
+    ! Solve the new system                                                 !
+    !----------------------------------------------------------------------!
+    x = 0.0_dp
+    call random_number(xc)
+    call A%matvec(xc,b)
+
+    if (verbose) then
+        print *, 'o New random right-hand side generated'
+    endif
+
+    r = b
+    do iter=1,nn
+        call ildu%solve(A,q,r)
+        x = x+q
+        call A%matvec(x,w)
+        r = b-w
+    enddo
+
+    misfit = maxval(dabs(x-xc))
+    if (misfit>1.0e-15) then
+        print *, 'Stationary iterative method with incomplete'
+        print *, 'LDU decomposition did not converge.'
+        print *, 'Terminating.'
+        call exit(1)
+    endif
+
+    if (verbose) then
+        print *, 'o Done solving linear system.'
+        print *, '    Error:',misfit
+    endif
+
 
 end program solver_tests_2

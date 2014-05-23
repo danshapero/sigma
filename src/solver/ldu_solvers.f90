@@ -95,24 +95,34 @@ subroutine sparse_ldu_setup(solver,A)                                      !
     class(linear_operator), intent(in) :: A
     ! local variables
     class(graph), pointer :: g, gL, gU
-    integer :: i,j,k,nn
+    integer :: i,j,k
 
-    nn = A%nrow
+    solver%nn = A%nrow
+
+    if (A%ncol/=A%nrow) then
+        print *, 'Cannot make an LDU solver for a non-square matrix.'
+        print *, 'Terminating.'
+        call exit(1)
+    endif
 
     ! First, check to make sure A is a sparse matrix, and not block-sparse
     ! or a general linear operator
     select type(A)
         type is(sparse_matrix)
-            g => A%g
+            if (.not.solver%initialized) then
+                g => A%g
 
-            ! Build the sparsity pattern for the factorization
-            call incomplete_ldu_sparsity_pattern( gL, gU, g, 0)
+                ! Build the sparsity pattern for the factorization
+                call incomplete_ldu_sparsity_pattern( gL, gU, g, 0)
 
-            ! Initialize the L, U factors and allocate space for the
-            ! diagonal elements D
-            call solver%L%init(nn,nn,'row',gL)
-            call solver%U%init(nn,nn,'row',gU)
-            allocate(solver%D(nn))
+                ! Initialize the L, U factors and allocate space for the
+                ! diagonal elements D
+                call solver%L%init(solver%nn,solver%nn,'row',gL)
+                call solver%U%init(solver%nn,solver%nn,'row',gU)
+                allocate(solver%D(solver%nn))
+
+                solver%initialized = .true.
+            endif
 
             ! Fill the L, D, U factors
             call sparse_static_pattern_ldu_factorization(A, &
@@ -184,6 +194,8 @@ subroutine ldu_free(solver)                                                !
     call solver%U%destroy()
 
     deallocate(solver%D,solver%z,solver%p)
+
+    solver%initialized = .false.
 
 end subroutine ldu_free
 
@@ -297,6 +309,10 @@ subroutine sparse_static_pattern_ldu_factorization(A,L,D,U)                !
     integer :: num_blocks, num_returned, edges(2,64), order(2)
 
     nn = A%nrow
+
+    call L%zero()
+    call U%zero()
+    D = 0.0_dp
 
     ! Copy A into L, D and U
     order = A%order
