@@ -31,6 +31,8 @@ type, extends(linear_operator) :: sparse_matrix                            !
     procedure(sparse_mat_perm_ifc), pointer, private :: left_perm_impl
     procedure(sparse_mat_perm_ifc), pointer, private :: right_perm_impl
     procedure(sparse_matvec_add_ifc), pointer, private :: matvec_add_impl
+    procedure(sparse_mat_get_slice_ifc), pointer, private :: get_row_impl
+    procedure(sparse_mat_get_slice_ifc), pointer, private :: get_col_impl
 contains
     !--------------
     ! Constructors
@@ -48,6 +50,12 @@ contains
     !-----------
     procedure :: get_value => sparse_mat_get_value
     ! Return a matrix entry
+
+    procedure :: get_row => sparse_mat_get_row
+    ! Return a row of the matrix
+
+    procedure :: get_column => sparse_mat_get_column
+    ! Return a column of the matrix
 
 
     !----------
@@ -116,6 +124,14 @@ end type sparse_matrix
 !--------------------------------------------------------------------------!
 abstract interface                                                         !
 !--------------------------------------------------------------------------!
+    subroutine sparse_mat_get_slice_ifc(A,nodes,vals,k)
+        import :: sparse_matrix, dp
+        class(sparse_matrix), intent(in) :: A
+        integer, intent(out) :: nodes(:)
+        real(dp), intent(out) :: vals(:)
+        integer, intent(in) :: k
+    end subroutine sparse_mat_get_slice_ifc
+
     subroutine sparse_mat_perm_ifc(A,p)
         import :: sparse_matrix
         class(sparse_matrix), intent(inout) :: A
@@ -204,10 +220,18 @@ subroutine sparse_mat_init(A,nrow,ncol,orientation,g)
     select case(orientation)
         case('row')
             A%order = [1, 2]
+
+            A%get_row_impl => sparse_mat_get_slice_contiguous
+            A%get_col_impl => sparse_mat_get_slice_discontiguous
+
             A%left_perm_impl => sparse_mat_graph_leftperm
             A%right_perm_impl => sparse_mat_graph_rightperm
         case('col')
             A%order = [2, 1]
+
+            A%get_row_impl => sparse_mat_get_slice_discontiguous
+            A%get_col_impl => sparse_mat_get_slice_contiguous
+
             A%left_perm_impl => sparse_mat_graph_rightperm
             A%right_perm_impl => sparse_mat_graph_leftperm
     end select
@@ -346,6 +370,145 @@ function sparse_mat_get_value(A,i,j) result(val)                           !
     if (k/=-1) val = A%val(k)
 
 end function sparse_mat_get_value
+
+
+
+!--------------------------------------------------------------------------!
+subroutine sparse_mat_get_row(A,nodes,vals,k)                              !
+!--------------------------------------------------------------------------!
+!     This subroutine is a facade for one of either                        !
+!          o sparse_mat_get_slice_contiguous                               !
+!          o sparse_mat_get_slice_discontiguous.                           !
+! If the matrix is stored in row-major order, then the get_row method uses !
+! the implementation which assumes that row accesses are contiguous,       !
+! whereas the get_column method uses the implementation assuming that      !
+! column accesses require looking at every row of that column. The         !
+! situation is reversed for accessing rows/columns of a matrix stored in   !
+! column major order.                                                      !
+!     The assignment of the function pointer get_row_impl (resp.           !
+! get_col_impl) is done when initializing the matrix.                      !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(in) :: A
+    integer, intent(out) :: nodes(:)
+    real(dp), intent(out) :: vals(:)
+    integer, intent(in) :: k
+
+    call A%get_row_impl(nodes,vals,k)
+
+end subroutine sparse_mat_get_row
+
+
+
+!--------------------------------------------------------------------------!
+subroutine sparse_mat_get_column(A,nodes,vals,k)                           !
+!--------------------------------------------------------------------------!
+!     See the comment in the previous subroutine.                          !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(in) :: A
+    integer, intent(out) :: nodes(:)
+    real(dp), intent(out) :: vals(:)
+    integer, intent(in) :: k
+
+    call A%get_col_impl(nodes,vals,k)
+
+end subroutine sparse_mat_get_column
+
+
+
+!--------------------------------------------------------------------------!
+subroutine sparse_mat_get_slice_contiguous(A,nodes,vals,k)                 !
+!--------------------------------------------------------------------------!
+!     This subroutine and the one that follows it implement row/column     !
+! access. This version of the algorithm assumes that the orientation of    !
+! the matrix is the same as the slice being accessed, e.g. the matrix is   !
+! in row-major order and we are finding all elements of a row. In that     !
+! case, we can make a call to A%g%get_neighbors to find all relevant       !
+! entries.                                                                 !
+!     The matrix A has a function pointer which will point to either       !
+! this subroutine or its discontiguous counterpart below; the function     !
+! pointer is assigned at initialization of the matrix according to whether !
+! the matrix is in row- or column-major order.                             !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(in) :: A
+    integer, intent(out) :: nodes(:)
+    real(dp), intent(out) :: vals(:)
+    integer, intent(in) :: k
+    ! local variables
+    integer :: l, d, ind
+
+    ! Set the return values to 0
+    vals = 0.0_dp
+
+    ! Get the degree of the node k
+    d = A%g%degree(k)
+
+    ! Get all the neighbors of node k and put them in to the array `nodes`
+    call A%g%get_neighbors(nodes,k)
+
+    ! For each neighbor l of node k,
+    do ind=1,d
+        l = nodes(ind)
+
+        ! get the matrix entry A(k,l)
+        vals(ind) = A%val( A%g%find_edge(k,l) )
+    enddo
+
+end subroutine sparse_mat_get_slice_contiguous
+
+
+
+!--------------------------------------------------------------------------!
+subroutine sparse_mat_get_slice_discontiguous(A,nodes,vals,k)              !
+!--------------------------------------------------------------------------!
+!     This subroutine is the discontiguous counterpart to the subroutine   !
+! above. If this subroutine is being used, it is assumed that we are       !
+! accessing say an entire row of a matrix in column-major format. In that  !
+! case, we cannot simply call A%g%get_neighbors in order to know which     !
+! matrix entries to find -- we have to go through all entries in the row.  !
+!     As you may have guessed, that is very bad and should be avoided: if  !
+! the matrix you're using is in column-major ordering, you should try to   !
+! only do column accesses if possible.                                     !
+!     That situation can be avoided if the matrix is symmetric.            !
+!     Note that for favorable access, we know that the array size needed   !
+! will be at most the maximum degree of the graph. For the unfavorable     !
+! access contained in this subroutine, SiGMA doesn't keep track of the     !
+! maximum degree in the opposite orientation. You can easily have a graph  !
+! where the maximum column degree greatly exceeds that maximum row degree  !
+! or vice versa, and you could unwittingly provide arrays `nodes`, `vals`  !
+! to this subroutine which have insufficient space for the operation that  !
+! you're trying to do. That would result in a buffer overflow error.       !
+!     TL;DR: for the love of God, try to avoid needing this subroutine.    !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(in) :: A
+    integer, intent(out) :: nodes(:)
+    real(dp), intent(out) :: vals(:)
+    integer, intent(in) :: k
+    ! local variables
+    integer :: l, ind, next
+
+    ! Set the index in `nodes` and `vals` of the next entry to 0
+    next = 0
+
+    ! Set the return values to 0
+    vals = 0.0_dp
+
+    ! For each node l,
+    do l=1,A%g%n
+        ind = A%g%find_edge(l,k)
+
+        ! Check whether (l,k) are connected
+        if (ind/=-1) then
+            ! If they are,
+            next = next+1
+            ! put l as the next node of the slice
+            nodes(next) = l
+            ! and find the corresponding matrix entry.
+            vals(next) = A%val(ind)
+        endif
+    enddo
+
+end subroutine sparse_mat_get_slice_discontiguous
 
 
 
