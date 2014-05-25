@@ -512,6 +512,12 @@ end subroutine sparse_mat_get_slice_discontiguous
 
 
 
+! TODO: make a version of the contiguous access subroutine which is 
+! optimized for the case where A is in say CSR format, and we know that
+! the entries of each row are contiguous in A%val
+
+
+
 
 !==========================================================================!
 !==== Mutators                                                         ====!

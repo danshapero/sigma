@@ -231,14 +231,15 @@ subroutine lower_triangular_solve(M,x)                                     !
     real(dp), intent(inout) :: x(:)
     ! local variables
     integer :: i, j, k, d, neighbors(M%g%max_degree)
+    real(dp) :: vals(M%g%max_degree)
 
-    do i=1,M%g%n
-        call M%g%get_neighbors(neighbors,i)
+    do i=1,M%nrow
+        call M%get_row(neighbors,vals,i)
 
         d = M%g%degree(i)
         do k=1,d
             j = neighbors(k)
-            x(i) = x(i)-M%get_value(i,j)*x(j)
+            x(i) = x(i)-vals(k)*x(j)
         enddo
     enddo
 
@@ -254,14 +255,15 @@ subroutine upper_triangular_solve(M,x)                                     !
     real(dp), intent(inout) :: x(:)
     ! local variables
     integer :: i, j, k, d, neighbors(M%g%max_degree)
+    real(dp) :: vals(M%g%max_degree)
 
-    do i=M%g%n,1,-1
-        call M%g%get_neighbors(neighbors,i)
+    do i=M%nrow,1,-1
+        call M%get_row(neighbors,vals,i)
 
         d = M%g%degree(i)
         do k=1,d
             j = neighbors(k)
-            x(i) = x(i)-M%get_value(i,j)*x(j)
+            x(i) = x(i)-vals(k)*x(j)
         enddo
     enddo
 
