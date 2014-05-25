@@ -38,7 +38,6 @@ contains
     procedure :: left_permute => coo_graph_left_permute
     procedure :: right_permute => coo_graph_right_permute
     procedure :: compress => coo_graph_compress
-    procedure :: decompress => coo_graph_decompress
 
     !-------------
     ! Destructors
@@ -486,17 +485,6 @@ subroutine coo_graph_compress(g,edge_p)                                    !
     g%mutable = .false.
 
 end subroutine coo_graph_compress
-
-
-
-!--------------------------------------------------------------------------!
-subroutine coo_graph_decompress(g)                                         !
-!--------------------------------------------------------------------------!
-    class(coo_graph), intent(inout) :: g
-
-    g%mutable = .true.
-
-end subroutine coo_graph_decompress
 
 
 

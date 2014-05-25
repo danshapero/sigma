@@ -36,7 +36,6 @@ contains
     procedure :: left_permute => ll_graph_left_permute
     procedure :: right_permute => ll_graph_right_permute
     procedure :: compress => ll_graph_compress
-    procedure :: decompress => ll_graph_decompress
 
     !-------------
     ! Destructors
@@ -557,17 +556,6 @@ subroutine ll_graph_compress(g,edge_p)                                     !
     g%mutable = .false.
 
 end subroutine ll_graph_compress
-
-
-
-!--------------------------------------------------------------------------!
-subroutine ll_graph_decompress(g)                                          !
-!--------------------------------------------------------------------------!
-    class(ll_graph), intent(inout) :: g
-
-    g%mutable = .true.
-
-end subroutine ll_graph_decompress
 
 
 
