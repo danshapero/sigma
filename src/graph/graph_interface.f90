@@ -21,7 +21,7 @@ implicit none
 type, abstract :: graph                                                    !
 !--------------------------------------------------------------------------!
     integer :: n,m,ne,capacity,max_degree,reference_count = 0
-    logical :: mutable
+    logical :: mutable, symmetric = .false.
 contains
     !--------------
     ! Constructors
@@ -86,6 +86,10 @@ contains
     procedure(change_edge_ifc), deferred :: delete_edge
     ! Delete an edge if it does exist.
     ! Will result in an error if invoked when the graph is immutable.
+
+    procedure :: check_symmetry
+    ! Iterate through the graph's edges to see whether or not it is
+    ! a symmetric graph: the edge (i,j) is in the graph iff (j,i) is too
 
     procedure(permute_graph_ifc), deferred :: left_permute
     ! Apply a permutation to the graph's left-vertices.
@@ -257,6 +261,52 @@ end type graph_pointer
 
 
 contains
+
+
+
+
+!--------------------------------------------------------------------------!
+subroutine check_symmetry(g)                                               !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(graph), intent(inout) :: g
+    ! local variables
+    integer :: i,j,k,n
+    integer :: num_blocks, num_returned, edges(2,64)
+    type(graph_edge_cursor) :: cursor
+
+    ! If the graph isn't square, then right away we know that it's not
+    ! symmetric, so we can return immediately. Otherwise, assume that
+    ! the graph is symmetric.
+    if (g%m/=g%n) then
+        g%symmetric = .false.
+        return
+    else
+        g%symmetric = .true.
+    endif
+
+    ! Then iterate through each edge (i,j) of the graph and check that
+    ! (j,i) is also in the graph; if for some edge it is not, then
+    ! we can mark g as asymmetric and return.
+    cursor = g%make_cursor(0)
+    num_blocks = (cursor%final-cursor%start)/64+1
+    do n=1,num_blocks
+        call g%get_edges(edges,cursor,64,num_returned)
+
+        do k=1,num_returned
+            i = edges(1,k)
+            j = edges(2,k)
+
+            if (i/=0 .and. j/=0) then
+                if (.not.g%connected(j,i)) then
+                    g%symmetric = .false.
+                    exit
+                endif
+            endif
+        enddo
+    enddo
+
+end subroutine check_symmetry
 
 
 
