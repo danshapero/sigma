@@ -12,15 +12,15 @@ implicit none
 
     class(graph), pointer :: g
     type(sparse_matrix) :: A
-    integer :: i,j,k,frmt,ordering
+    integer :: i,j,k,d,frmt,ordering
     real(dp) :: z
     logical :: correct
     integer, allocatable :: edges(:,:), neighbors(:), p(:)
-    real(dp), allocatable :: x(:), y(:)
+    real(dp), allocatable :: x(:), y(:), vals(:)
     character(len=3) :: orientation
     real(dp), allocatable :: B(:,:)
 
-    allocate(edges(2,31), x(7), y(7), neighbors(8), B(7,7))
+    allocate(edges(2,31), x(7), y(7), neighbors(8), vals(8), B(7,7))
 
     ! Loop through all formats
     do frmt=1,4
@@ -89,6 +89,45 @@ implicit none
                 call exit(1)
             endif
 
+            ! Check that getting a matrix row/column works
+            do i=1,7
+                d = A%g%degree(i)
+                call A%get_row(neighbors,vals,i)
+
+                do k=1,d
+                    j = neighbors(k)
+                    z = A%get_value(i,j)
+
+                    if (vals(k)/=z) then
+                        print *, 'On matrix test',frmt,ordering
+                        print *, 'Getting row',i,'failed;'
+                        print *, 'Should have entry',i,j,' = ',z
+                        print *, 'Value found:',vals(k)
+                        print *, 'Terminating.'
+                        call exit(1)
+                    endif
+                enddo
+            enddo
+
+            do j=1,7
+                d = A%g%degree(j)
+                call A%get_column(neighbors,vals,j)
+
+                do k=1,d
+                    i = neighbors(k)
+                    z = A%get_value(i,j)
+
+                    if (vals(k)/=z) then
+                        print *, 'On matrix test',frmt,ordering
+                        print *, 'Getting column',j,'failed;'
+                        print *, 'Should have entry',i,j,' = ',z
+                        print *, 'Value found:',vals(k)
+                        print *, 'Terminating.'
+                        call exit(1)
+                    endif
+                enddo
+            enddo
+
             ! Test matrix multiplication
             y = 2.0_dp
             x = 1.0_dp
@@ -98,6 +137,7 @@ implicit none
                 print *, 'On matrix test',frmt,ordering
                 print *, 'Graph Laplacian * constant vector should = 0.0'
                 print *, 'Value found:',maxval(dabs(y))-2.0_dp
+                call exit(1)
             endif
 
             ! Compress the matrix and test to see if matrix multiplication
