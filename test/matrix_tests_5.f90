@@ -20,10 +20,10 @@ implicit none
     real(dp) :: p
     real(dp), allocatable :: x(:), y(:), z(:)
     ! other variables
-    logical :: correct, found
+    logical :: correct, found, isomorphic
     ! command-line arguments
     character(len=16) :: arg
-    logical verbose
+    logical :: verbose
 
 
     ! Get command line arguments to see if we're running in verbose mode
@@ -42,7 +42,7 @@ implicit none
     ! Initialize a random seed
     call init_seed()
     nn = 64
-    p = 6.0/nn
+    p = 4.0/nn
 
 
 
@@ -53,6 +53,7 @@ implicit none
     allocate(ll_graph::hr)
     allocate(cs_graph::g)
 
+    ! Make gr a ring graph
     call gr%init(nn,nn,degree=3)
     do i=1,nn
         call gr%add_edge(i,i)
@@ -62,7 +63,12 @@ implicit none
         call gr%add_edge(j,i)
     enddo
 
+    ! Copy hr from gr
     call hr%init(gr)
+
+    ! Compute the product of gr and hr, which should yield a ring graph
+    ! where each node is connected to the next 2 nodes around the ring
+    ! instead of just the next node
     call graph_product(g,gr,hr)
 
     allocate(neighbors(g%max_degree))
@@ -85,6 +91,8 @@ implicit none
         print *, 'Terminating.'
         call exit(1)
     endif
+
+    if (verbose) print *, 'o Done testing graph product for ring graphs'
 
 
     !----------------------------------------------------------------------!
@@ -156,6 +164,8 @@ implicit none
 
     call graph_product(g,gr,hr)
 
+    if (verbose) print *, 'o Done testing graph product for directed graphs'
+
 
 
     !----------------------------------------------------------------------!
@@ -179,9 +189,22 @@ implicit none
         enddo
     enddo
 
-    allocate(neighbors(gr%max_degree), more_neighbors(hr%max_degree))
+    if (verbose) then
+        print *, 'o Done generating random graphs gr, hr'
+        print *, '    Number of vertices:',nn
+        print *, '    Number of edges:   ',gr%ne, hr%ne
+        print *, '    Maximum degree:    ',gr%max_degree, hr%max_degree
+    endif
 
     call graph_product(g,gr,hr)
+
+    if (verbose) then
+        print *, 'o Done computing product g of random graphs gr, hr'
+        print *, '    Number of edges:',g%ne
+        print *, '    Maximum degree: ',g%max_degree
+    endif
+
+    allocate(neighbors(gr%max_degree), more_neighbors(hr%max_degree))
 
     ! First test that every edge of gr*hr is in g
     do i=1,nn
@@ -234,6 +257,99 @@ implicit none
             endif
         enddo
     enddo
+
+    print *, check_product_graph_isomorphism(g,gr,hr)
+
+    if (verbose) print *, 'o Done testing product of random graphs'
+
+
+
+    !----------------------------------------------------------------------!
+    ! Now try it with some graph transposes                                !
+    !----------------------------------------------------------------------!
+    call g%destroy()
+
+    call graph_product(g, gr, hr, trans1 = .false., trans2 = .true.)
+
+
+
+
+    !----------------------------------------------------------------------!
+    ! Clear all the graph data                                             !
+    !----------------------------------------------------------------------!
+    call g%destroy()
+    call gr%destroy()
+    call hr%destroy()
+
+
+
+contains
+
+    !----------------------------------------------------------------------!
+    function check_product_graph_isomorphism(g,g1,g2,trans1,trans2) &      !
+            & result(isomorphic)                                           !
+    !----------------------------------------------------------------------!
+    !     This function checks that the input graph g is isomorphic to     !
+    ! the graph product g1*g2, where g1 and g2 might be transposed         !
+    ! according to whether the optional arguments trans1, trans2 are set.  !
+    !----------------------------------------------------------------------!
+        ! input/output variables
+        class(graph), intent(in) :: g, g1, g2
+        logical, intent(in), optional :: trans1, trans2
+        logical :: isomorphic
+        ! local variables
+        logical :: tr1, tr2
+        integer :: i, j, k, l, m, d1, d2
+        integer :: neighbors1(g1%max_degree), neighbors2(g2%max_degree)
+        integer :: num_blocks, num_returned, edges(2,64)
+        type(graph_edge_cursor) :: cursor
+
+        isomorphic = .true.
+
+        ! First test that every edge of g1*g2 is in g
+        do i=1,g%n
+            d1 = g1%degree(i)
+            call g1%get_neighbors(neighbors1,i)
+
+            do l=1,d1
+                k = neighbors1(l)
+
+                d2 = g2%degree(k)
+                call g2%get_neighbors(neighbors2,k)
+                do m=1,d2
+                    j = neighbors2(m)
+
+                    if (.not.g%connected(i,j)) isomorphic = .false.
+                enddo
+            enddo
+        enddo
+
+        ! Then test that every edge of g is in g1*g2
+        cursor = g%make_cursor(0)
+        num_blocks = (cursor%final-cursor%start)/64+1
+        do n=1,num_blocks
+            call g%get_edges(edges,cursor,64,num_returned)
+
+            do l=1,num_returned
+                i = edges(1,l)
+                j = edges(2,l)
+
+                found = .false.
+
+                d1 = g1%degree(i)
+                call g1%get_neighbors(neighbors1,i)
+                do m=1,d1
+                    k = neighbors1(m)
+                    if (g2%connected(k,j)) found = .true.
+                enddo
+
+                isomorphic = isomorphic .and. found
+            enddo
+        enddo
+
+    end function check_product_graph_isomorphism
+
+
 
 
 end program matrix_tests_5

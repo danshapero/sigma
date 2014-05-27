@@ -129,7 +129,7 @@ subroutine graph_product(g,h1,h2,trans1,trans2)                            !
     ! local versions of optional arguments
     logical :: tr1, tr2
     ! an extra graph, for which querying all neighbors occurs in O(degree)
-    type(ll_graph) :: hp
+    type(cs_graph) :: hp
 
 
     ! Get optional arguments
@@ -162,25 +162,43 @@ subroutine graph_product(g,h1,h2,trans1,trans2)                            !
     endif
 
 
-    ! Check and see if one of the graphs is in a nice enough format that
-    ! the `neighbors` query takes O(degree) operations.
+    ! Check for annoying edge cases; these always occur when we're computing
+    ! g = (something) * transpose(h2).
+    if (tr2) then
+        ! The first edge case is where we're computing h1 * transpose(h2).
+        ! Applying the algorithm naively necessitates computing the in-
+        ! neighbors (as opposed to the out-neighbors) of a node. Even if I
+        ! had bothered to implement that operation, it takes O(n) operations
+        ! each time instead of O(d). Instead, we're better off making a
+        ! deep copy of the graph.
+        if (.not. tr1) then
+            ! Make a hard copy of the transpose of h2.
+            call hp%init(h2, trans = .true.)
 
-    ! If that's the case, we can use the `nice` version of the algorithm
-    ! defined below.
-    call graph_product_optimized(g,h1,h2, &
-        & trans_h1=tr1, trans_h2=tr2, trans_g=.false.)
+            ! Call the real graph product algorithm
+            call graph_product_optimized(g, h1, hp, trans_h1 = .false., &
+                & trans_g = .false.)
 
-    ! If it's not the case, we will, at the expense of extra memory usage,
-    ! make a copy of one of the graphs which is in a convenient format.
+        ! The second edge case is where we're computing 
+        ! transpose(h1)*transpose(h2). When that happens, it's better to
+        ! compute transpose(h2 * h1).
+        else
+            call graph_product_optimized(g, h2, h1, trans_h1 = .false., &
+                & trans_g = .true.)
+        endif
 
-    ! Then go to the nice version of the algorithm.
+    ! Otherwise, we're fine and we can proceed as normal.
+    else
+        call graph_product_optimized(g, h1, h2, trans_h1 = tr1,  &
+            & trans_g = .false.)
+    endif
 
 end subroutine graph_product
 
 
 
 !--------------------------------------------------------------------------!
-subroutine graph_product_optimized(g,h1,h2,trans_h1,trans_h2,trans_g)      !
+subroutine graph_product_optimized(g,h1,h2,trans_h1,trans_g)               !
 !--------------------------------------------------------------------------!
 !     Compute the product of the graphs h1, h2 and store them in a third   !
 ! graph g.                                                                 !
@@ -194,7 +212,7 @@ subroutine graph_product_optimized(g,h1,h2,trans_h1,trans_h2,trans_g)      !
     ! input/output variables
     class(graph), intent(inout) :: g
     class(graph), intent(in) :: h1, h2
-    logical, intent(in), optional :: trans_h1, trans_h2, trans_g
+    logical, intent(in), optional :: trans_h1, trans_g
     ! local variables
     type(ll_graph) :: gl
     integer :: i,j,k,l,m,n,d,order1(2),order2(2),nv1(2),nv2(2),ind(2)
@@ -203,27 +221,22 @@ subroutine graph_product_optimized(g,h1,h2,trans_h1,trans_h2,trans_g)      !
     ! a neighbors array
     integer, allocatable :: neighbors(:)
     ! local versions of optional arguments
-    logical :: tr1, tr2, trg
+    logical :: tr1, trg
 
     ! Get optional arguments
     tr1 = .false.
-    tr2 = .false.
     trg = .false.
     if (present(trans_h1)) tr1 = trans_h1
-    if (present(trans_h2)) tr2 = trans_h2
     if (present(trans_g)) trg = trans_g
 
     ! Get the desired order for all the graphs
     order1 = [1, 2]
-    order2 = [1, 2]
     if (tr1) order1 = [2, 1]
-    if (tr2) order2 = [2, 1]
 
     ! Get the graph dimensions
     nv1 = [h1%n, h1%m]
     nv2 = [h2%n, h2%m]
     nv1 = nv1(order1)
-    nv2 = nv2(order2)
 
     allocate(neighbors(h2%max_degree))
 
@@ -244,8 +257,8 @@ subroutine graph_product_optimized(g,h1,h2,trans_h1,trans_h2,trans_g)      !
             ind = edges(order1,l)
 
             if (ind(1)/=0 .and. ind(2)/=0) then
-                i = ind(order2(1))
-                k = ind(order2(2))
+                i = ind(1)
+                k = ind(2)
 
                 call h2%get_neighbors(neighbors,k)
                 d = h2%degree(k)
