@@ -144,8 +144,8 @@ subroutine graph_neighbors_c(cgp,nbrs,i,d) bind(c,name='get_neighbors')    !
 !--------------------------------------------------------------------------!
     ! input/output variables
     type(c_ptr), intent(in) :: cgp
-    integer(c_int), intent(out) :: nbrs(d)
     integer(c_int), intent(in), value :: i,d
+    integer(c_int), intent(out) :: nbrs(d)
     ! local variables
     class(graph), pointer :: g
 

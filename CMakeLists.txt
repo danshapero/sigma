@@ -2,6 +2,7 @@ cmake_minimum_required (VERSION 2.6.2)
 project( sigma Fortran C )
 
 enable_language(Fortran)
+enable_language(CXX)
 enable_testing()
 
 set(CMAKE_Fortran_FLAGS_DEBUG "-g -Wall -fbounds-check")
