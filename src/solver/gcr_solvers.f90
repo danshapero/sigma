@@ -1,4 +1,4 @@
-module cg_solvers
+module gcr_solvers
 
 use types, only: dp
 use linear_operator_interface
@@ -7,25 +7,25 @@ implicit none
 
 
 !--------------------------------------------------------------------------!
-type, extends(linear_solver) :: cg_solver                                  !
+type, extends(linear_solver) :: gcr_solver                                 !
 !--------------------------------------------------------------------------!
-    ! scratch vectors for CG iteration
-    real(dp), allocatable :: p(:), q(:), r(:), z(:)
+    ! scratch vectors for GCR iteration
+    real(dp), allocatable :: ap(:), p(:), q(:), r(:), z(:)
     integer :: iterations
 
     ! parameters determining solver behavior
     real(dp) :: tolerance
     logical, private :: params_set = .false.
 contains
-    ! Methods required by linear solver interface
-    procedure :: setup => cg_setup
-    procedure :: linear_solve => cg_solve
-    procedure :: linear_solve_pc => cg_solve_pc
-    procedure :: destroy => cg_destroy
+    ! Methods required by linear solver itnerface
+    procedure :: setup => gcr_setup
+    procedure :: linear_solve => gcr_solve
+    procedure :: linear_solve_pc => gcr_solve_pc
+    procedure :: destroy => gcr_destroy
 
-    ! Methods specific to CG solvers
-    procedure :: set_params => cg_set_params
-end type cg_solver
+    ! Methods specific to GCR solvers
+    procedure :: set_params => gcr_set_params
+end type gcr_solver
 
 
 contains
@@ -33,40 +33,36 @@ contains
 
 
 !--------------------------------------------------------------------------!
-function cg(tolerance)                                                     !
+function gcr(tolerance)                                                    !
 !--------------------------------------------------------------------------!
     real(dp), intent(in), optional :: tolerance
-    class(linear_solver), pointer :: cg
+    class(linear_solver), pointer :: gcr
 
-    allocate(cg_solver::cg)
-    select type(cg)
-        type is(cg_solver)
-            call cg%set_params(tolerance)
+    allocate(gcr_solver::gcr)
+    select type(gcr)
+        type is(gcr_solver)
+            call gcr%set_params(tolerance)
     end select
 
-end function cg
+end function gcr
 
 
 
 !--------------------------------------------------------------------------!
-subroutine cg_setup(solver,A)                                              !
+subroutine gcr_setup(solver,A)                                             !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(cg_solver), intent(inout) :: solver
+    class(gcr_solver), intent(inout) :: solver
     class(linear_operator), intent(in) :: A
     ! local variables
     integer :: nn
 
     ! Error handling
     if (A%ncol/=A%nrow) then
-        print *, 'Cannot make a CG solver for a non-square matrix'
+        print *, 'Cannot make a GCR solver for a non-square matrix'
         print *, 'Terminating.'
         call exit(1)
     endif
-
-    ! Set the matrix dimension for this solver
-    nn = A%nrow
-    solver%nn = nn
 
     ! Set the iteration count to 0
     solver%iterations = 0
@@ -77,24 +73,26 @@ subroutine cg_setup(solver,A)                                              !
 
     ! If the solver hasn't been initialized yet, allocate the work vectors
     if (.not.solver%initialized) then
-        allocate( solver%p(nn), solver%q(nn), solver%r(nn), solver%z(nn) )
+        allocate( solver%ap(nn), solver%p(nn), solver%q(nn), &
+            & solver%r(nn), solver%z(nn) )
         solver%initialized = .true.
     endif
 
     ! Zero out all the work vectors
+    solver%ap = 0.0_dp
     solver%p = 0.0_dp
     solver%q = 0.0_dp
     solver%r = 0.0_dp
     solver%z = 0.0_dp
 
-end subroutine cg_setup
+end subroutine gcr_setup
 
 
 
 !--------------------------------------------------------------------------!
-subroutine cg_set_params(solver,tolerance)                                 !
+subroutine gcr_set_params(solver,tolerance)                                !
 !--------------------------------------------------------------------------!
-    class(cg_solver), intent(inout) :: solver
+    class(gcr_solver), intent(inout) :: solver
     real(dp), intent(in), optional :: tolerance
 
     ! If the user has specified a tolerance for the iterative solver, then
@@ -108,111 +106,124 @@ subroutine cg_set_params(solver,tolerance)                                 !
 
     solver%params_set = .true.
 
-end subroutine cg_set_params
+end subroutine gcr_set_params
 
 
 
 !--------------------------------------------------------------------------!
-subroutine cg_solve(solver,A,x,b)                                          !
+subroutine gcr_solve(solver,A,x,b)                                         !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(cg_solver), intent(inout)    :: solver
-    class(linear_operator), intent(in) :: A
-    real(dp), intent(inout)            :: x(:)
-    real(dp), intent(in)               :: b(:)
+    class(gcr_solver), intent(inout)    :: solver
+    class(linear_operator), intent(in)  :: A
+    real(dp), intent(inout)             :: x(:)
+    real(dp), intent(in)                :: b(:)
     ! local variables
     real(dp) :: alpha, beta, res2, dpr
 
-    associate( p=>solver%p, q=>solver%q, r=>solver%r )
+    associate( ap=>solver%ap, p=>solver%p, q=>solver%p, r=>solver%r)
 
     call A%matvec(x,q)
     r = b-q
     p = r
     res2 = dot_product(r,r)
 
-    do while( dsqrt(res2)>solver%tolerance )
-        call A%matvec(p,q)
-        dpr = dot_product(p,q)
-        alpha = res2/dpr
+    ! q will always store A*r
+    call A%matvec(r,q)
+    ap = q
+
+    do while(dsqrt(res2)>solver%tolerance)
+        dpr = dot_product(r,q)
+        alpha = dpr/dot_product(ap,ap)
         x = x+alpha*p
         r = r-alpha*q
 
-        dpr = dot_product(r,r)
-        beta = dpr/res2
+        call A%matvec(r,q)
+        beta = dot_product(r,q)/dpr
+
         p = r+beta*p
-        res2 = dpr
+        ap = q+beta*ap
+
+        res2 = dot_product(r,r)
 
         solver%iterations = solver%iterations+1
     enddo
 
     end associate
 
-end subroutine cg_solve
+end subroutine gcr_solve
 
 
 
 !--------------------------------------------------------------------------!
-subroutine cg_solve_pc(solver,A,x,b,pc)                                    !
+subroutine gcr_solve_pc(solver,A,x,b,pc)                                   !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(cg_solver), intent(inout)     :: solver
+    class(gcr_solver), intent(inout)    :: solver
     class(linear_operator), intent(in)  :: A
     real(dp), intent(inout)             :: x(:)
     real(dp), intent(in)                :: b(:)
     class(linear_solver), intent(inout) :: pc
     ! local variables
-    real(dp) :: alpha, beta, dpr, res2
+    real(dp) :: alpha, beta, res2, dpr
 
-    associate( p=>solver%p, q=>solver%q, r=>solver%r, z=>solver%z )
+    associate( ap=>solver%ap, p=>solver%p, q=>solver%p, r=>solver%r, &
+        & z=>solver%z)
 
-    z = x
-    call A%matvec(z,q)
-    r = b-q
-    call pc%solve(A,z,r)
-    p = z
-    res2 = dot_product(r,z)
+    call A%matvec(x,q)
+    z = b-q
+    call pc%solve(A,r,q)
+    p = r
 
-    do while( dsqrt(res2)>solver%tolerance )
-        call A%matvec(p,q)
-        dpr = dot_product(p,q)
-        alpha = res2/dpr
+    ! q will always store A*r
+    call A%matvec(r,q)
+    ap = q
+
+    ! z will always store M^{-1}*A*p
+    call pc%solve(A,z,ap)
+
+    do while(dsqrt(res2)>solver%tolerance)
+        dpr = dot_product(r,q)
+        alpha = dpr/dot_product(ap,z)
         x = x+alpha*p
-        r = r-alpha*q
+        r = r-alpha*z
 
-        call pc%solve(A,z,r)
+        call A%matvec(r,q)
+        beta = dot_product(r,q)/dpr
 
-        dpr = dot_product(r,z)
-        beta = dpr/res2
-        p = z+beta*p
-        res2 = dpr
+        p = r+beta*p
+        ap = q+beta*ap
+
+        call pc%solve(A,z,ap)
+
+        res2 = dot_product(r,r)
 
         solver%iterations = solver%iterations+1
     enddo
 
     end associate
 
-end subroutine cg_solve_pc
+end subroutine gcr_solve_pc
 
 
 
 !--------------------------------------------------------------------------!
-subroutine cg_destroy(solver)                                              !
+subroutine gcr_destroy(solver)                                             !
 !--------------------------------------------------------------------------!
-    class(cg_solver), intent(inout) :: solver
+    class(gcr_solver), intent(inout) :: solver
 
     solver%nn = 0
     solver%tolerance = 0.0_dp
     solver%iterations = 0
 
-    deallocate( solver%p, solver%q, solver%r, solver%z )
+    deallocate( solver%ap, solver%p, solver%q, solver%r, solver%z )
 
     solver%initialized = .false.
     solver%params_set = .false.
 
-end subroutine cg_destroy
+end subroutine gcr_destroy
 
 
 
 
-
-end module cg_solvers
+end module gcr_solvers
