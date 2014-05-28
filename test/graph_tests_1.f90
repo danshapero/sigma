@@ -14,7 +14,7 @@ implicit none
     ! variables for testing correctness of sundry graph operations
     class(graph), allocatable :: g
     integer :: i,j,k,l,n,test
-    integer, allocatable :: edges(:,:), neighbors(:), p(:)
+    integer, allocatable :: edges(:,:), neighbors(:), p(:), B(:,:)
     logical :: correct
     ! variables for testing graph edge iterator
     type(graph_edge_cursor) :: cursor
@@ -36,7 +36,8 @@ implicit none
         verbose = .true.
     endif
 
-    allocate(edges(2,12),found_by_iterator(24),reference_edges(2,24))
+    allocate(edges(2,12),found_by_iterator(24),reference_edges(2,24), &
+        & B(7,7))
 
     reference_edges(1,1:6) = 1
     reference_edges(2,1:6) = [2,3,4,5,6,7]
@@ -128,6 +129,19 @@ implicit none
             print *, test
             call exit(1)
         endif
+
+        ! Check that converting the graph to a dense array works properly
+        call g%to_dense_graph(B)
+        do j=1,7
+            do i=1,7
+                if ( (g%connected(i,j) .and. B(i,j)==0) .or. &
+                    & (.not.g%connected(i,j) .and. B(i,j)==1) ) then
+                    print *, 'Converting graph to dense array failed.'
+                    print *, 'Terminating.'
+                    call exit(1)
+                endif
+            enddo
+        enddo
 
         ! Add in new edges to symmetrize the graph
         do i=1,6

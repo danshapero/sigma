@@ -131,6 +131,9 @@ contains
     procedure(dump_edges_ifc), deferred :: dump_edges
     ! Write all of the graph's edges to an array.
 
+    procedure :: to_dense_graph
+    ! Convert the graph to a dense array.
+
     procedure :: write_to_file => write_graph_to_file
     ! Write to a file the number of left- and right-vertices of the
     ! graph, the number of edges, and then all of the edges.
@@ -291,6 +294,40 @@ subroutine remove_reference(g)                                             !
     g%reference_count = g%reference_count-1
 
 end subroutine remove_reference
+
+
+
+!--------------------------------------------------------------------------!
+subroutine to_dense_graph(g,A)                                             !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(graph), intent(in) :: g
+    integer, intent(out) :: A(g%n,g%m)
+    ! local variables
+    integer :: i,j,k
+    integer :: n, num_blocks, num_returned, edges(2,64)
+    type(graph_edge_cursor) :: cursor
+
+    ! Set the dense array to 0
+    A = 0
+
+    cursor = g%make_cursor(0)
+    num_blocks = (cursor%final-cursor%start)/64+1
+
+    ! Iterate through all the edges (i,j) of g
+    do n=1,num_blocks
+        call g%get_edges(edges,cursor,64,num_returned)
+
+        do k=1,num_returned
+            ! set A(i,j) = 1
+            i = edges(1,k)
+            j = edges(2,k)
+
+            if (i/=0 .and. j/=0) A(i,j) = 1
+        enddo
+    enddo
+
+end subroutine to_dense_graph
 
 
 
