@@ -298,15 +298,21 @@ end subroutine remove_reference
 
 
 !--------------------------------------------------------------------------!
-subroutine to_dense_graph(g,A)                                             !
+subroutine to_dense_graph(g,A,trans)                                       !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(graph), intent(in) :: g
     integer, intent(out) :: A(g%n,g%m)
+    logical, intent(in), optional :: trans
     ! local variables
-    integer :: i,j,k
+    integer :: k,ind(2),ord(2)
     integer :: n, num_blocks, num_returned, edges(2,64)
     type(graph_edge_cursor) :: cursor
+
+    ord = [1,2]
+    if (present(trans)) then
+        if (trans) ord = [2,1]
+    endif
 
     ! Set the dense array to 0
     A = 0
@@ -319,11 +325,9 @@ subroutine to_dense_graph(g,A)                                             !
         call g%get_edges(edges,cursor,64,num_returned)
 
         do k=1,num_returned
-            ! set A(i,j) = 1
-            i = edges(1,k)
-            j = edges(2,k)
+            ind = edges(ord,k)
 
-            if (i/=0 .and. j/=0) A(i,j) = 1
+            if (ind(1)/=0 .and. ind(2)/=0) A(ind(1),ind(2)) = 1
         enddo
     enddo
 

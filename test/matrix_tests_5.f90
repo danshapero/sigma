@@ -10,6 +10,7 @@ implicit none
 
     ! Matrices and graphs
     class(graph), pointer :: gr, hr, g
+    integer, allocatable :: A(:,:), B(:,:), C(:,:)
     ! Graph edge iterators
     type(graph_edge_cursor) :: cursor
     integer :: num_blocks, num_returned, edges(2,64)
@@ -52,6 +53,7 @@ implicit none
     allocate(ll_graph::gr)
     allocate(ll_graph::hr)
     allocate(cs_graph::g)
+    allocate(A(nn,nn), B(nn,nn), C(nn,nn))
 
     ! Make gr a ring graph
     call gr%init(nn,nn,degree=3)
@@ -71,24 +73,15 @@ implicit none
     ! instead of just the next node
     call graph_product(g,gr,hr)
 
-    allocate(neighbors(g%max_degree))
-    call g%get_neighbors(neighbors,16)
+    call g%to_dense_graph(A)
+    call gr%to_dense_graph(B)
+    call hr%to_dense_graph(C)
 
-    correct = .true.
-    do k=1,5
-        found = .false.
-        j = neighbors(k)
+    A = A-matmul(B,C)
 
-        do i=14,18
-            if (j==i) found = .true.
-        enddo
-        correct = correct .and. found
-    enddo
-
-    if (.not.correct) then
-        print *, 'Computing graph product failed, should have node 16'
-        print *, 'neighboring nodes 14-18; neighbors found:',neighbors
-        print *, 'Terminating.'
+    if (maxval(A)/=0) then
+        print *, 'Computing graph product of ring graph with itself'
+        print *, 'failed. Terminating.'
         call exit(1)
     endif
 
@@ -114,32 +107,16 @@ implicit none
 
     call graph_product(g,gr,hr)
 
-    if (g%ne/=3*nn) then
-        print *, 'Graph product does not have the correct number of edges;'
-        print *, 'should be',3*nn
-        print *, 'Number of edges found:',g%ne
-        print *, 'Terminating.'
+    call g%to_dense_graph(A)
+    call gr%to_dense_graph(B)
+    call hr%to_dense_graph(C)
+
+    A = A-matmul(B,C)
+    if (maxval(A)/=0) then
+        print *, 'Computing graph product of ring graph with its reverse'
+        print *, 'graph failed. Terminating.'
         call exit(1)
     endif
-
-    if (g%max_degree/=3) then
-        print *, 'Degree of graph product incorrect, should have degree = 3'
-        print *, 'Degree found:',g%max_degree
-        print *, 'Terminating.'
-        call exit(1)
-    endif
-
-    i = 15
-    do di=-1,1
-        j = mod(i+di-1,nn)+1
-
-        if (.not.g%connected(i,j)) then
-            print *, 'Should have nodes',i,j
-            print *, 'connected in g, but they are not!'
-            print *, 'Terminating.'
-            call exit(1)
-        endif
-    enddo
 
 
 
@@ -164,6 +141,17 @@ implicit none
 
     call graph_product(g,gr,hr)
 
+    call g%to_dense_graph(A)
+    call gr%to_dense_graph(B)
+    call hr%to_dense_graph(C)
+
+    A = A-matmul(B,C)
+    if (maxval(A)/=0) then
+        print *, 'Computing graph product of ring graph with 2-jump ring'
+        print *, 'graph failed. Terminating.'
+        call exit(1)
+    endif
+
     if (verbose) print *, 'o Done testing graph product for directed graphs'
 
 
@@ -178,7 +166,6 @@ implicit none
     call hr%init(nn,nn)
 
     allocate(y(nn), z(nn))
-    deallocate(neighbors)
 
     do i=1,nn
         call random_number(y)
@@ -204,61 +191,17 @@ implicit none
         print *, '    Maximum degree: ',g%max_degree
     endif
 
-    allocate(neighbors(gr%max_degree), more_neighbors(hr%max_degree))
+    call g%to_dense_graph(A)
+    call gr%to_dense_graph(B)
+    call hr%to_dense_graph(C)
 
-    ! First test that every edge of gr*hr is in g
-    do i=1,nn
-        d1 = gr%degree(i)
-        call gr%get_neighbors(neighbors,i)
-        do l=1,d1
-            k = neighbors(l)
+    A = A-matmul(B,C)
+    if (maxval(A)/=0) then
+        print *, 'Computing graph product of two random graphs failed.'
+        print *, 'Terminating.'
+        call exit(1)
+    endif
 
-            d2 = hr%degree(k)
-            call hr%get_neighbors(more_neighbors,k)
-            do m=1,d2
-                j = more_neighbors(m)
-
-                if (.not.g%connected(i,j)) then
-                    print *, 'Have nodes',i,k,'connected in gr'
-                    print *, ' and nodes',k,j,'connected in hr'
-                    print *, 'so we should have nodes',i,j
-                    print *, 'connected in g = gr*hr, but they are not!'
-                    call exit(1)
-                endif
-            enddo
-        enddo
-    enddo
-
-    ! Then test that every edge of g is in gr*hr
-    cursor = g%make_cursor(0)
-    num_blocks = (cursor%final-cursor%start)/64+1
-    do n=1,num_blocks
-        call g%get_edges(edges,cursor,64,num_returned)
-
-        do l=1,num_returned
-            i = edges(1,l)
-            j = edges(2,l)
-
-            found = .false.
-
-            d = gr%degree(i)
-            call gr%get_neighbors(neighbors,i)
-            do m=1,d
-                k = neighbors(m)
-
-                if (hr%connected(k,j)) found = .true.
-            enddo
-
-            if (.not.found) then
-                print *, 'Have nodes',i,j,'connected in g, but there is no'
-                print *, 'node k such that ',i,'<-> k in gr, k<->',j,'in hr'
-                print *, 'Terminating.'
-                call exit(1)
-            endif
-        enddo
-    enddo
-
-    print *, check_product_graph_isomorphism(g,gr,hr)
 
     if (verbose) print *, 'o Done testing product of random graphs'
 
@@ -271,6 +214,16 @@ implicit none
 
     call graph_product(g, gr, hr, trans1 = .false., trans2 = .true.)
 
+    call g%to_dense_graph(A)
+    call gr%to_dense_graph(B)
+    call hr%to_dense_graph(C,trans=.true.)
+
+    A = A-matmul(B,C)
+    if (maxval(A)/=0) then
+        print *, 'Computing graph product of random graph with transpose'
+        print *, 'of random graph failed. Terminating.'
+        call exit(1)
+    endif
 
 
 
@@ -280,76 +233,6 @@ implicit none
     call g%destroy()
     call gr%destroy()
     call hr%destroy()
-
-
-
-contains
-
-    !----------------------------------------------------------------------!
-    function check_product_graph_isomorphism(g,g1,g2,trans1,trans2) &      !
-            & result(isomorphic)                                           !
-    !----------------------------------------------------------------------!
-    !     This function checks that the input graph g is isomorphic to     !
-    ! the graph product g1*g2, where g1 and g2 might be transposed         !
-    ! according to whether the optional arguments trans1, trans2 are set.  !
-    !----------------------------------------------------------------------!
-        ! input/output variables
-        class(graph), intent(in) :: g, g1, g2
-        logical, intent(in), optional :: trans1, trans2
-        logical :: isomorphic
-        ! local variables
-        logical :: tr1, tr2
-        integer :: i, j, k, l, m, d1, d2
-        integer :: neighbors1(g1%max_degree), neighbors2(g2%max_degree)
-        integer :: num_blocks, num_returned, edges(2,64)
-        type(graph_edge_cursor) :: cursor
-
-        isomorphic = .true.
-
-        ! First test that every edge of g1*g2 is in g
-        do i=1,g%n
-            d1 = g1%degree(i)
-            call g1%get_neighbors(neighbors1,i)
-
-            do l=1,d1
-                k = neighbors1(l)
-
-                d2 = g2%degree(k)
-                call g2%get_neighbors(neighbors2,k)
-                do m=1,d2
-                    j = neighbors2(m)
-
-                    if (.not.g%connected(i,j)) isomorphic = .false.
-                enddo
-            enddo
-        enddo
-
-        ! Then test that every edge of g is in g1*g2
-        cursor = g%make_cursor(0)
-        num_blocks = (cursor%final-cursor%start)/64+1
-        do n=1,num_blocks
-            call g%get_edges(edges,cursor,64,num_returned)
-
-            do l=1,num_returned
-                i = edges(1,l)
-                j = edges(2,l)
-
-                found = .false.
-
-                d1 = g1%degree(i)
-                call g1%get_neighbors(neighbors1,i)
-                do m=1,d1
-                    k = neighbors1(m)
-                    if (g2%connected(k,j)) found = .true.
-                enddo
-
-                isomorphic = isomorphic .and. found
-            enddo
-        enddo
-
-    end function check_product_graph_isomorphism
-
-
 
 
 end program matrix_tests_5
