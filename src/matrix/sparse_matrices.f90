@@ -44,6 +44,9 @@ contains
     procedure :: add_mats => sparse_mat_add_mats
     ! Initialize a sparse matrix as the sum of two other sparse matrices.
 
+    procedure :: multiply_mats => sparse_mat_multiply_mats
+    ! Initialize a sparse matrix ast he product of two sparse matrices.
+
 
     !-----------
     ! Accessors
@@ -337,6 +340,96 @@ subroutine sparse_mat_add_mats(A,B,C,g,orientation)                        !
     enddo
 
 end subroutine sparse_mat_add_mats
+
+
+
+!--------------------------------------------------------------------------!
+subroutine sparse_mat_multiply_mats(A,B,C,g,orientation)                   !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(inout) :: A
+    class(sparse_matrix), intent(in) :: B, C
+    class(graph), pointer, intent(inout), optional :: g
+    character(len=3), intent(in), optional :: orientation
+    ! local variables
+    integer :: nv(2)
+    class(graph), pointer :: ga, h1, h2
+    character(len=3) :: ori
+    logical :: tr1, tr2
+
+
+    !------------------------
+    ! Do some error checking
+
+    if (B%ncol /= C%nrow) then
+        print *, 'Dimensions for sparse matrix product are inconsistent.'
+        print *, 'Terminating.'
+        call exit(1)
+    endif
+
+
+    !---------------------
+    ! Check optional args
+
+    ! First, check if the user has supplied a graph to use for the
+    ! connectivity structure of A
+    if (present(g)) then
+        ! If the graph pointer isn't associated, allocate it to a CS graph
+        if (.not.associated(g)) allocate(cs_graph::g)
+
+        ! Make our local graph pointer ga point to g
+        ga => g
+    else
+        ! If the user hasn't supplied a graph, make the local graph pointer
+        ! ga a CS graph.
+        allocate(cs_graph::ga)
+    endif
+
+    ! Next, check if the user has supplied an orientation for the output
+    ! matrix A; if not, default to row orientation
+    ori = "row"
+    if (present(orientation)) ori = orientation
+
+
+    !---------------------------------
+    ! Build the connectivity graph ga
+
+    ! Decide what dimension to make ga depending on the matrix orientation
+    select case(ori)
+        case("row")
+            nv = [B%nrow, C%ncol]
+            A%order = [1,2]
+        case("col")
+            nv = [C%ncol, B%nrow]
+            A%order = [2,1]
+    end select
+
+    ! Determine whether we're transposing matrices in the product graph
+    h1 => B%g
+    h2 => C%g
+    tr1 = (B%orientation == "col")
+    tr2 = (C%orientation == "col")
+
+    if (ori == "col") then
+        h1 => C%g
+        h2 => B%g
+
+        tr1 = xor(tr1,ori=="col")
+        tr2 = xor(tr2,ori=="col")
+    endif
+
+    ! Form the graph product and put it into ga
+    call graph_product(ga,h1,h2,tr1,tr2)
+
+    ! Initialize A with the structure of ga
+    call A%init(B%nrow,C%ncol,ori,ga)
+
+
+    !-----------------------
+    ! Fill the entries of A
+
+
+end subroutine sparse_mat_multiply_mats
 
 
 
