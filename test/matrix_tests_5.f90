@@ -216,7 +216,7 @@ implicit none
 
     call g%to_dense_graph(A)
     call gr%to_dense_graph(B)
-    call hr%to_dense_graph(C,trans=.true.)
+    call hr%to_dense_graph(C, trans = .true.)
 
     A = A-matmul(B,C)
     if (maxval(A)/=0) then
@@ -225,6 +225,35 @@ implicit none
         call exit(1)
     endif
 
+
+    call g%destroy()
+    call graph_product(g, gr, hr, trans1 = .true., trans2 = .false.)
+
+    call g%to_dense_graph(A)
+    call gr%to_dense_graph(B, trans = .true.)
+    call hr%to_dense_graph(C)
+
+    A = A-matmul(B,C)
+    if (maxval(A)/=0) then
+        print *, 'Computing graph product of transpose of random graph'
+        print *, 'with another random graph failed. Terminating.'
+        call exit(1)
+    endif
+
+
+    call g%destroy()
+    call graph_product(g, gr, hr, trans1 = .true., trans2 = .true.)
+
+    call g%to_dense_graph(A)
+    call gr%to_dense_graph(B, trans = .true.)
+    call hr%to_dense_graph(C, trans = .true.)
+
+    A = A-matmul(B,C)
+    if (maxval(A)/=0) then
+        print *, 'Computing graph product of transposes of random graphs'
+        print *, 'failed. Terminating.'
+        call exit(1)
+    endif
 
 
     !----------------------------------------------------------------------!
