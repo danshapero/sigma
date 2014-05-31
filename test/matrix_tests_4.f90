@@ -212,7 +212,8 @@ implicit none
 
 
                 ! Add B and C into the matrix A
-                call A%add(B,C,g=gph,orientation=orientation3)
+                call add_sparse_matrices(A, B, C, &
+                    & g = gph, orientation = orientation3)
 
                 x = 0.0_dp
                 u = 0.0_dp
