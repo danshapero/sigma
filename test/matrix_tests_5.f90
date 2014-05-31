@@ -114,6 +114,8 @@ implicit none
     allocate(ll_graph::g)
     call multiply_sparse_matrices(A,B,C,g)
 
+    if (verbose) print *, 'o Done computing matrix product A = B*C'
+
     allocate(AD(nn,nn), BD(nn,nn), CD(nn,nn))
     call A%to_dense_matrix(AD)
     call B%to_dense_matrix(BD)

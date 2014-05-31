@@ -1109,7 +1109,7 @@ subroutine multiply_sparse_matrices(A,B,C,g,orientation)                   !
     class(graph), pointer, intent(inout), optional :: g
     character(len=3), intent(in), optional :: orientation
     ! local variables
-    integer :: i, j, k, l, m, ind(2), nv(2)
+    integer :: i, j, k, l, m, ind(2)
     real(dp) :: z
     class(graph), pointer :: ga, h1, h2
     character(len=3) :: ori
@@ -1161,10 +1161,8 @@ subroutine multiply_sparse_matrices(A,B,C,g,orientation)                   !
     ! Decide what dimension to make ga depending on the matrix orientation
     select case(ori)
         case("row")
-            nv = [B%nrow, C%ncol]
             A%order = [1,2]
         case("col")
-            nv = [C%ncol, B%nrow]
             A%order = [2,1]
     end select
 
@@ -1187,6 +1185,7 @@ subroutine multiply_sparse_matrices(A,B,C,g,orientation)                   !
 
     ! Initialize A with the structure of ga
     call A%init(B%nrow,C%ncol,ori,ga)
+    call A%zero()
 
 
     !-----------------------
@@ -1217,11 +1216,11 @@ subroutine multiply_sparse_matrices(A,B,C,g,orientation)                   !
                 do m=1,C%g%max_degree
                     j = nodes(m)
 
-                    if (j/=0) z = z+B%val(64*(n-1)+l) * vals(m)
+                    if (j/=0) then
+                        z = B%val(64*(n-1)+l) * vals(m)
+                        call A%add_value(i,j,z)
+                    endif
                 enddo
-
-                ! Add z to A
-                call A%add_value(i,j,z)
             endif
         enddo
     enddo
