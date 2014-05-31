@@ -59,21 +59,10 @@ implicit none
     ! Loop through and test each graph type                                !
     !----------------------------------------------------------------------!
     do test=1,4
+        if (verbose) print *, 'Test',test
+
         ! Allocate the graph
-        select case(test)
-            case(1)
-                allocate(ll_graph::g)
-                if (verbose) print *, 'Test 1, linked-list graph'
-            case(2)
-                allocate(coo_graph::g)
-                if (verbose) print *, 'Test 2, coordinate graph'
-            case(3)
-                allocate(cs_graph::g)
-                if (verbose) print *, 'Test 3, compressed sparse graph'
-            case(4)
-                allocate(ellpack_graph::g)
-                if (verbose) print *, 'Test 4, ellpack graph'
-        end select
+        call choose_graph_type(g,test)
 
         ! Initialize the graph with a set of pre-defined edges
         call g%init(7,7,[6,3,3,3,3,3,3])

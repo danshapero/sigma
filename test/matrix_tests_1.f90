@@ -34,16 +34,7 @@ implicit none
             endif
 
             ! Choose the matrix format
-            select case(frmt)
-                case(1)
-                    allocate(ll_graph::g)
-                case(2)
-                    allocate(coo_graph::g)
-                case(3)
-                    allocate(cs_graph::g)
-                case(4)
-                    allocate(ellpack_graph::g)
-            end select
+            call choose_graph_type(g,frmt)
             call g%init(7,7,[7,4,4,4,4,4,4])
 
             do i=1,6
