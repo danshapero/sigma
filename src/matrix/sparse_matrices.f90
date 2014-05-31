@@ -154,6 +154,8 @@ type :: sparse_matrix_pointer                                              !
 end type sparse_matrix_pointer
 
 
+private :: multiply_sparse_mats_fast_row_access, &
+            & multiply_sparse_mats_fast_col_access
 
 
 contains
@@ -239,6 +241,7 @@ subroutine sparse_mat_init(A,nrow,ncol,orientation,g)
             A%left_perm_impl => sparse_mat_graph_rightperm
             A%right_perm_impl => sparse_mat_graph_leftperm
     end select
+    A%orientation = orientation
 
     ! Make the matrix's implementation of matvec refer to the decompressed
     ! version of the method
@@ -1114,12 +1117,6 @@ subroutine multiply_sparse_matrices(A,B,C,g,orientation)                   !
     class(graph), pointer :: ga, h1, h2
     character(len=3) :: ori
     logical :: tr1, tr2
-    ! variables for graph edge iterator
-    integer :: n, num_blocks, num_returned, edges(2,64)
-    type(graph_edge_cursor) :: cursor
-    ! variables for getting matrix slice
-    integer, allocatable :: nodes(:)
-    real(dp), allocatable :: vals(:)
 
 
     !------------------------
@@ -1190,10 +1187,39 @@ subroutine multiply_sparse_matrices(A,B,C,g,orientation)                   !
 
     !-----------------------
     ! Fill the entries of A
-    !TODO this assumes that the second factor C is in a row-oriented
-    ! format for decent performance, switch to a different implementation
-    ! if that's not the case
-    allocate(nodes(C%g%max_degree), vals(C%g%max_degree))
+
+    if (C%orientation=="row") then
+        call multiply_sparse_mats_fast_row_access(A,B,C)
+    elseif (B%orientation=="col") then
+        call multiply_sparse_mats_fast_col_access(A,B,C)
+    else
+        print *, 'Must have either B in column-major order'
+        print *, 'or C in row-major order. Terminating.'
+        call exit(1)
+    endif
+
+
+end subroutine multiply_sparse_matrices
+
+
+
+!--------------------------------------------------------------------------!
+subroutine multiply_sparse_mats_fast_row_access(A,B,C)                     !
+!--------------------------------------------------------------------------!
+!     This is a helper subroutine for sparse matrix multiplication which   !
+! assumes that the second factor matrix C is in row-major order and        !
+! preferably the underlying graph is in a format for which accessing all   !
+! the neighbors of a vertex can be done in O(degree).                      !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(inout) :: A
+    class(sparse_matrix), intent(in) :: B, C
+    ! local variables
+    integer :: i, j, k, l, m, ind(2)
+    integer :: nodes(C%g%max_degree)
+    real(dp) :: z, vals(C%g%max_degree)
+    integer :: n, num_blocks, num_returned, edges(2,64)
+    type(graph_edge_cursor) :: cursor
 
     cursor = B%g%make_cursor(0)
     num_blocks = (cursor%final-cursor%start)/64+1
@@ -1225,7 +1251,57 @@ subroutine multiply_sparse_matrices(A,B,C,g,orientation)                   !
         enddo
     enddo
 
-end subroutine multiply_sparse_matrices
+
+end subroutine multiply_sparse_mats_fast_row_access
+
+
+
+!--------------------------------------------------------------------------!
+subroutine multiply_sparse_mats_fast_col_access(A,B,C)                     !
+!--------------------------------------------------------------------------!
+!     This is a helper subroutine for multiplying sparse matrices in the   !
+! case where the first factor B is in column-major order.                  !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(inout) :: A
+    class(sparse_matrix), intent(in) :: B, C
+    ! local variables
+    integer :: i, j, k, l, m, ind(2)
+    integer :: nodes(B%g%max_degree)
+    real(dp) :: z, vals(B%g%max_degree)
+    integer :: n, num_blocks, num_returned, edges(2,64)
+    type(graph_edge_cursor) :: cursor
+
+    cursor = C%g%make_cursor(0)
+    num_blocks = (cursor%final-cursor%start)/64+1
+
+    ! Iterate through all the entries (k,j) of C
+    do n=1,num_blocks
+        call C%g%get_edges(edges,cursor,64,num_returned)
+
+        do l=1,num_returned
+            ind = edges(C%order,l)
+            k = ind(1)
+            j = ind(2)
+
+            if (k/=0 .and. j/=0) then
+                ! For each entry (k,j) of C, get the entire column
+                ! of entries (i,k) of B and compute z = B(i,k)*C(k,j)
+                call B%get_column(nodes,vals,k)
+
+                do m=1,B%g%max_degree
+                    j = nodes(m)
+
+                    if (j/=0) then
+                        z = vals(m) * C%val(64*(n-1)+1)
+                        call A%add_value(i,j,z)
+                    endif
+                enddo
+            endif
+        enddo
+    enddo
+
+end subroutine multiply_sparse_mats_fast_col_access
 
 
 
