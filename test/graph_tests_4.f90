@@ -70,17 +70,17 @@ implicit none
     if (verbose) print *, '>> Testing graph union operation.'
 
     do test1=1,4
-        if (verbose) print *, 'Test:',test1
+        if (verbose) print *, '    Test:',test1
         call choose_graph_type(h1,test1)
         call h1%init(gr)
 
         do test2=1,4
-            if (verbose) print *, '    Test:',test2
+            if (verbose) print *, '        Test:',test2
             call choose_graph_type(h2,test2)
             call h2%init(hr)
 
             do test3=1,4
-                if (verbose) print *, '        Test:',test3
+                if (verbose) print *, '            Test:',test3
                 call choose_graph_type(g,test3)
 
                 ! Check each possibility for transposing the input graphs
@@ -121,6 +121,69 @@ implicit none
         call h1%destroy()
         deallocate(h1)
     enddo
+
+
+
+    !----------------------------------------------------------------------!
+    ! Test graph product operation                                         !
+    !----------------------------------------------------------------------!
+    print *, ' '
+    if (verbose) print *, '>> Testing graph product operation.'
+
+    do test1=1,4
+        if (verbose) print *, '    Test:',test1
+        call choose_graph_type(h1,test1)
+        call h1%init(gr)
+
+        do test2=1,4
+            if (verbose) print *, '        Test:',test2
+            call choose_graph_type(h2,test2)
+            call h2%init(hr)
+
+            do test3=1,4
+                if (verbose) print *, '            Test:',test3
+                call choose_graph_type(g,test3)
+
+                ! Check each possibility for transposing the input graphs
+                ! h1, h2 of the graph union.
+                do t1=1,2
+                do t2=1,2
+                    tr1 = (t1==1)
+                    tr2 = (t2==1)
+
+                    ! Compute the graph union
+                    call graph_product(g, h1, h2, trans1=tr1, trans2=tr2)
+
+                    ! Check that g is isomorphic to h1 + h2
+                    call g%to_dense_graph(A)
+                    call h1%to_dense_graph(B1, trans=tr1)
+                    call h2%to_dense_graph(B2, trans=tr2)
+
+                    A = A-matmul(B1,B2)
+                    if (maxval(A)/=0) then
+                        print *, 'Graph product failed on test', &
+                            & test1,test2,test3
+                        print *, 'With transpositions', tr1, tr2
+                        print *, 'Terminating.'
+                        call exit(1)
+                    endif
+
+                    call g%destroy()
+                enddo
+                enddo
+
+                deallocate(g)
+            enddo
+
+            call h2%destroy()
+            deallocate(h2)
+        enddo
+
+        call h1%destroy()
+        deallocate(h1)
+    enddo
+
+
 
 
 end program graph_tests_4
