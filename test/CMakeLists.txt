@@ -4,6 +4,7 @@ test/util_tests.f90
 test/graph_tests_1.f90
 test/graph_tests_2.f90
 test/graph_tests_3.f90
+test/graph_tests_4.f90
 test/matrix_tests_1.f90
 test/matrix_tests_2.f90
 test/matrix_tests_3.f90
