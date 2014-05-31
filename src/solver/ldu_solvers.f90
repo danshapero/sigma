@@ -95,7 +95,6 @@ subroutine sparse_ldu_setup(solver,A)                                      !
     class(linear_operator), intent(in) :: A
     ! local variables
     class(graph), pointer :: g, gL, gU
-    integer :: i,j,k
 
     solver%nn = A%nrow
 
@@ -303,7 +302,7 @@ subroutine sparse_static_pattern_ldu_factorization(A,L,D,U)                !
     type(sparse_matrix), intent(inout) :: L, U
     real(dp), intent(inout) :: D(:)
     ! local variables
-    integer :: i,j,k,n,nn,dl,du,ind1,ind2,row
+    integer :: i,j,k,n,nn,dl,du,ind1,ind2
     integer, allocatable :: lneighbors(:),uneighbors(:)
     real(dp) :: Lik, Uki, Uik, Ukj
     ! graph edge iterators
@@ -421,7 +420,7 @@ subroutine incomplete_ldu_sparsity_pattern(gL,gU,g,level,trans)            !
     integer, intent(in) :: level
     logical, intent(in), optional :: trans
     ! local variables
-    integer :: i,j,k,n,ind(2),order(2)
+    integer :: i,j,k,n,order(2)
     integer :: Ldegrees(g%n), Udegrees(g%n)
     ! graph edge iterators
     type(graph_edge_cursor) :: cursor

@@ -12,17 +12,12 @@ implicit none
     class(graph), pointer :: gr, hr, g
     type(sparse_matrix) :: A, B, C
     real(dp), allocatable :: AD(:,:), BD(:,:), CD(:,:)
-    ! Graph edge iterators
-    type(graph_edge_cursor) :: cursor
-    integer :: num_blocks, num_returned, edges(2,64)
     ! Integer indices
-    integer :: i,j,k,l,m,n,d,di,d1,d2,nn
+    integer :: i,j,k,d,nn
     integer, allocatable :: neighbors(:)
     ! Random numbers and vectors
     real(dp) :: p, q
-    real(dp), allocatable :: x(:), y(:), z(:)
-    ! other variables
-    logical :: correct, found
+    real(dp), allocatable :: y(:), z(:)
     ! command-line arguments
     character(len=16) :: arg
     logical :: verbose
@@ -42,7 +37,7 @@ implicit none
 
 
     ! Initialize a random seed
-    !call init_seed()
+    call init_seed()
     nn = 64
     p = 4.0/nn
 

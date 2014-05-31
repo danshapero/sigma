@@ -14,11 +14,11 @@ implicit none
     class(graph), pointer :: g, h1, h2, gr, hr
     integer, allocatable :: A(:,:), B1(:,:), B2(:,:)
     ! Assorted variables
-    integer :: i, j, k, n, nn, test1, test2, test3, t1, t2
+    integer :: i, j, nn, test1, test2, test3, t1, t2
     logical :: tr1, tr2
     ! Random numbers
-    real(dp) :: p, q
-    real(dp), allocatable :: u(:), x(:), y(:), z(:)
+    real(dp) :: p
+    real(dp), allocatable :: y(:), z(:)
     ! Command-line arguments
     character(len=16) :: arg
     logical verbose
