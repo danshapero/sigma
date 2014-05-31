@@ -10,18 +10,19 @@ implicit none
 
     ! Matrices and graphs
     class(graph), pointer :: gr, hr, g
-    integer, allocatable :: A(:,:), B(:,:), C(:,:)
+    type(sparse_matrix) :: A, B, C
+    real(dp), allocatable :: AD(:,:), BD(:,:), CD(:,:)
     ! Graph edge iterators
     type(graph_edge_cursor) :: cursor
     integer :: num_blocks, num_returned, edges(2,64)
     ! Integer indices
     integer :: i,j,k,l,m,n,d,di,d1,d2,nn
-    integer, allocatable :: neighbors(:), more_neighbors(:)
+    integer, allocatable :: neighbors(:)
     ! Random numbers and vectors
-    real(dp) :: p
+    real(dp) :: p, q
     real(dp), allocatable :: x(:), y(:), z(:)
     ! other variables
-    logical :: correct, found, isomorphic
+    logical :: correct, found
     ! command-line arguments
     character(len=16) :: arg
     logical :: verbose
@@ -41,127 +42,16 @@ implicit none
 
 
     ! Initialize a random seed
-    call init_seed()
+    !call init_seed()
     nn = 64
     p = 4.0/nn
 
 
-
     !----------------------------------------------------------------------!
-    ! Construct reference graphs from which all test graphs are copied     !
+    ! Generate random graphs                                               !
     !----------------------------------------------------------------------!
     allocate(ll_graph::gr)
     allocate(ll_graph::hr)
-    allocate(cs_graph::g)
-    allocate(A(nn,nn), B(nn,nn), C(nn,nn))
-
-    ! Make gr a ring graph
-    call gr%init(nn,nn,degree=3)
-    do i=1,nn
-        call gr%add_edge(i,i)
-
-        j = mod(i,nn)+1
-        call gr%add_edge(i,j)
-        call gr%add_edge(j,i)
-    enddo
-
-    ! Copy hr from gr
-    call hr%init(gr)
-
-    ! Compute the product of gr and hr, which should yield a ring graph
-    ! where each node is connected to the next 2 nodes around the ring
-    ! instead of just the next node
-    call graph_product(g,gr,hr)
-
-    call g%to_dense_graph(A)
-    call gr%to_dense_graph(B)
-    call hr%to_dense_graph(C)
-
-    A = A-matmul(B,C)
-
-    if (maxval(A)/=0) then
-        print *, 'Computing graph product of ring graph with itself'
-        print *, 'failed. Terminating.'
-        call exit(1)
-    endif
-
-    if (verbose) print *, 'o Done testing graph product for ring graphs'
-
-
-    !----------------------------------------------------------------------!
-    ! Try it with different graphs                                         !
-    !----------------------------------------------------------------------!
-    call g%destroy()
-    call gr%destroy()
-    call hr%destroy()
-    call gr%init(nn,nn,degree=2)
-
-    do i=1,nn
-        call gr%add_edge(i,i)
-
-        j = mod(i,nn)+1
-        call gr%add_edge(i,j)
-    enddo
-
-    call hr%init(gr,.true.)
-
-    call graph_product(g,gr,hr)
-
-    call g%to_dense_graph(A)
-    call gr%to_dense_graph(B)
-    call hr%to_dense_graph(C)
-
-    A = A-matmul(B,C)
-    if (maxval(A)/=0) then
-        print *, 'Computing graph product of ring graph with its reverse'
-        print *, 'graph failed. Terminating.'
-        call exit(1)
-    endif
-
-
-
-    !----------------------------------------------------------------------!
-    ! And some more graphs                                                 !
-    !----------------------------------------------------------------------!
-    call g%destroy()
-    call gr%destroy()
-    call hr%destroy()
-    call gr%init(nn,nn,degree=2)
-    call hr%init(nn,nn,degree=2)
-
-    do i=1,nn
-        call gr%add_edge(i,i)
-        j = mod(i,nn)+1
-        call gr%add_edge(i,j)
-
-        k = mod(i+1,nn)+1
-        call hr%add_edge(i,j)
-        call hr%add_edge(j,k)
-    enddo
-
-    call graph_product(g,gr,hr)
-
-    call g%to_dense_graph(A)
-    call gr%to_dense_graph(B)
-    call hr%to_dense_graph(C)
-
-    A = A-matmul(B,C)
-    if (maxval(A)/=0) then
-        print *, 'Computing graph product of ring graph with 2-jump ring'
-        print *, 'graph failed. Terminating.'
-        call exit(1)
-    endif
-
-    if (verbose) print *, 'o Done testing graph product for directed graphs'
-
-
-
-    !----------------------------------------------------------------------!
-    ! And this time a random graph                                         !
-    !----------------------------------------------------------------------!
-    call g%destroy()
-    call gr%destroy()
-    call hr%destroy()
     call gr%init(nn,nn)
     call hr%init(nn,nn)
 
@@ -183,49 +73,60 @@ implicit none
         print *, '    Maximum degree:    ',gr%max_degree, hr%max_degree
     endif
 
-    call graph_product(g,gr,hr)
 
-    if (verbose) then
-        print *, 'o Done computing product g of random graphs gr, hr'
-        print *, '    Number of edges:',g%ne
-        print *, '    Maximum degree: ',g%max_degree
-    endif
+    !----------------------------------------------------------------------!
+    ! Fill random matrices                                                 !
+    !----------------------------------------------------------------------!
+    call B%init(nn,nn,'row',gr)
+    call C%init(nn,nn,'row',hr)
 
-    call g%to_dense_graph(A)
-    call gr%to_dense_graph(B)
-    call hr%to_dense_graph(C)
+    allocate(neighbors(B%g%max_degree))
+    do i=1,nn
+        call B%g%get_neighbors(neighbors,i)
 
-    A = A-matmul(B,C)
-    if (maxval(A)/=0) then
-        print *, 'Computing graph product of two random graphs failed.'
+        d = B%g%degree(i)
+        do k=1,d
+            j = neighbors(k)
+
+            call random_number(q)
+            call B%set_value(i,j,2*q-1)
+        enddo
+    enddo
+    deallocate(neighbors)
+
+    allocate(neighbors(C%g%max_degree))
+    do i=1,nn
+        call C%g%get_neighbors(neighbors,i)
+
+        d = C%g%degree(i)
+        do k=1,d
+            j = neighbors(k)
+
+            call random_number(q)
+            call C%set_value(i,j,2*q-1)
+        enddo
+    enddo
+
+
+    !----------------------------------------------------------------------!
+    ! Compute sparse matrix product                                        !
+    !----------------------------------------------------------------------!
+    allocate(ll_graph::g)
+    call multiply_sparse_matrices(A,B,C,g)
+
+    allocate(AD(nn,nn), BD(nn,nn), CD(nn,nn))
+    call A%to_dense_matrix(AD)
+    call B%to_dense_matrix(BD)
+    call C%to_dense_matrix(CD)
+
+    AD = AD-matmul(BD,CD)
+
+    if (maxval(dabs(AD))>1.0e-14) then
+        print *, 'Matrix multiplication failed.'
         print *, 'Terminating.'
         call exit(1)
     endif
-
-
-    if (verbose) print *, 'o Done testing product of random graphs'
-
-
-
-    !----------------------------------------------------------------------!
-    ! Now try it with some graph transposes                                !
-    !----------------------------------------------------------------------!
-    call g%destroy()
-
-    call graph_product(g, gr, hr, trans1 = .false., trans2 = .true.)
-
-    call g%to_dense_graph(A)
-    call gr%to_dense_graph(B)
-    call hr%to_dense_graph(C,trans=.true.)
-
-    A = A-matmul(B,C)
-    if (maxval(A)/=0) then
-        print *, 'Computing graph product of random graph with transpose'
-        print *, 'of random graph failed. Terminating.'
-        call exit(1)
-    endif
-
-
+    
 
     !----------------------------------------------------------------------!
     ! Clear all the graph data                                             !
@@ -233,6 +134,9 @@ implicit none
     call g%destroy()
     call gr%destroy()
     call hr%destroy()
+    deallocate(g)
+    deallocate(gr)
+    deallocate(hr)
 
 
 end program matrix_tests_5
