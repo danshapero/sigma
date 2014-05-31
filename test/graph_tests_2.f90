@@ -11,7 +11,7 @@ use sigma
 
 implicit none
 
-    class(graph), allocatable :: g, h
+    class(graph), pointer :: g, h
     integer :: i, j, k, l, n, degree, test1, test2, min_degree, ord(2)
     real(dp) :: z(16)
     logical :: trans

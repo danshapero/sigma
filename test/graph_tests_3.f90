@@ -10,7 +10,7 @@ use sigma
 
 implicit none
 
-    class(graph), allocatable :: g
+    class(graph), pointer :: g
     integer :: i,j,k,d,nn,test
     ! command-line arguments
     character(len=16) :: arg

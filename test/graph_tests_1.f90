@@ -12,7 +12,7 @@ use sigma
 implicit none
 
     ! variables for testing correctness of sundry graph operations
-    class(graph), allocatable :: g
+    class(graph), pointer :: g
     integer :: i,j,k,l,n,test
     integer, allocatable :: edges(:,:), neighbors(:), p(:), B(:,:)
     logical :: correct
