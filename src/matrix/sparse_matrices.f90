@@ -1364,10 +1364,10 @@ subroutine multiply_sparse_mats_fast_col_access(A,B,C)                     !
                 call B%get_column(nodes,vals,k)
 
                 do m=1,B%g%max_degree
-                    j = nodes(m)
+                    i = nodes(m)
 
-                    if (j/=0) then
-                        z = vals(m) * C%val(64*(n-1)+1)
+                    if (i/=0) then
+                        z = vals(m) * C%val(64*(n-1)+l)
                         call A%add_value(i,j,z)
                     endif
                 enddo

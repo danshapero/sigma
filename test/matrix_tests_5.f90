@@ -9,8 +9,8 @@ use sigma
 implicit none
 
     ! Matrices and graphs
-    class(graph), pointer :: gr, hr, g
-    type(sparse_matrix) :: A, B, C
+    class(graph), pointer :: gr, hr
+    type(sparse_matrix) :: A, B, C, BT, CT
     real(dp), allocatable :: AD(:,:), BD(:,:), CD(:,:)
     ! Integer indices
     integer :: i,j,k,d,nn
@@ -102,14 +102,16 @@ implicit none
         enddo
     enddo
 
+    call BT%copy(B,orientation='col',frmt='ll')
+    call CT%copy(C,orientation='col',frmt='ll')
+
 
     !----------------------------------------------------------------------!
     ! Compute sparse matrix product                                        !
     !----------------------------------------------------------------------!
-    allocate(ll_graph::g)
-    call multiply_sparse_matrices(A,B,C,g)
+    call multiply_sparse_matrices(A,B,C)
 
-    if (verbose) print *, 'o Done computing matrix product A = B*C'
+    if (verbose) print *, "o Done computing matrix product A = B * C"
 
     allocate(AD(nn,nn), BD(nn,nn), CD(nn,nn))
     call A%to_dense_matrix(AD)
@@ -123,17 +125,60 @@ implicit none
         print *, 'Terminating.'
         call exit(1)
     endif
-    
+
 
     !----------------------------------------------------------------------!
-    ! Clear all the graph data                                             !
+    ! Now try it with matrices in column-major ordering                    !
     !----------------------------------------------------------------------!
-    call g%destroy()
+    ! Clear out the matrix A
+    call A%destroy()
+
+    ! Proceed as before
+    call multiply_sparse_matrices(A,BT,C)
+
+    if (verbose) print *, "o Done computing matrix product A = B' * C"
+
+    call A%to_dense_matrix(AD)
+    call BT%to_dense_matrix(BD)
+    call C%to_dense_matrix(CD)
+
+    AD = AD-matmul(BD,CD)
+
+    if (maxval(dabs(AD))>1.0e-14) then
+        print *, 'Matrix multiplication failed.'
+        print *, 'Terminating.'
+        call exit(1)
+    endif
+
+
+    ! Now try it with C' too
+    call A%destroy()
+    call multiply_sparse_matrices(A,BT,CT)
+
+    if (verbose) print *, "o Done computing matrix product A = B' * C'"
+
+    call A%to_dense_matrix(AD)
+    call BT%to_dense_matrix(BD)
+    call CT%to_dense_matrix(CD)
+
+    AD = AD-matmul(BD,CD)
+
+    if (maxval(dabs(AD))>1.0e-14) then
+        print *, 'Matrix multiplication failed.'
+        print *, 'Terminating.'
+        call exit(1)
+    endif
+
+
+    !----------------------------------------------------------------------!
+    ! Clear all the graph and matrix data                                  !
+    !----------------------------------------------------------------------!
     call gr%destroy()
     call hr%destroy()
-    deallocate(g)
     deallocate(gr)
     deallocate(hr)
+
+
 
 
 end program matrix_tests_5
