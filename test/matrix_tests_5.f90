@@ -171,6 +171,28 @@ implicit none
 
 
     !----------------------------------------------------------------------!
+    ! Now try it with the really bad matrix ordering                       !
+    !----------------------------------------------------------------------!
+    call A%destroy()
+
+    call multiply_sparse_matrices(A,B,CT)
+
+    if (verbose) print *, "o Done computing matrix product A = B * C'"
+
+    call A%to_dense_matrix(AD)
+    call BT%to_dense_matrix(BD)
+    call C%to_dense_matrix(CD)
+
+    AD = AD-matmul(BD,CD)
+
+    if (maxval(dabs(AD))>1.0e-14) then
+        print *, 'Matrix multiplication failed.'
+        print *, 'Terminating.'
+        call exit(1)
+    endif
+
+
+    !----------------------------------------------------------------------!
     ! Clear all the graph and matrix data                                  !
     !----------------------------------------------------------------------!
     call gr%destroy()
