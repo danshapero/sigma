@@ -41,6 +41,10 @@ contains
     ! Initialize a sparse matrix given the number of rows and columns,
     ! and the desired ordering, e.g. row- or column-major ordering.
 
+    procedure :: copy => sparse_mat_copy
+    ! Initialize a sparse matrix as a copy of another matrix, or optionally
+    ! as a copy of its transpose matrix.
+
 
     !-----------
     ! Accessors
@@ -248,6 +252,68 @@ subroutine sparse_mat_init(A,nrow,ncol,orientation,g)
     A%matvec_add_impl => sparse_matvec_add_decompressed
 
 end subroutine sparse_mat_init
+
+
+
+!--------------------------------------------------------------------------!
+subroutine sparse_mat_copy(A,B,orientation,frmt)                           !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(inout) :: A
+    class(sparse_matrix), intent(in) :: B
+    character(len=3), intent(in), optional :: orientation
+    character(len=*), intent(in), optional :: frmt
+    ! local variables
+    integer :: k, ind(2), order(2)
+    character(len=3) :: ori
+    logical :: trans
+    class(graph), pointer :: g
+    ! graph edge iterator
+    integer :: n, num_blocks, num_returned, edges(2,64)
+    type(graph_edge_cursor) :: cursor
+
+    ! Check the optional orientation argument to see if the user has
+    ! specified whether the copied matrix is to be in row- or column-
+    ! major order
+    ori = B%orientation
+    if (present(orientation)) ori = orientation
+
+    ! We're effectively copying the transpose of a matrix if its desired
+    ! orientation is different from that of the matrix we're copying
+    trans = (ori /= B%orientation)
+
+    ! Allocate the graph poiner g, either to a specific format if the user
+    ! has requested one, or to whatever format B%g is in otherwise
+    if (present(frmt)) then
+        call choose_graph_type(g, frmt)
+    else
+        allocate(g, mold=B%g)
+    endif
+
+    ! Copy the structure of B into g
+    call g%copy(B%g, trans)
+
+    ! Initialize the matrix A
+    call A%init(B%nrow,B%ncol,ori,g)
+    call A%zero()
+
+    ! Copy the entries of B into A
+    cursor = g%make_cursor(0)
+    num_blocks = (cursor%final-cursor%start)/64+1
+
+    do n=1,num_blocks
+        call g%get_edges(edges,cursor,64,num_returned)
+
+        do k=1,num_returned
+            ind = edges(A%order,k)
+
+            if (ind(1)/=0 .and. ind(2)/=0) then
+                A%val(64*(n-1)+k) = B%get_value(ind(1),ind(2))
+            endif
+        enddo
+    enddo
+
+end subroutine sparse_mat_copy
 
 
 
@@ -1117,6 +1183,7 @@ subroutine multiply_sparse_matrices(A,B,C,g,orientation)                   !
     class(graph), pointer :: ga, h1, h2
     character(len=3) :: ori
     logical :: tr1, tr2
+    type(sparse_matrix) :: CR
 
 
     !------------------------
@@ -1188,14 +1255,21 @@ subroutine multiply_sparse_matrices(A,B,C,g,orientation)                   !
     !-----------------------
     ! Fill the entries of A
 
+    ! If C is in row-major order, call the routine assuming that getting
+    ! matrix rows is fast
     if (C%orientation=="row") then
         call multiply_sparse_mats_fast_row_access(A,B,C)
+
+    ! Likewise, if B is in column-major order, call the appropriate routine
     elseif (B%orientation=="col") then
         call multiply_sparse_mats_fast_col_access(A,B,C)
+
+    ! If C is not in row-major order and B is not in column-major order,
+    ! copy C into a new matrix CR which is in CSR format. This case is
+    ! wasteful of memory and should be avoided at all costs.
     else
-        print *, 'Must have either B in column-major order'
-        print *, 'or C in row-major order. Terminating.'
-        call exit(1)
+        call CR%copy(C, orientation="row", frmt="cs")
+        call multiply_sparse_mats_fast_row_access(A,B,CR)
     endif
 
 
