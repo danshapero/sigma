@@ -54,21 +54,9 @@ implicit none
     ! Construct graph for connectivity structure of sparse matrix          !
     !----------------------------------------------------------------------!
     do test=1,4
-        select case(test)
-            case(1)
-                allocate(ll_graph::g)
-                if (verbose) print *, 'Test 1, linked-list graph'
-            case(2)
-                allocate(coo_graph::g)
-                if (verbose) print *, 'Test 2, coordinate graph'
-            case(3)
-                allocate(cs_graph::g)
-                if (verbose) print *, 'Test 3, compressed sparse graph'
-            case(4)
-                allocate(ellpack_graph::g)
-                if (verbose) print *, 'Test 4, ellpack graph'
-        end select
+        if (verbose) print *, 'Test:',test
 
+        call choose_graph_type(g,test)
         call g%init(h)
 
 

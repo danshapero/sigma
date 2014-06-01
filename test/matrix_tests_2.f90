@@ -67,16 +67,7 @@ implicit none
         print *, test1
 
         ! Allocate g to each possible graph type
-        select case(test1)
-            case(1)
-                allocate(ll_graph::g)
-            case(2)
-                allocate(coo_graph::g)
-            case(3)
-                allocate(cs_graph::g)
-            case(4)
-                allocate(ellpack_graph::g)
-        end select
+        call choose_graph_type(g,test1)
         call g%init(gr)
 
         ! Make a matrix from g
@@ -85,16 +76,7 @@ implicit none
         do test2=1,4
             print *, test2
             ! Allocate h to each possible graph type
-            select case(test1)
-                case(1)
-                    allocate(ll_graph::h)
-                case(2)
-                    allocate(coo_graph::h)
-                case(3)
-                    allocate(cs_graph::h)
-                case(4)
-                    allocate(ellpack_graph::h)
-            end select
+            call choose_graph_type(h,test2)
             call h%init(hr)
 
             ! Make a matrix from h

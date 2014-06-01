@@ -10,7 +10,7 @@ use sigma
 
 implicit none
 
-    class(graph), allocatable :: g
+    class(graph), pointer :: g
     integer :: i,j,k,d,nn,test
     ! command-line arguments
     character(len=16) :: arg
@@ -28,22 +28,10 @@ implicit none
     nn = 128
 
     do test=1,4
-        ! Allocate and initialize the graph
-        select case(test)
-            case(1)
-                allocate(ll_graph::g)
-                if (verbose) print *, 'Test 1, linked-list graph'
-            case(2)
-                allocate(coo_graph::g)
-                if (verbose) print *, 'Test 2, coordinate graph'
-            case(3)
-                allocate(cs_graph::g)
-                if (verbose) print *, 'Test 3, compressed sparse graph'
-            case(4)
-                allocate(ellpack_graph::g)
-                if (verbose) print *, 'Test 4, ellpack graph'
-        end select
+        if (verbose) print *, 'Test:',test
 
+        ! Allocate and initialize the graph
+        call choose_graph_type(g,test)
         call g%init(nn,degree=2)
 
         ! Make g a ring graph, where each vertex is connected to the next

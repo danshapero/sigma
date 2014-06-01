@@ -11,7 +11,7 @@ use sigma
 
 implicit none
 
-    class(graph), allocatable :: g, h
+    class(graph), pointer :: g, h
     integer :: i, j, k, l, n, degree, test1, test2, min_degree, ord(2)
     real(dp) :: z(16)
     logical :: trans
@@ -89,20 +89,8 @@ implicit none
     do test1=1,4
         do test2=1,2
             ! Iterate over every graph format
-            select case(test1)
-                case(1)
-                    allocate(ll_graph::g)
-                    if (verbose) print *, '  Test 1: linked-list graph'
-                case(2)
-                    allocate(coo_graph::g)
-                    if (verbose) print *, '  Test 2: coordinate graph'
-                case(3)
-                    allocate(cs_graph::g)
-                    if (verbose) print *, '  Test 3: compressed sparse graph'
-                case(4)
-                    allocate(ellpack_graph::g)
-                    if (verbose) print *, '  Test 4: ellpack graph'
-            end select
+            call choose_graph_type(g,test1)
+            if (verbose) print *, '   Test', test1, test2
 
             ! Iterate over each graph orientation, i.e. test copying both h
             ! and h with all directed edges reversed

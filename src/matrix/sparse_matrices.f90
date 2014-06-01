@@ -41,8 +41,9 @@ contains
     ! Initialize a sparse matrix given the number of rows and columns,
     ! and the desired ordering, e.g. row- or column-major ordering.
 
-    procedure :: add_mats => sparse_mat_add_mats
-    ! Initialize a sparse matrix as the sum of two other sparse matrices.
+    procedure :: copy => sparse_mat_copy
+    ! Initialize a sparse matrix as a copy of another matrix, or optionally
+    ! as a copy of its transpose matrix.
 
 
     !-----------
@@ -103,6 +104,7 @@ contains
     !--------------------------
     ! Testing, debugging & I/O
     !--------------------------
+    procedure :: to_dense_matrix => sparse_matrix_to_dense_matrix
     procedure :: write_to_file => write_sparse_matrix_to_file
 
 
@@ -115,7 +117,7 @@ contains
     !----------
     ! Generics
     !----------
-    generic :: add => add_mats, add_mat_to_self
+    generic :: add => add_mat_to_self
 
 end type sparse_matrix
 
@@ -156,11 +158,19 @@ type :: sparse_matrix_pointer                                              !
 end type sparse_matrix_pointer
 
 
+private :: multiply_sparse_mats_fast_row_access, &
+            & multiply_sparse_mats_fast_col_access
 
 
 contains
 
 
+
+!     //////////////////////////////////////////////////////////////////
+!    //////////////////////////////////////////////////////////////////
+!   //// Object methods for sparse matrices                       //// 
+!  //////////////////////////////////////////////////////////////////
+! //////////////////////////////////////////////////////////////////
 
 
 !==========================================================================!
@@ -235,6 +245,7 @@ subroutine sparse_mat_init(A,nrow,ncol,orientation,g)
             A%left_perm_impl => sparse_mat_graph_rightperm
             A%right_perm_impl => sparse_mat_graph_leftperm
     end select
+    A%orientation = orientation
 
     ! Make the matrix's implementation of matvec refer to the decompressed
     ! version of the method
@@ -245,98 +256,64 @@ end subroutine sparse_mat_init
 
 
 !--------------------------------------------------------------------------!
-subroutine sparse_mat_add_mats(A,B,C,g,orientation)                        !
+subroutine sparse_mat_copy(A,B,orientation,frmt)                           !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(sparse_matrix), intent(inout) :: A
-    class(sparse_matrix), intent(in) :: B, C
-    class(graph), pointer, intent(inout), optional :: g
+    class(sparse_matrix), intent(in) :: B
     character(len=3), intent(in), optional :: orientation
+    character(len=*), intent(in), optional :: frmt
     ! local variables
-    integer :: i,j,k,n,nv(2)
-    logical :: trans1, trans2
-    integer :: num_blocks, num_returned, edges(2,64)
-    type(graph_edge_cursor) :: cursor
-    class(graph), pointer :: ga
+    integer :: k, ind(2), order(2)
     character(len=3) :: ori
+    logical :: trans
+    class(graph), pointer :: g
+    ! graph edge iterator
+    integer :: n, num_blocks, num_returned, edges(2,64)
+    type(graph_edge_cursor) :: cursor
 
-    !------------------------
-    ! Do some error checking
-
-    if (B%nrow/=C%nrow .or. B%ncol/=C%ncol) then
-        print *, 'Dimensions for sparse matrix sum are inconsistent.'
-        print *, 'Terminating.'
-        call exit(1)
-    endif
-
-
-    !---------------------
-    ! Check optional args
-
-    ! First, check if the user has supplied a graph to use for the
-    ! connectivity structure of A
-    if (present(g)) then
-        ! If the graph pointer isn't associated, allocate it to a CS graph
-        if (.not.associated(g)) allocate(cs_graph::g)
-
-        ! Make our local graph pointer ga point to g
-        ga => g
-    else
-        ! If the user hasn't supplied a graph, make the local graph pointer
-        ! ga a CS graph.
-        allocate(cs_graph::ga)
-    endif
-
-    ! Next, check if the user has supplied an orientation for the output
-    ! matrix A; if not, default to row orientation
-    ori = "row"
+    ! Check the optional orientation argument to see if the user has
+    ! specified whether the copied matrix is to be in row- or column-
+    ! major order
+    ori = B%orientation
     if (present(orientation)) ori = orientation
 
+    ! We're effectively copying the transpose of a matrix if its desired
+    ! orientation is different from that of the matrix we're copying
+    trans = (ori /= B%orientation)
 
-    !---------------------------------
-    ! Build the connectivity graph ga
+    ! Allocate the graph poiner g, either to a specific format if the user
+    ! has requested one, or to whatever format B%g is in otherwise
+    if (present(frmt)) then
+        call choose_graph_type(g, frmt)
+    else
+        allocate(g, mold=B%g)
+    endif
 
-    ! Decide what dimension to make ga depending on the matrix orientation
-    select case(ori)
-        case("row")
-            nv = [B%nrow, B%ncol]
-            A%order = [1,2]
-        case("col")
-            nv = [B%ncol, B%nrow]
-            A%order = [2,1]
-    end select
+    ! Copy the structure of B into g
+    call g%copy(B%g, trans)
 
-    ! The orientation of ga is flipped relative to B%g, C%g if A has a
-    ! different orientation to each matrix
-    trans1 = .not.(A%order(1)==B%order(1) .and. A%order(2)==B%order(2))
-    trans2 = .not.(A%order(1)==C%order(1) .and. A%order(2)==C%order(2))
+    ! Initialize the matrix A
+    call A%init(B%nrow,B%ncol,ori,g)
+    call A%zero()
 
-    ! Compute the union of the graphs B%g, C%g and put it into ga
-    call graph_union(ga,B%g,C%g,trans1,trans2)
-
-    ! Initialize A with the connectivity structure ga
-    call A%init(B%nrow,B%ncol,ori,ga)
-
-
-    !-----------------------
-    ! Fill the entries of A
-
-    cursor = A%g%make_cursor(0)
+    ! Copy the entries of B into A
+    cursor = g%make_cursor(0)
     num_blocks = (cursor%final-cursor%start)/64+1
+
     do n=1,num_blocks
-        call A%g%get_edges(edges,cursor,64,num_returned)
+        call g%get_edges(edges,cursor,64,num_returned)
 
         do k=1,num_returned
-            i = edges(A%order(1),k)
-            j = edges(A%order(2),k)
+            ind = edges(A%order,k)
 
-            if (i/=0 .and. j/=0) then
-                A%val(64*(n-1)+k) = B%get_value(i,j)+C%get_value(i,j)
+            if (ind(1)/=0 .and. ind(2)/=0) then
+                A%val(64*(n-1)+k) = B%get_value(ind(1),ind(2))
             endif
         enddo
     enddo
 
-end subroutine sparse_mat_add_mats
+end subroutine sparse_mat_copy
 
 
 
@@ -951,6 +928,46 @@ end subroutine sparse_mat_destroy
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
+subroutine sparse_matrix_to_dense_matrix(A,B,trans)                        !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(in) :: A
+    real(dp), intent(out) :: B(A%nrow,A%ncol)
+    logical, intent(in), optional :: trans
+    ! local variables
+    integer :: k, ind(2), ord(2)
+    integer :: n, num_blocks, num_returned, edges(2,64)
+    type(graph_edge_cursor) :: cursor
+
+    ord = A%order
+    if (present(trans)) then
+        if (trans) ord = ord([2, 1])
+    endif
+
+    ! Set the dense matrix to 0
+    B = 0.0_dp
+
+    cursor = A%g%make_cursor(0)
+    num_blocks = (cursor%final-cursor%start)/64+1
+
+    ! Iterate through all the entries of A
+    do n=1,num_blocks
+        call A%g%get_edges(edges,cursor,64,num_returned)
+
+        do k=1,num_returned
+            ind = edges(A%order,k)
+
+            if (ind(1)/=0 .and. ind(2)/=0) then
+                B(ind(1),ind(2)) = A%val(64*(n-1)+k)
+            endif
+        enddo
+    enddo
+
+end subroutine sparse_matrix_to_dense_matrix
+
+
+
+!--------------------------------------------------------------------------!
 subroutine write_sparse_matrix_to_file(A,filename)                         !
 !--------------------------------------------------------------------------!
     ! input/output variables
@@ -1044,6 +1061,321 @@ subroutine set_value_with_reallocation(A,i,j,val)                          !
     call move_alloc(from=vals, to=A%val)
 
 end subroutine set_value_with_reallocation
+
+
+
+
+
+!     //////////////////////////////////////////////////////////////////
+!    //////////////////////////////////////////////////////////////////
+!   //// Algebraic operations on sparse matrices                  //// 
+!  //////////////////////////////////////////////////////////////////
+! //////////////////////////////////////////////////////////////////
+
+
+!--------------------------------------------------------------------------!
+subroutine add_sparse_matrices(A,B,C,g,orientation)                        !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(inout) :: A
+    class(sparse_matrix), intent(in) :: B, C
+    class(graph), pointer, intent(inout), optional :: g
+    character(len=3), intent(in), optional :: orientation
+    ! local variables
+    integer :: i,j,k,n,nv(2)
+    logical :: trans1, trans2
+    integer :: num_blocks, num_returned, edges(2,64)
+    type(graph_edge_cursor) :: cursor
+    class(graph), pointer :: ga
+    character(len=3) :: ori
+
+    !------------------------
+    ! Do some error checking
+
+    if (B%nrow/=C%nrow .or. B%ncol/=C%ncol) then
+        print *, 'Dimensions for sparse matrix sum are inconsistent.'
+        print *, 'Terminating.'
+        call exit(1)
+    endif
+
+
+    !---------------------
+    ! Check optional args
+
+    ! First, check if the user has supplied a graph to use for the
+    ! connectivity structure of A
+    if (present(g)) then
+        ! If the graph pointer isn't associated, allocate it to a CS graph
+        if (.not.associated(g)) allocate(cs_graph::g)
+
+        ! Make our local graph pointer ga point to g
+        ga => g
+    else
+        ! If the user hasn't supplied a graph, make the local graph pointer
+        ! ga a CS graph.
+        allocate(cs_graph::ga)
+    endif
+
+    ! Next, check if the user has supplied an orientation for the output
+    ! matrix A; if not, default to row orientation
+    ori = "row"
+    if (present(orientation)) ori = orientation
+
+
+    !---------------------------------
+    ! Build the connectivity graph ga
+
+    ! Decide what dimension to make ga depending on the matrix orientation
+    select case(ori)
+        case("row")
+            nv = [B%nrow, B%ncol]
+            A%order = [1,2]
+        case("col")
+            nv = [B%ncol, B%nrow]
+            A%order = [2,1]
+    end select
+
+    ! The orientation of ga is flipped relative to B%g, C%g if A has a
+    ! different orientation to each matrix
+    trans1 = .not.(A%order(1)==B%order(1) .and. A%order(2)==B%order(2))
+    trans2 = .not.(A%order(1)==C%order(1) .and. A%order(2)==C%order(2))
+
+    ! Compute the union of the graphs B%g, C%g and put it into ga
+    call graph_union(ga,B%g,C%g,trans1,trans2)
+
+    ! Initialize A with the connectivity structure ga
+    call A%init(B%nrow,B%ncol,ori,ga)
+
+
+    !-----------------------
+    ! Fill the entries of A
+
+    cursor = A%g%make_cursor(0)
+    num_blocks = (cursor%final-cursor%start)/64+1
+    do n=1,num_blocks
+        call A%g%get_edges(edges,cursor,64,num_returned)
+
+        do k=1,num_returned
+            i = edges(A%order(1),k)
+            j = edges(A%order(2),k)
+
+            if (i/=0 .and. j/=0) then
+                A%val(64*(n-1)+k) = B%get_value(i,j)+C%get_value(i,j)
+            endif
+        enddo
+    enddo
+
+end subroutine add_sparse_matrices
+
+
+
+!--------------------------------------------------------------------------!
+subroutine multiply_sparse_matrices(A,B,C,g,orientation)                   !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(inout) :: A
+    class(sparse_matrix), intent(in) :: B, C
+    class(graph), pointer, intent(inout), optional :: g
+    character(len=3), intent(in), optional :: orientation
+    ! local variables
+    integer :: i, j, k, l, m, ind(2)
+    real(dp) :: z
+    class(graph), pointer :: ga, h1, h2
+    character(len=3) :: ori
+    logical :: tr1, tr2
+    type(sparse_matrix) :: CR
+
+
+    !------------------------
+    ! Do some error checking
+
+    if (B%ncol /= C%nrow) then
+        print *, 'Dimensions for sparse matrix product are inconsistent.'
+        print *, 'Terminating.'
+        call exit(1)
+    endif
+
+
+    !---------------------
+    ! Check optional args
+
+    ! First, check if the user has supplied a graph to use for the
+    ! connectivity structure of A
+    if (present(g)) then
+        ! If the graph pointer isn't associated, allocate it to a CS graph
+        if (.not.associated(g)) allocate(cs_graph::g)
+
+        ! Make our local graph pointer ga point to g
+        ga => g
+    else
+        ! If the user hasn't supplied a graph, make the local graph pointer
+        ! ga a CS graph.
+        allocate(cs_graph::ga)
+    endif
+
+    ! Next, check if the user has supplied an orientation for the output
+    ! matrix A; if not, default to row orientation
+    ori = "row"
+    if (present(orientation)) ori = orientation
+
+
+    !---------------------------------
+    ! Build the connectivity graph ga
+
+    ! Decide what dimension to make ga depending on the matrix orientation
+    select case(ori)
+        case("row")
+            A%order = [1,2]
+        case("col")
+            A%order = [2,1]
+    end select
+
+    ! Determine whether we're transposing matrices in the product graph
+    h1 => B%g
+    h2 => C%g
+    tr1 = (B%orientation == "col")
+    tr2 = (C%orientation == "col")
+
+    if (ori == "col") then
+        h1 => C%g
+        h2 => B%g
+
+        tr1 = xor(tr1,ori=="col")
+        tr2 = xor(tr2,ori=="col")
+    endif
+
+    ! Form the graph product and put it into ga
+    call graph_product(ga,h1,h2,tr1,tr2)
+
+    ! Initialize A with the structure of ga
+    call A%init(B%nrow,C%ncol,ori,ga)
+    call A%zero()
+
+
+    !-----------------------
+    ! Fill the entries of A
+
+    ! If C is in row-major order, call the routine assuming that getting
+    ! matrix rows is fast
+    if (C%orientation=="row") then
+        call multiply_sparse_mats_fast_row_access(A,B,C)
+
+    ! Likewise, if B is in column-major order, call the appropriate routine
+    elseif (B%orientation=="col") then
+        call multiply_sparse_mats_fast_col_access(A,B,C)
+
+    ! If C is not in row-major order and B is not in column-major order,
+    ! copy C into a new matrix CR which is in CSR format. This case is
+    ! wasteful of memory and should be avoided at all costs.
+    else
+        call CR%copy(C, orientation="row", frmt="cs")
+        call multiply_sparse_mats_fast_row_access(A,B,CR)
+    endif
+
+
+end subroutine multiply_sparse_matrices
+
+
+
+!--------------------------------------------------------------------------!
+subroutine multiply_sparse_mats_fast_row_access(A,B,C)                     !
+!--------------------------------------------------------------------------!
+!     This is a helper subroutine for sparse matrix multiplication which   !
+! assumes that the second factor matrix C is in row-major order and        !
+! preferably the underlying graph is in a format for which accessing all   !
+! the neighbors of a vertex can be done in O(degree).                      !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(inout) :: A
+    class(sparse_matrix), intent(in) :: B, C
+    ! local variables
+    integer :: i, j, k, l, m, ind(2)
+    integer :: nodes(C%g%max_degree)
+    real(dp) :: z, vals(C%g%max_degree)
+    integer :: n, num_blocks, num_returned, edges(2,64)
+    type(graph_edge_cursor) :: cursor
+
+    cursor = B%g%make_cursor(0)
+    num_blocks = (cursor%final-cursor%start)/64+1
+
+    ! Iterate through all the entries (i,k) of B
+    do n=1,num_blocks
+        call B%g%get_edges(edges,cursor,64,num_returned)
+
+        do l=1,num_returned
+            ind = edges(B%order,l)
+            i = ind(1)
+            k = ind(2)
+
+            if (i/=0 .and. k/=0) then
+                ! For each entry (i,k) of B, get the entire row
+                ! of entries (k,j) of C and compute z = B(i,k)*C(k,j)
+                z = 0.0_dp
+                call C%get_row(nodes,vals,k)
+
+                do m=1,C%g%max_degree
+                    j = nodes(m)
+
+                    if (j/=0) then
+                        z = B%val(64*(n-1)+l) * vals(m)
+                        call A%add_value(i,j,z)
+                    endif
+                enddo
+            endif
+        enddo
+    enddo
+
+
+end subroutine multiply_sparse_mats_fast_row_access
+
+
+
+!--------------------------------------------------------------------------!
+subroutine multiply_sparse_mats_fast_col_access(A,B,C)                     !
+!--------------------------------------------------------------------------!
+!     This is a helper subroutine for multiplying sparse matrices in the   !
+! case where the first factor B is in column-major order.                  !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(inout) :: A
+    class(sparse_matrix), intent(in) :: B, C
+    ! local variables
+    integer :: i, j, k, l, m, ind(2)
+    integer :: nodes(B%g%max_degree)
+    real(dp) :: z, vals(B%g%max_degree)
+    integer :: n, num_blocks, num_returned, edges(2,64)
+    type(graph_edge_cursor) :: cursor
+
+    cursor = C%g%make_cursor(0)
+    num_blocks = (cursor%final-cursor%start)/64+1
+
+    ! Iterate through all the entries (k,j) of C
+    do n=1,num_blocks
+        call C%g%get_edges(edges,cursor,64,num_returned)
+
+        do l=1,num_returned
+            ind = edges(C%order,l)
+            k = ind(1)
+            j = ind(2)
+
+            if (k/=0 .and. j/=0) then
+                ! For each entry (k,j) of C, get the entire column
+                ! of entries (i,k) of B and compute z = B(i,k)*C(k,j)
+                call B%get_column(nodes,vals,k)
+
+                do m=1,B%g%max_degree
+                    i = nodes(m)
+
+                    if (i/=0) then
+                        z = vals(m) * C%val(64*(n-1)+l)
+                        call A%add_value(i,j,z)
+                    endif
+                enddo
+            endif
+        enddo
+    enddo
+
+end subroutine multiply_sparse_mats_fast_col_access
 
 
 
