@@ -100,7 +100,7 @@ subroutine graph_union(g,h1,h2,trans1,trans2)                              !
     logical, intent(in), optional :: trans1, trans2
     ! local variables
     integer :: i,j,k,n,order1(2),order2(2),nv1(2),nv2(2)
-    integer :: num_blocks,num_returned,edges(2,64)
+    integer :: num_blocks,num_returned,edges(2,batch_size)
     type(graph_edge_cursor) :: cursor
     ! local versions of optional arguments
     logical :: tr1, tr2
@@ -143,9 +143,9 @@ subroutine graph_union(g,h1,h2,trans1,trans2)                              !
     !---------------------------------------------
     ! Add the edges from h1 to the output graph g
     cursor = h1%make_cursor(0)
-    num_blocks = (cursor%final-cursor%start)/64+1
+    num_blocks = (cursor%final-cursor%start)/batch_size+1
     do n=1,num_blocks
-        call h1%get_edges(edges,cursor,64,num_returned)
+        call h1%get_edges(edges,cursor,batch_size,num_returned)
 
         do k=1,num_returned
             i = edges(order1(1),k)
@@ -159,9 +159,9 @@ subroutine graph_union(g,h1,h2,trans1,trans2)                              !
     !---------------------------------------------
     ! Add the edges from h2 to the output graph g
     cursor = h2%make_cursor(0)
-    num_blocks = (cursor%final-cursor%start)/64+1
+    num_blocks = (cursor%final-cursor%start)/batch_size+1
     do n=1,num_blocks
-        call h2%get_edges(edges,cursor,64,num_returned)
+        call h2%get_edges(edges,cursor,batch_size,num_returned)
 
         do k=1,num_returned
             i = edges(order2(1),k)
@@ -192,7 +192,7 @@ subroutine graph_product(g,h1,h2,trans1,trans2)                            !
     logical, intent(in), optional :: trans1, trans2
     ! local variables
     integer :: i,j,k,n,order1(2),order2(2),nv1(2),nv2(2)
-    integer :: num_blocks,num_returned,edges(2,64)
+    integer :: num_blocks,num_returned,edges(2,batch_size)
     type(graph_edge_cursor) :: cursor
     ! local versions of optional arguments
     logical :: tr1, tr2
@@ -284,7 +284,7 @@ subroutine graph_product_optimized(g,h1,h2,trans_h1,trans_g)               !
     ! local variables
     type(ll_graph) :: gl
     integer :: i,j,k,l,m,n,d,order1(2),order2(2),nv1(2),nv2(2),ind(2)
-    integer :: num_blocks,num_returned,edges(2,64)
+    integer :: num_blocks,num_returned,edges(2,batch_size)
     type(graph_edge_cursor) :: cursor
     ! a neighbors array
     integer, allocatable :: neighbors(:)
@@ -317,10 +317,10 @@ subroutine graph_product_optimized(g,h1,h2,trans_h1,trans_g)               !
     !-------------------------------------
     ! Iterate through all the edges of h1
     cursor = h1%make_cursor(0)
-    num_blocks = (cursor%final-cursor%start)/64+1
+    num_blocks = (cursor%final-cursor%start)/batch_size+1
 
     do n=1,num_blocks
-        call h1%get_edges(edges,cursor,64,num_returned)
+        call h1%get_edges(edges,cursor,batch_size,num_returned)
         do l=1,num_returned
             ind = edges(order1,l)
 

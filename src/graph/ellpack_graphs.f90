@@ -138,7 +138,8 @@ subroutine ellpack_graph_copy(g,h,trans)                                   !
     class(graph), intent(in)            :: h
     logical, intent(in), optional :: trans
     ! local variables
-    integer :: ind(2),order(2),nv(2),k,n,num_blocks,num_returned,edges(2,64)
+    integer :: ind(2),order(2),nv(2),k
+    integer :: n, num_blocks, num_returned, edges(2,batch_size)
     type(graph_edge_cursor) :: cursor
 
     nv = [h%n, h%m]
@@ -168,12 +169,12 @@ subroutine ellpack_graph_copy(g,h,trans)                                   !
 
     ! Make an edge iterator for the copied graph h
     cursor = h%make_cursor(0)
-    num_blocks = (cursor%final-cursor%start)/64+1
+    num_blocks = (cursor%final-cursor%start)/batch_size+1
 
     ! Iterate through all the edges of h
     do n=1,num_blocks
         ! Get a chunk of edges from h
-        call h%get_edges(edges,cursor,64,num_returned)
+        call h%get_edges(edges,cursor,batch_size,num_returned)
 
         ! Add each edge from the chunk into g
         do k=1,num_returned

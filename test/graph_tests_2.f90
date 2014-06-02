@@ -16,7 +16,7 @@ implicit none
     real(dp) :: z(16)
     logical :: trans
     ! variables for graph edge iteration
-    integer :: num_blocks, num_returned, edges(2,64)
+    integer :: num_blocks, num_returned, edges(2,batch_size)
     type(graph_edge_cursor) :: cursor
     ! command-line arguments
     character(len=16) :: arg
@@ -106,10 +106,10 @@ implicit none
             ! Iterate through all the edges of g and make sure they all are
             ! connected in h
             cursor = g%make_cursor(0)
-            num_blocks = (cursor%final-cursor%start)/64+1
+            num_blocks = (cursor%final-cursor%start)/batch_size+1
 
             do n=1,num_blocks
-                call g%get_edges(edges,cursor,64,num_returned)
+                call g%get_edges(edges,cursor,batch_size,num_returned)
 
                 do k=1,num_returned
                     i = edges(ord(1),k)
@@ -131,10 +131,10 @@ implicit none
             ! Iterate through all the edges of h and make sure they all are
             ! connected in g
             cursor = h%make_cursor(0)
-            num_blocks = (cursor%final-cursor%start)/64+1
+            num_blocks = (cursor%final-cursor%start)/batch_size+1
 
             do n=1,num_blocks
-                call h%get_edges(edges,cursor,64,num_returned)
+                call h%get_edges(edges,cursor,batch_size,num_returned)
 
                 do k=1,num_returned
                     i = edges(ord(1),k)

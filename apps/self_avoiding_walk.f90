@@ -17,7 +17,7 @@ implicit none
     integer :: n, k
     integer, allocatable :: s(:), neighbors(:), histogram(:)
     logical, allocatable :: unvisited(:)
-    real(dp) :: beta, p
+    real(dp) :: p
 
     ! other variables
     integer :: i,j,d,nn,iter,trial,num

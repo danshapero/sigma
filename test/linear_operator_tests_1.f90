@@ -11,7 +11,7 @@ implicit none
     real(dp), allocatable :: w(:), x(:), y(:), z(:)
     class(linear_operator), pointer :: L
     type(graph_edge_cursor) :: cursor
-    integer :: num_blocks, num_returned, edges(2,64)
+    integer :: num_blocks, num_returned, edges(2,batch_size)
 
     call init_seed()
 
@@ -44,10 +44,10 @@ implicit none
     call A%init(nn,nn,'row',g)
 
     cursor = g%make_cursor(0)
-    num_blocks = (cursor%final-cursor%start)/64+1
+    num_blocks = (cursor%final-cursor%start)/batch_size+1
 
     do n=1,num_blocks
-        call g%get_edges(edges,cursor,64,num_returned)
+        call g%get_edges(edges,cursor,batch_size,num_returned)
 
         do k=1,num_returned
             i = edges(1,k)
@@ -62,10 +62,10 @@ implicit none
 
     call B%init(nn,nn,'col',h)
     cursor = h%make_cursor(0)
-    num_blocks = (cursor%final-cursor%start)/64+1
+    num_blocks = (cursor%final-cursor%start)/batch_size+1
 
     do n=1,num_blocks
-        call h%get_edges(edges,cursor,64,num_returned)
+        call h%get_edges(edges,cursor,batch_size,num_returned)
 
         do k=1,num_returned
             i = edges(2,k)

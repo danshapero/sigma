@@ -15,7 +15,7 @@ implicit none
     character(len=3) :: orientation1, orientation2, orientation3
     ! Graph edge iterators
     type(graph_edge_cursor) :: cursor
-    integer :: num_blocks, num_returned, edges(2,64)
+    integer :: num_blocks, num_returned, edges(2,batch_size)
     ! Integer indices
     integer :: i, j, k, n, nn, test1, test2, test3, frmt1, frmt2, frmt3
     ! Random numbers and vectors
@@ -43,7 +43,7 @@ implicit none
 
     ! Initialize a random seed
     call init_seed()
-    nn = 64
+    nn = 72
     p = 8.0/nn
 
 
@@ -107,9 +107,9 @@ implicit none
         ! Make B a random matrix
         call B%init(nn,nn,orientation1,g)
         cursor = B%g%make_cursor(0)
-        num_blocks = (cursor%start-cursor%final)/64+1
+        num_blocks = (cursor%start-cursor%final)/batch_size+1
         do n=1,num_blocks
-            call B%g%get_edges(edges,cursor,64,num_returned)
+            call B%g%get_edges(edges,cursor,batch_size,num_returned)
 
             do k=1,num_returned
                 i = edges(B%order(1),k)
@@ -162,9 +162,9 @@ implicit none
             ! Make C a random matrix
             call C%init(nn,nn,orientation2,h)
             cursor = C%g%make_cursor(0)
-            num_blocks = (cursor%final-cursor%start)/64+1
+            num_blocks = (cursor%final-cursor%start)/batch_size+1
             do n=1,num_blocks
-                call C%g%get_edges(edges,cursor,64,num_returned)
+                call C%g%get_edges(edges,cursor,batch_size,num_returned)
 
                 do k=1,num_returned
                     i = edges(C%order(1),k)

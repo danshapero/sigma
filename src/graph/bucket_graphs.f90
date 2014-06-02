@@ -95,7 +95,7 @@ subroutine bucket_init_copy(g,h)                                           !
     class(bucket_graph), intent(inout) :: g
     class(graph), intent(in)           :: h
     ! local variables
-    integer :: i,j,k,n,num_returned,num_blocks,edges(2,64)
+    integer :: i,j,k,n,num_returned,num_blocks,edges(2,batch_size)
     type(graph_edge_cursor) :: cursor
 
 

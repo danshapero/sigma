@@ -269,7 +269,7 @@ subroutine sparse_mat_copy(A,B,orientation,frmt)                           !
     logical :: trans
     class(graph), pointer :: g
     ! graph edge iterator
-    integer :: n, num_blocks, num_returned, edges(2,64)
+    integer :: n, num_blocks, num_returned, edges(2,batch_size)
     type(graph_edge_cursor) :: cursor
 
     ! Check the optional orientation argument to see if the user has
@@ -299,16 +299,16 @@ subroutine sparse_mat_copy(A,B,orientation,frmt)                           !
 
     ! Copy the entries of B into A
     cursor = g%make_cursor(0)
-    num_blocks = (cursor%final-cursor%start)/64+1
+    num_blocks = (cursor%final-cursor%start)/batch_size+1
 
     do n=1,num_blocks
-        call g%get_edges(edges,cursor,64,num_returned)
+        call g%get_edges(edges,cursor,batch_size,num_returned)
 
         do k=1,num_returned
             ind = edges(A%order,k)
 
             if (ind(1)/=0 .and. ind(2)/=0) then
-                A%val(64*(n-1)+k) = B%get_value(ind(1),ind(2))
+                A%val(batch_size*(n-1)+k) = B%get_value(ind(1),ind(2))
             endif
         enddo
     enddo
@@ -566,7 +566,7 @@ subroutine sparse_mat_add_mat_to_self(A,B)                                 !
     class(sparse_matrix), intent(in)    :: B
     ! local variables
     integer :: i,j,k,l,n,ind(2)
-    integer :: edges(2,64), num_blocks, num_returned
+    integer :: edges(2,batch_size), num_blocks, num_returned
     type(graph_edge_cursor) :: cursor
     type(dynamic_array) :: stack
 
@@ -577,12 +577,12 @@ subroutine sparse_mat_add_mat_to_self(A,B)                                 !
 
     ! Make a cursor for iterating through graph edges.
     cursor = B%g%make_cursor(0)
-    num_blocks = (cursor%final-cursor%start)/64+1
+    num_blocks = (cursor%final-cursor%start)/batch_size+1
 
     ! Iterate through all the non-zero entries of B.
     do n=1,num_blocks
         ! Get a chunk of edges.
-        call B%g%get_edges(edges,cursor,64,num_returned)
+        call B%g%get_edges(edges,cursor,batch_size,num_returned)
 
         ! For each edge,
         do k=1,num_returned
@@ -600,12 +600,12 @@ subroutine sparse_mat_add_mat_to_self(A,B)                                 !
                 ! If that edge exists in A,
                 if (l/=-1) then
                     ! add the value from B to A.
-                    A%val(l) = A%val(l)+B%val(64*(n-1)+k)
+                    A%val(l) = A%val(l)+B%val(batch_size*(n-1)+k)
                 else
                     ! Otherwise, B has a non-zero entry where A does not.
                     ! Push those entries onto the stack so we can expand the
                     ! storage of A later.
-                    call stack%push(64*(n-1)+k)
+                    call stack%push(batch_size*(n-1)+k)
                 endif
             endif
         enddo
@@ -816,7 +816,8 @@ subroutine sparse_matvec_add_compressed(A,x,y,trans)                       !
     real(dp), intent(inout) :: y(:)
     logical, intent(in), optional :: trans
     ! local variables
-    integer :: i,j,k,n,order(2),edges(2,64),num_returned,num_blocks
+    integer :: i,j,k,order(2)
+    integer :: n, num_blocks, num_returned, edges(2,batch_size)
     type(graph_edge_cursor) :: cursor
 
     ! Reverse the matrix orientation if we're computing A'*x instead of A*x
@@ -830,11 +831,11 @@ subroutine sparse_matvec_add_compressed(A,x,y,trans)                       !
 
     ! Set the number of blocks in which we will be performing the matrix
     ! multiplication
-    num_blocks = (cursor%final-cursor%start)/64+1
+    num_blocks = (cursor%final-cursor%start)/batch_size+1
 
     do n=1,num_blocks
-        ! Get the next 64 edges of the graph
-        call A%g%get_edges(edges,cursor,64,num_returned)
+        ! Get the next batch of edges from the graph
+        call A%g%get_edges(edges,cursor,batch_size,num_returned)
 
         ! Go through all the edges (i,j) that we just plucked from A%g
         do k=1,num_returned
@@ -843,7 +844,7 @@ subroutine sparse_matvec_add_compressed(A,x,y,trans)                       !
 
             ! Add A(i,j)*x(j) to y(i). Since the underlying graph is
             ! compressed, we know that i,j are not zero.
-            y(i) = y(i)+A%val(64*(n-1)+k)*x(j)
+            y(i) = y(i)+A%val(batch_size*(n-1)+k)*x(j)
         enddo
     enddo
 
@@ -860,7 +861,8 @@ subroutine sparse_matvec_add_decompressed(A,x,y,trans)                     !
     real(dp), intent(inout) :: y(:)
     logical, intent(in), optional :: trans
     ! local variables
-    integer :: i,j,k,n,order(2),edges(2,64),num_returned,num_blocks
+    integer :: i,j,k,order(2)
+    integer :: n, num_blocks, num_returned, edges(2,batch_size)
     type(graph_edge_cursor) :: cursor
 
     ! Reverse the matrix orientation if we're computing A'*x instead of A*x
@@ -874,11 +876,11 @@ subroutine sparse_matvec_add_decompressed(A,x,y,trans)                     !
 
     ! Set the number of blocks in which we will be performing the matrix
     ! multiplication
-    num_blocks = (cursor%final-cursor%start)/64+1
+    num_blocks = (cursor%final-cursor%start)/batch_size+1
 
     do n=1,num_blocks
-        ! Get the next 64 edges of the graph
-        call A%g%get_edges(edges,cursor,64,num_returned)
+        ! Get the next batch of edges from the graph
+        call A%g%get_edges(edges,cursor,batch_size,num_returned)
 
         ! Go through all the edges (i,j) that we just plucked from A%g
         do k=1,num_returned
@@ -889,7 +891,7 @@ subroutine sparse_matvec_add_decompressed(A,x,y,trans)                     !
             ! A(i,j)*x(j) to y(i); a graph which has not yet been 
             ! compressed might have null edges
             if (i/=0 .and. j/=0) then
-                y(i) = y(i)+A%val(64*(n-1)+k)*x(j)
+                y(i) = y(i)+A%val(batch_size*(n-1)+k)*x(j)
             endif
         enddo
     enddo
@@ -936,7 +938,7 @@ subroutine sparse_matrix_to_dense_matrix(A,B,trans)                        !
     logical, intent(in), optional :: trans
     ! local variables
     integer :: k, ind(2), ord(2)
-    integer :: n, num_blocks, num_returned, edges(2,64)
+    integer :: n, num_blocks, num_returned, edges(2,batch_size)
     type(graph_edge_cursor) :: cursor
 
     ord = A%order
@@ -948,17 +950,17 @@ subroutine sparse_matrix_to_dense_matrix(A,B,trans)                        !
     B = 0.0_dp
 
     cursor = A%g%make_cursor(0)
-    num_blocks = (cursor%final-cursor%start)/64+1
+    num_blocks = (cursor%final-cursor%start)/batch_size+1
 
     ! Iterate through all the entries of A
     do n=1,num_blocks
-        call A%g%get_edges(edges,cursor,64,num_returned)
+        call A%g%get_edges(edges,cursor,batch_size,num_returned)
 
         do k=1,num_returned
             ind = edges(A%order,k)
 
             if (ind(1)/=0 .and. ind(2)/=0) then
-                B(ind(1),ind(2)) = A%val(64*(n-1)+k)
+                B(ind(1),ind(2)) = A%val(batch_size*(n-1)+k)
             endif
         enddo
     enddo
@@ -977,22 +979,22 @@ subroutine write_sparse_matrix_to_file(A,filename)                         !
     integer :: i,j,k,n
     real(dp) :: val
     type(graph_edge_cursor) :: cursor
-    integer :: num_blocks, num_returned, edges(2,64)
+    integer :: num_blocks, num_returned, edges(2,batch_size)
 
     open(unit=10, file=trim(filename))
 
     write(10,*) A%g%n, A%g%m, A%g%capacity
 
     cursor = A%g%make_cursor(0)
-    num_blocks = (cursor%final-cursor%start)/64+1
+    num_blocks = (cursor%final-cursor%start)/batch_size+1
     do n=1,num_blocks
-        call A%g%get_edges(edges,cursor,64,num_returned)
+        call A%g%get_edges(edges,cursor,batch_size,num_returned)
 
         do k=1,num_returned
             i = edges(A%order(1),k)
             j = edges(A%order(2),k)
 
-            val = A%val(64*(n-1)+k)
+            val = A%val(batch_size*(n-1)+k)
 
             write(10,*) i,j,val
         enddo
@@ -1019,7 +1021,8 @@ subroutine set_value_with_reallocation(A,i,j,val)                          !
     ! local variables
     class(graph), pointer :: g
     real(dp), allocatable :: vals(:)
-    integer :: k, n, indx, edges(2,64), ind(2), num_blocks, num_returned
+    integer :: k, indx, ind(2)
+    integer :: n, edges(2,batch_size), num_blocks, num_returned
     type(graph_edge_cursor) :: cursor
 
     allocate(g, mold=A%g)
@@ -1035,10 +1038,10 @@ subroutine set_value_with_reallocation(A,i,j,val)                          !
     vals(indx) = val
 
     cursor = A%g%make_cursor(0)
-    num_blocks = (cursor%final-cursor%start)/64+1
+    num_blocks = (cursor%final-cursor%start)/batch_size+1
 
     do n=1,num_blocks
-        call A%g%get_edges(edges,cursor,64,num_returned)
+        call A%g%get_edges(edges,cursor,batch_size,num_returned)
 
         do k=1,num_returned
             ind(1) = edges(A%order(1),k)
@@ -1046,7 +1049,7 @@ subroutine set_value_with_reallocation(A,i,j,val)                          !
 
             if (ind(1)/=0 .and. ind(2)/=0) then
                 indx = g%find_edge(ind(1),ind(2))
-                vals(indx) = A%val(64*(n-1)+k)
+                vals(indx) = A%val(batch_size*(n-1)+k)
             endif
         enddo
     enddo
@@ -1084,7 +1087,7 @@ subroutine add_sparse_matrices(A,B,C,g,orientation)                        !
     ! local variables
     integer :: i,j,k,n,nv(2)
     logical :: trans1, trans2
-    integer :: num_blocks, num_returned, edges(2,64)
+    integer :: num_blocks, num_returned, edges(2,batch_size)
     type(graph_edge_cursor) :: cursor
     class(graph), pointer :: ga
     character(len=3) :: ori
@@ -1151,16 +1154,16 @@ subroutine add_sparse_matrices(A,B,C,g,orientation)                        !
     ! Fill the entries of A
 
     cursor = A%g%make_cursor(0)
-    num_blocks = (cursor%final-cursor%start)/64+1
+    num_blocks = (cursor%final-cursor%start)/batch_size+1
     do n=1,num_blocks
-        call A%g%get_edges(edges,cursor,64,num_returned)
+        call A%g%get_edges(edges,cursor,batch_size,num_returned)
 
         do k=1,num_returned
             i = edges(A%order(1),k)
             j = edges(A%order(2),k)
 
             if (i/=0 .and. j/=0) then
-                A%val(64*(n-1)+k) = B%get_value(i,j)+C%get_value(i,j)
+                A%val(batch_size*(n-1)+k) = B%get_value(i,j)+C%get_value(i,j)
             endif
         enddo
     enddo
@@ -1292,15 +1295,15 @@ subroutine multiply_sparse_mats_fast_row_access(A,B,C)                     !
     integer :: i, j, k, l, m, ind(2)
     integer :: nodes(C%g%max_degree)
     real(dp) :: z, vals(C%g%max_degree)
-    integer :: n, num_blocks, num_returned, edges(2,64)
+    integer :: n, num_blocks, num_returned, edges(2,batch_size)
     type(graph_edge_cursor) :: cursor
 
     cursor = B%g%make_cursor(0)
-    num_blocks = (cursor%final-cursor%start)/64+1
+    num_blocks = (cursor%final-cursor%start)/batch_size+1
 
     ! Iterate through all the entries (i,k) of B
     do n=1,num_blocks
-        call B%g%get_edges(edges,cursor,64,num_returned)
+        call B%g%get_edges(edges,cursor,batch_size,num_returned)
 
         do l=1,num_returned
             ind = edges(B%order,l)
@@ -1317,7 +1320,7 @@ subroutine multiply_sparse_mats_fast_row_access(A,B,C)                     !
                     j = nodes(m)
 
                     if (j/=0) then
-                        z = B%val(64*(n-1)+l) * vals(m)
+                        z = B%val(batch_size*(n-1)+l) * vals(m)
                         call A%add_value(i,j,z)
                     endif
                 enddo
@@ -1343,15 +1346,15 @@ subroutine multiply_sparse_mats_fast_col_access(A,B,C)                     !
     integer :: i, j, k, l, m, ind(2)
     integer :: nodes(B%g%max_degree)
     real(dp) :: z, vals(B%g%max_degree)
-    integer :: n, num_blocks, num_returned, edges(2,64)
+    integer :: n, num_blocks, num_returned, edges(2,batch_size)
     type(graph_edge_cursor) :: cursor
 
     cursor = C%g%make_cursor(0)
-    num_blocks = (cursor%final-cursor%start)/64+1
+    num_blocks = (cursor%final-cursor%start)/batch_size+1
 
     ! Iterate through all the entries (k,j) of C
     do n=1,num_blocks
-        call C%g%get_edges(edges,cursor,64,num_returned)
+        call C%g%get_edges(edges,cursor,batch_size,num_returned)
 
         do l=1,num_returned
             ind = edges(C%order,l)
@@ -1367,7 +1370,7 @@ subroutine multiply_sparse_mats_fast_col_access(A,B,C)                     !
                     i = nodes(m)
 
                     if (i/=0) then
-                        z = vals(m) * C%val(64*(n-1)+l)
+                        z = vals(m) * C%val(batch_size*(n-1)+l)
                         call A%add_value(i,j,z)
                     endif
                 enddo
