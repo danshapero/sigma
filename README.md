@@ -1,7 +1,7 @@
 SiGMA
 =====
 
-Sparse Graph and Matrix Algebra Library: the "i" is there to have a nice acronym.
+Sparse Graph and Matrix Algebra Library: the "i" is there to have a nice acronym. An old version of this library was called fempack before I came up with the snappy new name.
 
 This is a library for performing operations on graphs and matrices. It is implemented
 in Fortran 2003, with bindings for C and the accompanying family of languages.
@@ -26,6 +26,7 @@ installation procedure is:
   cmake ..
   make
   make test
+If you are compiling with the Intel Fortran compiler, make sure that your LD_LIBRARY_PATH variable is set to include the shared libraries provided with your installation of ifort.
 
 
 Getting started:
