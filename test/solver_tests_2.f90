@@ -17,7 +17,7 @@ implicit none
     real(dp) :: p, z, z1, z2, misfit
     ! graph edge iterator
     type(graph_edge_cursor) :: cursor
-    integer :: n, num_blocks, num_returned, edges(2,batch_size)
+    integer :: n, num_batches, num_returned, edges(2,batch_size)
     ! command-line arguments
     character(len=16) :: arg
     logical :: verbose
@@ -145,9 +145,9 @@ implicit none
     ! Add a random skew-symmetric perturbation to A                        !
     !----------------------------------------------------------------------!
     cursor = g%make_cursor(0)
-    num_blocks = (cursor%final-cursor%start)/batch_size+1
+    num_batches = (cursor%final-cursor%start)/batch_size+1
 
-    do n=1,num_blocks
+    do n=1,num_batches
         call g%get_edges(edges,cursor,batch_size,num_returned)
 
         do k=1,num_returned

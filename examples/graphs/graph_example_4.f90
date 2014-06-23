@@ -32,7 +32,7 @@ implicit none
     integer, allocatable :: neighbors(:)
 
     ! variables for iterating through the edges of a graph
-    integer :: n, num_blocks, num_returned, edges(2,batch_size)
+    integer :: n, num_batches, num_returned, edges(2,batch_size)
     type(graph_edge_cursor) :: cursor
 
     ! variables for computing the clustering coefficient of a graph
@@ -77,8 +77,8 @@ implicit none
 
     cursor = g_ring%make_cursor(0)
 
-    num_blocks = (cursor%final-cursor%start)/batch_size+1
-    do n=1,num_blocks
+    num_batches = (cursor%final-cursor%start)/batch_size+1
+    do n=1,num_batches
         ! Get a chunk of edges from the ring lattice
         call g_ring%get_edges(edges,cursor,batch_size,num_returned)
 

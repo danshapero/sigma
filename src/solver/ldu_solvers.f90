@@ -307,7 +307,7 @@ subroutine sparse_static_pattern_ldu_factorization(A,L,D,U)                !
     real(dp) :: Lik, Uki, Uik, Ukj
     ! graph edge iterators
     type(graph_edge_cursor) :: cursor
-    integer :: num_blocks, num_returned, edges(2,batch_size), order(2)
+    integer :: num_batches, num_returned, edges(2,batch_size), order(2)
 
     nn = A%nrow
 
@@ -318,8 +318,8 @@ subroutine sparse_static_pattern_ldu_factorization(A,L,D,U)                !
     ! Copy A into L, D and U
     order = A%order
     cursor = A%g%make_cursor(0)
-    num_blocks = (cursor%final-cursor%start)/batch_size+1
-    do n=1,num_blocks
+    num_batches = (cursor%final-cursor%start)/batch_size+1
+    do n=1,num_batches
         call A%g%get_edges(edges,cursor,batch_size,num_returned)
 
         do k=1,num_returned
@@ -424,7 +424,7 @@ subroutine incomplete_ldu_sparsity_pattern(gL,gU,g,level,trans)            !
     integer :: Ldegrees(g%n), Udegrees(g%n)
     ! graph edge iterators
     type(graph_edge_cursor) :: cursor
-    integer :: num_blocks, num_returned, edges(2,batch_size)
+    integer :: num_batches, num_returned, edges(2,batch_size)
 
     if (level>0) then
         print *, 'ILU(k) for k>0 not implemented yet! Sorry pal.'
@@ -444,9 +444,9 @@ subroutine incomplete_ldu_sparsity_pattern(gL,gU,g,level,trans)            !
 
     ! First, determine the degrees of all the the nodes in gL, gU
     cursor = g%make_cursor(0)
-    num_blocks = (cursor%final-cursor%start)/batch_size+1
+    num_batches = (cursor%final-cursor%start)/batch_size+1
 
-    do n=1,num_blocks
+    do n=1,num_batches
         call g%get_edges(edges,cursor,batch_size,num_returned)
 
         do k=1,num_returned
@@ -465,7 +465,7 @@ subroutine incomplete_ldu_sparsity_pattern(gL,gU,g,level,trans)            !
 
     ! Next, add the edges to gL, gU
     cursor = g%make_cursor(0)
-    do n=1,num_blocks
+    do n=1,num_batches
         call g%get_edges(edges,cursor,batch_size,num_returned)
 
         do k=1,num_returned

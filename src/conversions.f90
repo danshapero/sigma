@@ -18,7 +18,7 @@ subroutine convert(g,storage_format)                                       !
     class(graph), pointer :: gc
     type(graph_edge_cursor) :: cursor
     integer :: num_nbrs(g%n),i,j,k
-    integer :: n, num_blocks, num_returned, edges(2,batch_size)
+    integer :: n, num_batches, num_returned, edges(2,batch_size)
     character(len=3) :: str_fmt
 
     ! Ascertain the right storage format for g
@@ -36,9 +36,9 @@ subroutine convert(g,storage_format)                                       !
     num_nbrs = 0
     edges = 0
     cursor = gc%make_cursor(0)
-    num_blocks = (cursor%final-cursor%start+1)/batch_size+1
+    num_batches = (cursor%final-cursor%start+1)/batch_size+1
 
-    do n=1,num_blocks
+    do n=1,num_batches
         call gc%get_edges(edges,cursor,batch_size,num_returned)
 
         do k=1,num_returned
@@ -68,7 +68,7 @@ subroutine convert(g,storage_format)                                       !
     ! Add in all the edges to the new format
     cursor = gc%make_cursor(0)
 
-    do n=1,num_blocks
+    do n=1,num_batches
         call gc%get_edges(edges,cursor,batch_size,num_returned)
 
         do k=1,num_returned

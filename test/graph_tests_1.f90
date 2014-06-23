@@ -19,7 +19,7 @@ implicit none
     ! variables for testing graph edge iterator
     type(graph_edge_cursor) :: cursor
     integer, allocatable :: reference_edges(:,:)
-    integer :: num_blocks,num_returned
+    integer :: num_batches,num_returned
     logical, allocatable :: found_by_iterator(:)
     ! variables for testing correctness of graph permutation
     logical :: found(6)
@@ -184,9 +184,9 @@ implicit none
         ! Check that iterating through a graph's edges works
         if (verbose) print *, '    Edge iterator output:'
         cursor = g%make_cursor(0)
-        num_blocks = (cursor%final-cursor%start)/12+1
+        num_batches = (cursor%final-cursor%start)/12+1
         found_by_iterator = .false.
-        do n=1,num_blocks
+        do n=1,num_batches
             call g%get_edges(edges,cursor,12,num_returned)
 
             if (verbose) then
@@ -331,8 +331,8 @@ implicit none
         endif
 
         cursor = g%make_cursor(0)
-        num_blocks = (cursor%final-cursor%start)/12+1
-        do n=1,num_blocks
+        num_batches = (cursor%final-cursor%start)/12+1
+        do n=1,num_batches
             call g%get_edges(edges,cursor,12,num_returned)
 
             do k=1,num_returned

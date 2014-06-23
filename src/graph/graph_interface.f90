@@ -312,7 +312,7 @@ subroutine to_dense_graph(g,A,trans)                                       !
     logical, intent(in), optional :: trans
     ! local variables
     integer :: k,ind(2),ord(2)
-    integer :: n, num_blocks, num_returned, edges(2,batch_size)
+    integer :: n, num_batches, num_returned, edges(2,batch_size)
     type(graph_edge_cursor) :: cursor
 
     ord = [1,2]
@@ -324,10 +324,10 @@ subroutine to_dense_graph(g,A,trans)                                       !
     A = 0
 
     cursor = g%make_cursor(0)
-    num_blocks = (cursor%final-cursor%start)/batch_size+1
+    num_batches = (cursor%final-cursor%start)/batch_size+1
 
     ! Iterate through all the edges (i,j) of g
-    do n=1,num_blocks
+    do n=1,num_batches
         call g%get_edges(edges,cursor,batch_size,num_returned)
 
         do k=1,num_returned
@@ -350,14 +350,14 @@ subroutine write_graph_to_file(g,filename)                                 !
     ! local variables
     integer :: i,j,k,n
     type(graph_edge_cursor) :: cursor
-    integer :: num_blocks, num_returned, edges(2,batch_size)
+    integer :: num_batches, num_returned, edges(2,batch_size)
 
     open(unit=10,file=trim(filename))
     write(10,*) g%n, g%m, g%capacity
 
     cursor = g%make_cursor(0)
-    num_blocks = (cursor%final-cursor%start)/batch_size+1
-    do n=1,num_blocks
+    num_batches = (cursor%final-cursor%start)/batch_size+1
+    do n=1,num_batches
         call g%get_edges(edges,cursor,batch_size,num_returned)
 
         do k=1,num_returned

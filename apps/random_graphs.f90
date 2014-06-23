@@ -61,7 +61,7 @@ subroutine watts_strogatz(g,nn,k,p)                                        !
     real(dp) :: z
     ! variables for graph edge iterator
     type(graph_edge_cursor) :: cursor
-    integer :: edges(2,batch_size), num_returned, num_blocks
+    integer :: edges(2,batch_size), num_returned, num_batches
     ! ring graph
     type(ellpack_graph) :: g_ring
 
@@ -86,8 +86,8 @@ subroutine watts_strogatz(g,nn,k,p)                                        !
 
     cursor = g_ring%make_cursor(0)
     print *, cursor%final,cursor%start
-    num_blocks = (cursor%final-cursor%start)/batch_size+1
-    do n=1,num_blocks
+    num_batches = (cursor%final-cursor%start)/batch_size+1
+    do n=1,num_batches
         call g_ring%get_edges(edges,cursor,batch_size,num_returned)
 
         do m=1,num_returned
