@@ -317,7 +317,7 @@ subroutine sparse_static_pattern_ldu_factorization(A,L,D,U)                !
 
     ! Copy A into L, D and U
     order = A%order
-    cursor = A%g%make_cursor(0)
+    cursor = A%g%make_cursor()
     num_batches = (cursor%final-cursor%start)/batch_size+1
     do n=1,num_batches
         call A%g%get_edges(edges,cursor,batch_size,num_returned)
@@ -443,7 +443,7 @@ subroutine incomplete_ldu_sparsity_pattern(gL,gU,g,level,trans)            !
     Udegrees = 0
 
     ! First, determine the degrees of all the the nodes in gL, gU
-    cursor = g%make_cursor(0)
+    cursor = g%make_cursor()
     num_batches = (cursor%final-cursor%start)/batch_size+1
 
     do n=1,num_batches
@@ -464,7 +464,7 @@ subroutine incomplete_ldu_sparsity_pattern(gL,gU,g,level,trans)            !
     call gU%init(g%n,g%n,degrees=Udegrees)
 
     ! Next, add the edges to gL, gU
-    cursor = g%make_cursor(0)
+    cursor = g%make_cursor()
     do n=1,num_batches
         call g%get_edges(edges,cursor,batch_size,num_returned)
 

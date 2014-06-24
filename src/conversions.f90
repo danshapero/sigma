@@ -35,7 +35,7 @@ subroutine convert(g,storage_format)                                       !
     ! Determine how many neighbors each node has
     num_nbrs = 0
     edges = 0
-    cursor = gc%make_cursor(0)
+    cursor = gc%make_cursor()
     num_batches = (cursor%final-cursor%start+1)/batch_size+1
 
     do n=1,num_batches
@@ -66,7 +66,7 @@ subroutine convert(g,storage_format)                                       !
     call g%init(gc%n,gc%m,num_nbrs)
 
     ! Add in all the edges to the new format
-    cursor = gc%make_cursor(0)
+    cursor = gc%make_cursor()
 
     do n=1,num_batches
         call gc%get_edges(edges,cursor,batch_size,num_returned)

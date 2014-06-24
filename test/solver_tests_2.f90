@@ -144,7 +144,7 @@ implicit none
     !----------------------------------------------------------------------!
     ! Add a random skew-symmetric perturbation to A                        !
     !----------------------------------------------------------------------!
-    cursor = g%make_cursor(0)
+    cursor = g%make_cursor()
     num_batches = (cursor%final-cursor%start)/batch_size+1
 
     do n=1,num_batches

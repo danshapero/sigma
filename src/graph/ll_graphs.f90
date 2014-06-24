@@ -171,7 +171,7 @@ subroutine ll_graph_copy(g,h,trans)                                        !
     call g%init(nv(1),nv(2))
 
     ! Get a cursor from h with which to iterate through its edges
-    cursor = h%make_cursor(0)
+    cursor = h%make_cursor()
 
     ! Find the number of chunks into which we're dividing the edges of h
     num_batches = (cursor%final-cursor%start)/batch_size+1
@@ -290,11 +290,10 @@ end function ll_find_edge
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-function ll_make_cursor(g,thread) result(cursor)                           !
+function ll_make_cursor(g) result(cursor)                                  !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(ll_graph), intent(in) :: g
-    integer, intent(in) :: thread
     type(graph_edge_cursor) :: cursor
     ! local variables
     integer :: k

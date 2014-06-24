@@ -183,7 +183,7 @@ implicit none
 
         ! Check that iterating through a graph's edges works
         if (verbose) print *, '    Edge iterator output:'
-        cursor = g%make_cursor(0)
+        cursor = g%make_cursor()
         num_batches = (cursor%final-cursor%start)/12+1
         found_by_iterator = .false.
         do n=1,num_batches
@@ -330,7 +330,7 @@ implicit none
             call exit(1)
         endif
 
-        cursor = g%make_cursor(0)
+        cursor = g%make_cursor()
         num_batches = (cursor%final-cursor%start)/12+1
         do n=1,num_batches
             call g%get_edges(edges,cursor,12,num_returned)

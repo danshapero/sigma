@@ -105,7 +105,7 @@ implicit none
 
             ! Iterate through all the edges of g and make sure they all are
             ! connected in h
-            cursor = g%make_cursor(0)
+            cursor = g%make_cursor()
             num_batches = (cursor%final-cursor%start)/batch_size+1
 
             do n=1,num_batches
@@ -130,7 +130,7 @@ implicit none
 
             ! Iterate through all the edges of h and make sure they all are
             ! connected in g
-            cursor = h%make_cursor(0)
+            cursor = h%make_cursor()
             num_batches = (cursor%final-cursor%start)/batch_size+1
 
             do n=1,num_batches

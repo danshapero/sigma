@@ -43,7 +43,7 @@ implicit none
     allocate(A,B)
     call A%init(nn,nn,'row',g)
 
-    cursor = g%make_cursor(0)
+    cursor = g%make_cursor()
     num_batches = (cursor%final-cursor%start)/batch_size+1
 
     do n=1,num_batches
@@ -61,7 +61,7 @@ implicit none
     enddo
 
     call B%init(nn,nn,'col',h)
-    cursor = h%make_cursor(0)
+    cursor = h%make_cursor()
     num_batches = (cursor%final-cursor%start)/batch_size+1
 
     do n=1,num_batches

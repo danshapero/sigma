@@ -182,7 +182,7 @@ subroutine coo_graph_copy(g,h,trans)                                       !
     call g%edges(2)%init(capacity=g%capacity)
 
     ! Make an edge iterator for the copied graph h
-    cursor = h%make_cursor(0)
+    cursor = h%make_cursor()
     num_batches = (cursor%final-cursor%start)/batch_size+1
 
     ! Iterate through all the edges of h
@@ -298,10 +298,9 @@ end function coo_find_edge
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-function coo_make_cursor(g,thread) result(cursor)                          !
+function coo_make_cursor(g) result(cursor)                                 !
 !--------------------------------------------------------------------------!
     class(coo_graph), intent(in) :: g
-    integer, intent(in) :: thread
     type(graph_edge_cursor) :: cursor
 
     cursor%start = 1

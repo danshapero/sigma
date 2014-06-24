@@ -84,7 +84,7 @@ subroutine watts_strogatz(g,nn,k,p)                                        !
     ! Next, rewire the edges of the ring graph
     call g%init(nn)
 
-    cursor = g_ring%make_cursor(0)
+    cursor = g_ring%make_cursor()
     print *, cursor%final,cursor%start
     num_batches = (cursor%final-cursor%start)/batch_size+1
     do n=1,num_batches

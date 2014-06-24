@@ -207,7 +207,7 @@ subroutine cs_graph_copy(g,h,trans)                                        !
     allocate(g%ptr(g%n+1),g%node(g%capacity))
 
     ! Get a cursor from h with which to iterate through its edges
-    cursor = h%make_cursor(0)
+    cursor = h%make_cursor()
     num_batches = (cursor%final-cursor%start)/batch_size+1
 
     ! Fill out the ptr array
@@ -236,7 +236,7 @@ subroutine cs_graph_copy(g,h,trans)                                        !
     enddo
 
     ! Iterate through the edges of h again to fill the node array of g
-    cursor = h%make_cursor(0)
+    cursor = h%make_cursor()
 
     g%node = 0
 
@@ -348,11 +348,10 @@ end function cs_find_edge
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-function cs_make_cursor(g,thread) result(cursor)                           !
+function cs_make_cursor(g) result(cursor)                                  !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_graph), intent(in) :: g
-    integer, intent(in) :: thread
     type(graph_edge_cursor) :: cursor
     ! local variables
     integer :: k

@@ -202,10 +202,9 @@ abstract interface                                                         !
         integer :: find_edge_ifc
     end function find_edge_ifc
 
-    function make_cursor_ifc(g,thread) result(cursor)
+    function make_cursor_ifc(g) result(cursor)
         import :: graph, graph_edge_cursor
         class(graph), intent(in) :: g
-        integer, intent(in) :: thread
         type(graph_edge_cursor) :: cursor
     end function make_cursor_ifc
 
@@ -323,7 +322,7 @@ subroutine to_dense_graph(g,A,trans)                                       !
     ! Set the dense array to 0
     A = 0
 
-    cursor = g%make_cursor(0)
+    cursor = g%make_cursor()
     num_batches = (cursor%final-cursor%start)/batch_size+1
 
     ! Iterate through all the edges (i,j) of g
@@ -355,7 +354,7 @@ subroutine write_graph_to_file(g,filename)                                 !
     open(unit=10,file=trim(filename))
     write(10,*) g%n, g%m, g%capacity
 
-    cursor = g%make_cursor(0)
+    cursor = g%make_cursor()
     num_batches = (cursor%final-cursor%start)/batch_size+1
     do n=1,num_batches
         call g%get_edges(edges,cursor,batch_size,num_returned)

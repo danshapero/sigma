@@ -75,7 +75,7 @@ implicit none
 
     p = 0.25
 
-    cursor = g_ring%make_cursor(0)
+    cursor = g_ring%make_cursor()
 
     num_batches = (cursor%final-cursor%start)/batch_size+1
     do n=1,num_batches

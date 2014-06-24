@@ -168,7 +168,7 @@ subroutine ellpack_graph_copy(g,h,trans)                                   !
     g%node = 0
 
     ! Make an edge iterator for the copied graph h
-    cursor = h%make_cursor(0)
+    cursor = h%make_cursor()
     num_batches = (cursor%final-cursor%start)/batch_size+1
 
     ! Iterate through all the edges of h
@@ -275,10 +275,9 @@ end function ellpack_find_edge
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-function ellpack_make_cursor(g,thread) result(cursor)                      !
+function ellpack_make_cursor(g) result(cursor)                             !
 !--------------------------------------------------------------------------!
     class(ellpack_graph), intent(in) :: g
-    integer, intent(in) :: thread
     type(graph_edge_cursor) :: cursor
 
     cursor%start = 1

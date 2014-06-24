@@ -298,7 +298,7 @@ subroutine sparse_mat_copy(A,B,orientation,frmt)                           !
     call A%zero()
 
     ! Copy the entries of B into A
-    cursor = g%make_cursor(0)
+    cursor = g%make_cursor()
     num_batches = (cursor%final-cursor%start)/batch_size+1
 
     do n=1,num_batches
@@ -576,7 +576,7 @@ subroutine sparse_mat_add_mat_to_self(A,B)                                 !
     call stack%init()
 
     ! Make a cursor for iterating through graph edges.
-    cursor = B%g%make_cursor(0)
+    cursor = B%g%make_cursor()
     num_batches = (cursor%final-cursor%start)/batch_size+1
 
     ! Iterate through all the non-zero entries of B.
@@ -827,7 +827,7 @@ subroutine sparse_matvec_add_compressed(A,x,y,trans)                       !
     endif
 
     ! set the parameters for the cursor
-    cursor = A%g%make_cursor(0)
+    cursor = A%g%make_cursor()
 
     ! Set the number of blocks in which we will be performing the matrix
     ! multiplication
@@ -872,7 +872,7 @@ subroutine sparse_matvec_add_decompressed(A,x,y,trans)                     !
     endif
 
     ! set the parameters for the cursor
-    cursor = A%g%make_cursor(0)
+    cursor = A%g%make_cursor()
 
     ! Set the number of blocks in which we will be performing the matrix
     ! multiplication
@@ -949,7 +949,7 @@ subroutine sparse_matrix_to_dense_matrix(A,B,trans)                        !
     ! Set the dense matrix to 0
     B = 0.0_dp
 
-    cursor = A%g%make_cursor(0)
+    cursor = A%g%make_cursor()
     num_batches = (cursor%final-cursor%start)/batch_size+1
 
     ! Iterate through all the entries of A
@@ -985,7 +985,7 @@ subroutine write_sparse_matrix_to_file(A,filename)                         !
 
     write(10,*) A%g%n, A%g%m, A%g%capacity
 
-    cursor = A%g%make_cursor(0)
+    cursor = A%g%make_cursor()
     num_batches = (cursor%final-cursor%start)/batch_size+1
     do n=1,num_batches
         call A%g%get_edges(edges,cursor,batch_size,num_returned)
@@ -1037,7 +1037,7 @@ subroutine set_value_with_reallocation(A,i,j,val)                          !
     indx = g%find_edge(ind(1),ind(2))
     vals(indx) = val
 
-    cursor = A%g%make_cursor(0)
+    cursor = A%g%make_cursor()
     num_batches = (cursor%final-cursor%start)/batch_size+1
 
     do n=1,num_batches
@@ -1153,7 +1153,7 @@ subroutine add_sparse_matrices(A,B,C,g,orientation)                        !
     !-----------------------
     ! Fill the entries of A
 
-    cursor = A%g%make_cursor(0)
+    cursor = A%g%make_cursor()
     num_batches = (cursor%final-cursor%start)/batch_size+1
     do n=1,num_batches
         call A%g%get_edges(edges,cursor,batch_size,num_returned)
@@ -1298,7 +1298,7 @@ subroutine multiply_sparse_mats_fast_row_access(A,B,C)                     !
     integer :: n, num_batches, num_returned, edges(2,batch_size)
     type(graph_edge_cursor) :: cursor
 
-    cursor = B%g%make_cursor(0)
+    cursor = B%g%make_cursor()
     num_batches = (cursor%final-cursor%start)/batch_size+1
 
     ! Iterate through all the entries (i,k) of B
@@ -1349,7 +1349,7 @@ subroutine multiply_sparse_mats_fast_col_access(A,B,C)                     !
     integer :: n, num_batches, num_returned, edges(2,batch_size)
     type(graph_edge_cursor) :: cursor
 
-    cursor = C%g%make_cursor(0)
+    cursor = C%g%make_cursor()
     num_batches = (cursor%final-cursor%start)/batch_size+1
 
     ! Iterate through all the entries (k,j) of C

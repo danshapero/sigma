@@ -106,7 +106,7 @@ implicit none
 
         ! Make B a random matrix
         call B%init(nn,nn,orientation1,g)
-        cursor = B%g%make_cursor(0)
+        cursor = B%g%make_cursor()
         num_batches = (cursor%start-cursor%final)/batch_size+1
         do n=1,num_batches
             call B%g%get_edges(edges,cursor,batch_size,num_returned)
@@ -161,7 +161,7 @@ implicit none
 
             ! Make C a random matrix
             call C%init(nn,nn,orientation2,h)
-            cursor = C%g%make_cursor(0)
+            cursor = C%g%make_cursor()
             num_batches = (cursor%final-cursor%start)/batch_size+1
             do n=1,num_batches
                 call C%g%get_edges(edges,cursor,batch_size,num_returned)
