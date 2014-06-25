@@ -175,7 +175,7 @@ implicit none
     L = adjoint(A)
 
     x = 1.0_dp
-    call A%matvec(x,y,.true.)
+    call A%matvec_t(x,y)
     call L%matvec(x,z)
 
     r = maxval(dabs(y-z))
@@ -198,7 +198,7 @@ implicit none
     x = 1.0_dp
     call L%matvec(x,y)
     call A%matvec(x,w)
-    call A%matvec(w,z,.true.)
+    call A%matvec_t(w,z)
 
     r = maxval(dabs(y-z))
     if (r>1.0e-12) then

@@ -124,7 +124,7 @@ implicit none
     x(1) = 1.0
 
     do k=1,2048
-        call A%matvec(x,y,trans=.true.)
+        call A%matvec_t(x,y)
         x = y/sum(y)
     enddo
 
@@ -136,7 +136,7 @@ implicit none
     write(*,30) 100*entropy/log(512.0)
 30  format('After 1024 iterations, entropy relative maximum is ',f9.6,'%.')
 
-    call A%matvec(x,y,trans=.true.)
+    call A%matvec_t(x,y)
     write(*,40)
 40  format('Residual of invariant distribution as left eigenvector')
     write(*,50) maxval(dabs(x-y))

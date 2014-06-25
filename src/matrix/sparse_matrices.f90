@@ -88,11 +88,11 @@ contains
     !------------------------------
     ! Matrix-vector multiplication
     !------------------------------
-    procedure :: matvec => sparse_mat_matvec
-    ! Compute the product y = A*x of a matrix and a vector
-
     procedure :: matvec_add => sparse_mat_matvec_add
     ! Add the product A*x to the vector y
+
+    procedure :: matvec_t_add => sparse_mat_matvec_t_add
+    ! Add the product transpose(A)*x to the vector y
 
 
     !-------------
@@ -779,31 +779,28 @@ end subroutine sparse_mat_compress
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine sparse_mat_matvec(A,x,y,trans)                                  !
-!--------------------------------------------------------------------------!
-    class(sparse_matrix), intent(in) :: A
-    real(dp), intent(in)  :: x(:)
-    real(dp), intent(out) :: y(:)
-    logical, intent(in), optional :: trans
-
-    y = 0_dp
-    call A%matvec_add_impl(x,y,trans)
-
-end subroutine sparse_mat_matvec
-
-
-
-!--------------------------------------------------------------------------!
-subroutine sparse_mat_matvec_add(A,x,y,trans)                              !
+subroutine sparse_mat_matvec_add(A,x,y)                                    !
 !--------------------------------------------------------------------------!
     class(sparse_matrix), intent(in) :: A
     real(dp), intent(in)    :: x(:)
     real(dp), intent(inout) :: y(:)
-    logical, intent(in), optional :: trans
 
-    call A%matvec_add_impl(x,y,trans)
+    call A%matvec_add_impl(x,y,.false.)
 
 end subroutine sparse_mat_matvec_add
+
+
+
+!--------------------------------------------------------------------------!
+subroutine sparse_mat_matvec_t_add(A,x,y)                                  !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(in) :: A
+    real(dp), intent(in)    :: x(:)
+    real(dp), intent(inout) :: y(:)
+
+    call A%matvec_add_impl(x,y,.true.)
+
+end subroutine sparse_mat_matvec_t_add
 
 
 

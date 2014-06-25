@@ -29,8 +29,10 @@ type, abstract :: linear_operator                                          !
     class(linear_solver), pointer :: solver => null(), pc => null()
 contains
     procedure :: get_value => linear_operator_get_value
-    procedure :: matvec => linear_operator_matvec
+    procedure :: matvec   => linear_operator_matvec
+    procedure :: matvec_t => linear_operator_matvec_t
     procedure(opvec_add_ifc), deferred :: matvec_add
+    procedure(opvec_add_ifc), deferred :: matvec_t_add
     procedure :: solve => linear_operator_solve
     procedure :: set_solver
     procedure :: set_preconditioner
@@ -71,12 +73,11 @@ abstract interface                                                         !
 !--------------------------------------------------------------------------!
 ! Interfaces for linear operator methods.                                  !
 !--------------------------------------------------------------------------!
-    subroutine opvec_add_ifc(A,x,y,trans)
+    subroutine opvec_add_ifc(A,x,y)
         import :: linear_operator, dp
         class(linear_operator), intent(in) :: A
         real(dp), intent(in) :: x(:)
         real(dp), intent(inout) :: y(:)
-        logical, intent(in), optional :: trans
     end subroutine opvec_add_ifc
 end interface
 
@@ -164,17 +165,30 @@ end function linear_operator_get_value
 
 
 !--------------------------------------------------------------------------!
-subroutine linear_operator_matvec(A,x,y,trans)                             !
+subroutine linear_operator_matvec(A,x,y)                                   !
 !--------------------------------------------------------------------------!
     class(linear_operator), intent(in) :: A
     real(dp), intent(in) :: x(:)
     real(dp), intent(out) :: y(:)
-    logical, intent(in), optional :: trans
 
     y = 0.0_dp
-    call A%matvec_add(x,y,trans)
+    call A%matvec_add(x,y)
 
 end subroutine linear_operator_matvec
+
+
+
+!--------------------------------------------------------------------------!
+subroutine linear_operator_matvec_t(A,x,y)                                 !
+!--------------------------------------------------------------------------!
+    class(linear_operator), intent(in) :: A
+    real(dp), intent(in) :: x(:)
+    real(dp), intent(out) :: y(:)
+
+    y = 0.0_dp
+    call A%matvec_t_add(x,y)
+
+end subroutine linear_operator_matvec_t
 
 
 

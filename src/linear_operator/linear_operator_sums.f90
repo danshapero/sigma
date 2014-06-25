@@ -15,6 +15,7 @@ type, extends(linear_operator) :: operator_sum                             !
 contains
     procedure :: get_value => operator_sum_get_value
     procedure :: matvec_add => operator_sum_matvec_add
+    procedure :: matvec_t_add => operator_sum_matvec_t_add
 end type operator_sum
 
 
@@ -87,21 +88,39 @@ end function operator_sum_get_value
 
 
 !--------------------------------------------------------------------------!
-subroutine operator_sum_matvec_add(A,x,y,trans)                            !
+subroutine operator_sum_matvec_add(A,x,y)                                  !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(operator_sum), intent(in) :: A
     real(dp), intent(in) :: x(:)
     real(dp), intent(inout) :: y(:)
-    logical, intent(in), optional :: trans
     ! local variables
     integer :: k
 
     do k=1,A%num_summands
-        call A%summands(k)%ap%matvec_add(x,y,trans)
+        call A%summands(k)%ap%matvec_add(x,y)
     enddo
 
 end subroutine operator_sum_matvec_add
+
+
+
+!--------------------------------------------------------------------------!
+subroutine operator_sum_matvec_t_add(A,x,y)                                !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(operator_sum), intent(in) :: A
+    real(dp), intent(in) :: x(:)
+    real(dp), intent(inout) :: y(:)
+    ! local variables
+    integer :: k
+
+    do k=1,A%num_summands
+        call A%summands(k)%ap%matvec_t_add(x,y)
+    enddo
+
+end subroutine operator_sum_matvec_t_add
+
 
 
 

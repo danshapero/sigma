@@ -14,6 +14,7 @@ type, extends(linear_operator) :: operator_adjoint                         !
 contains
     procedure :: get_value => operator_adjoint_get_value
     procedure :: matvec_add => operator_adjoint_matvec_add
+    procedure :: matvec_t_add => operator_adjoint_matvec_t_add
 end type operator_adjoint
 
 
@@ -57,23 +58,31 @@ end function operator_adjoint_get_value
 
 
 !--------------------------------------------------------------------------!
-subroutine operator_adjoint_matvec_add(A,x,y,trans)                        !
+subroutine operator_adjoint_matvec_add(A,x,y)                              !
 !--------------------------------------------------------------------------!
-    ! input/output variables
     class(operator_adjoint), intent(in) :: A
     real(dp), intent(in) :: x(:)
     real(dp), intent(inout) :: y(:)
-    logical, intent(in), optional :: trans
-    ! local variables
-    logical :: not_trans
 
-    not_trans = .true.
-    if (present(trans)) not_trans = .not.trans
-
-    call A%op%matvec_add(x,y,not_trans)
+    call A%op%matvec_t_add(x,y)
 
 end subroutine operator_adjoint_matvec_add
 
 
 
+!--------------------------------------------------------------------------!
+subroutine operator_adjoint_matvec_t_add(A,x,y)                            !
+!--------------------------------------------------------------------------!
+    class(operator_adjoint), intent(in) :: A
+    real(dp), intent(in) :: x(:)
+    real(dp), intent(inout) :: y(:)
+
+    call A%op%matvec_add(x,y)
+
+end subroutine operator_adjoint_matvec_t_add
+
+
+
+
 end module linear_operator_adjoints
+

@@ -15,6 +15,7 @@ type, extends(linear_operator) :: operator_product                         !
     real(dp), pointer :: z1(:), z2(:)
 contains
     procedure :: matvec_add => operator_product_matvec_add
+    procedure :: matvec_t_add => operator_product_matvec_t_add
 end type operator_product
 
 
@@ -71,13 +72,12 @@ end function multiply_operators
 
 
 !--------------------------------------------------------------------------!
-subroutine operator_product_matvec_add(A,x,y,trans)                        !
+subroutine operator_product_matvec_add(A,x,y)                              !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(operator_product), intent(in) :: A
     real(dp), intent(in) :: x(:)
     real(dp), intent(inout) :: y(:)
-    logical, intent(in), optional :: trans
     ! local variables
     integer :: i, k, n
     real(dp), pointer :: z1(:), z2(:)
@@ -92,7 +92,7 @@ subroutine operator_product_matvec_add(A,x,y,trans)                        !
     ! Starting from the last matrix,
     do k=A%num_products,1,-1
         ! multiply that matrix by z1 and put the result into z2.
-        call A%products(k)%ap%matvec(z1,z2,trans)
+        call A%products(k)%ap%matvec(z1,z2)
 
         ! In order to get ready for the next matrix down the line, copy 
         ! z2 into z1. Note that we have to do this explicitly with a loop
@@ -108,6 +108,44 @@ subroutine operator_product_matvec_add(A,x,y,trans)                        !
     z2(:) = 0.0_dp
 
 end subroutine operator_product_matvec_add
+
+
+
+!--------------------------------------------------------------------------!
+subroutine operator_product_matvec_t_add(A,x,y)                            !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(operator_product), intent(in) :: A
+    real(dp), intent(in) :: x(:)
+    real(dp), intent(inout) :: y(:)
+    ! local variables
+    integer :: i, k, n
+    real(dp), pointer :: z1(:), z2(:)
+
+    z1 => A%z1
+    z2 => A%z2
+
+    ! First, copy the input vector x into the array z1
+    z1(1:A%ncol) = x(1:A%ncol)
+    z2(:) = 0.0_dp
+
+    ! Starting from the first matrix,
+    do k=1,A%num_products
+        ! multiply that matrix transpose by z1 and put the result into z2.
+        call A%products(k)%ap%matvec_t(z1,z2)
+
+        ! Copy z2 into z1, avoiding a temporary array
+        n = A%products(k)%ap%ncol
+        do i=1,n
+            z1(i) = z2(i)
+        enddo
+    enddo
+    y = y+z2
+
+    z1(:) = 0.0_dp
+    z2(:) = 0.0_dp
+
+end subroutine operator_product_matvec_t_add
 
 
 
