@@ -91,7 +91,12 @@ contains
     !------------------------------
     ! Matrix-vector multiplication
     !------------------------------
-    ! Deferred to sub-classes
+    ! Note: if you want performance, you had best override these.
+    procedure :: matvec_add   => sparse_matrix_matvec_add
+    ! Add the product A*x to the vector y
+
+    procedure :: matvec_t_add => sparse_matrix_matvec_t_add
+    ! Add the product transpose(A)*x to the vector y
 
 
     !-------------
@@ -182,6 +187,73 @@ end interface
 
 
 contains
+
+
+
+
+!==========================================================================!
+!==== Matrix-vector multiplication                                     ====!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
+subroutine sparse_matrix_matvec_add(A, x, y)                               !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(in) :: A
+    real(dp), intent(in)    :: x(:)
+    real(dp), intent(inout) :: y(:)
+    ! local variables
+    integer :: i, j, k
+    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    real(dp) :: vals(batch_size)
+    type(graph_edge_cursor) :: cursor
+
+    cursor = A%make_cursor()
+    num_batches = (cursor%final - cursor%start)/batch_size + 1
+
+    do n = 1, num_batches
+        call A%get_entries(edges, vals, cursor, batch_size, num_returned)
+
+        do k = 1, num_returned
+            i = edges(1, k)
+            j = edges(2, k)
+
+            if (i /= 0 .and. j /= 0) y(i) = y(i) + vals(k) * x(j)
+        enddo
+    enddo
+
+end subroutine sparse_matrix_matvec_add
+
+
+
+!--------------------------------------------------------------------------!
+subroutine sparse_matrix_matvec_t_add(A, x, y)                             !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(in) :: A
+    real(dp), intent(in)    :: x(:)
+    real(dp), intent(inout) :: y(:)
+    ! local variables
+    integer :: i, j, k
+    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    real(dp) :: vals(batch_size)
+    type(graph_edge_cursor) :: cursor
+
+    cursor = A%make_cursor()
+    num_batches = (cursor%final - cursor%start)/batch_size + 1
+
+    do n = 1, num_batches
+        call A%get_entries(edges, vals, cursor, batch_size, num_returned)
+
+        do k = 1, num_returned
+            i = edges(2, k)
+            j = edges(1, k)
+
+            if (i /= 0 .and. j /= 0) y(i) = y(i) + vals(k) * x(j)
+        enddo
+    enddo
+end subroutine sparse_matrix_matvec_t_add
+
 
 
 
