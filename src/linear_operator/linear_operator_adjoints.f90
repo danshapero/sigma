@@ -45,13 +45,13 @@ end function adjoint
 
 
 !--------------------------------------------------------------------------!
-function operator_adjoint_get_value(A,i,j) result(val)                     !
+function operator_adjoint_get_value(A,i,j) result(z)                       !
 !--------------------------------------------------------------------------!
     class(operator_adjoint), intent(in) :: A
     integer, intent(in) :: i,j
-    real(dp) :: val
+    real(dp) :: z
 
-    val = A%op%get_value(j,i)
+    z = A%op%get_value(j,i)
 
 end function operator_adjoint_get_value
 

@@ -158,11 +158,11 @@ abstract interface                                                         !
         integer, intent(out) :: num_returned
     end subroutine sparse_mat_get_entries_ifc
 
-    subroutine sparse_mat_set_value_ifc(A,i,j,val)
+    subroutine sparse_mat_set_value_ifc(A,i,j,z)
         import :: sparse_matrix, dp
         class(sparse_matrix), intent(inout) :: A
         integer, intent(in) :: i, j
-        real(dp), intent(in) :: val
+        real(dp), intent(in) :: z
     end subroutine sparse_mat_set_value_ifc
 
     subroutine sparse_mat_zero_ifc(A)
@@ -313,6 +313,7 @@ subroutine sparse_matrix_to_file(A, filename, trans)                       !
     ! input/output variables
     class(sparse_matrix), intent(in) :: A
     character(len=*), intent(in) :: filename
+    logical, intent(in), optional :: trans
     ! local variables
     integer :: i, j, k, ord(2), nv(2)
     integer :: n, num_batches, num_returned, edges(2, batch_size)

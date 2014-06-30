@@ -147,18 +147,18 @@ end subroutine assign_operators
 
 
 !--------------------------------------------------------------------------!
-function linear_operator_get_value(A,i,j) result(val)                      !
+function linear_operator_get_value(A,i,j) result(z)                        !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(linear_operator), intent(in) :: A
     integer, intent(in) :: i,j
-    real(dp) :: val
+    real(dp) :: z
     ! local variables
     real(dp) :: x(A%ncol), y(A%nrow)
 
     x(j) = 1.0_dp
     call A%matvec(x,y)
-    val = y(i)
+    z = y(i)
 
 end function linear_operator_get_value
 

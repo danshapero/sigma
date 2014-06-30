@@ -73,7 +73,7 @@ subroutine get_slice_contiguous(g, val, nodes, slice, k)                   !
     integer :: l, d, ind
 
     ! Set the return values to 0
-    vals = 0.0_dp
+    slice = 0.0_dp
 
     ! Get the degree of node k
     d = g%degree(k)
@@ -124,7 +124,7 @@ subroutine get_slice_discontiguous(g, val, nodes, slice, k)                !
             nodes(next) = l
 
             ! and put the corresponding matrix entry into the array `vals`
-            vals(next) = val(ind)
+            slice(next) = val(ind)
         endif
     enddo
 

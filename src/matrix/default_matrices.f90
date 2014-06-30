@@ -128,9 +128,6 @@ subroutine default_matrix_init(A, nrow, ncol, g, orientation)              !
 
             A%left_permute_impl  => graph_leftperm
             A%right_permute_impl => graph_rightperm
-
-            A%matvec_add_impl   => generic_matvec_add
-            A%matvec_t_add_impl => generic_matvec_t_add
         case('col')
             A%ord = [2, 1]
 
@@ -139,9 +136,6 @@ subroutine default_matrix_init(A, nrow, ncol, g, orientation)              !
 
             A%left_permute_impl  => graph_rightperm
             A%right_permute_impl => graph_leftperm
-
-            A%matvec_add_impl   => generic_matvec_t_add
-            A%matvec_t_add_impl => generic_matvec_add
     end select
 
 end subroutine default_matrix_init
@@ -256,7 +250,7 @@ subroutine default_matrix_get_entries(A, edges, entries, cursor, &         !
     ! input/output variables
     class(default_matrix), intent(in) :: A
     integer, intent(out) :: edges(2, num_edges)
-    real(dp), intent(out) :: entries(num_edges
+    real(dp), intent(out) :: entries(num_edges)
     type(graph_edge_cursor), intent(inout) :: cursor
     integer, intent(in) :: num_edges
     integer, intent(out) :: num_returned
@@ -341,7 +335,7 @@ end subroutine default_matrix_zero
 subroutine default_matrix_left_permute(A, p)                               !
 !--------------------------------------------------------------------------!
     class(default_matrix), intent(inout) :: A
-    integer, intent(in) :: p
+    integer, intent(in) :: p(:)
 
     call A%left_permute_impl(A%g, A%val, p)
 
@@ -353,7 +347,7 @@ end subroutine default_matrix_left_permute
 subroutine default_matrix_right_permute(A, p)                              !
 !--------------------------------------------------------------------------!
     class(default_matrix), intent(inout) :: A
-    integer, intent(in) :: p
+    integer, intent(in) :: p(:)
 
     call A%right_permute_impl(A%g, A%val, p)
 

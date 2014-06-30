@@ -68,19 +68,19 @@ end function add_operators
 
 
 !--------------------------------------------------------------------------!
-function operator_sum_get_value(A,i,j) result(val)                         !
+function operator_sum_get_value(A,i,j) result(z)                           !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(operator_sum), intent(in) :: A
     integer, intent(in) :: i,j
-    real(dp) :: val
+    real(dp) :: z
     ! local variables
     integer :: k
 
-    val = 0.0_dp
+    z = 0.0_dp
 
     do k=1,A%num_summands
-        val = val + A%summands(k)%ap%get_value(i,j)
+        z = z + A%summands(k)%ap%get_value(i, j)
     enddo
 
 end function operator_sum_get_value

@@ -15,16 +15,19 @@ use linear_operator_products
 use linear_operators
 
 ! Use all the matrix modules
+use sparse_matrix_interface
+use default_sparse_matrix_kernels
+use default_matrices
 use sparse_matrices
 
 ! Use the solver and preconditioner modules
 use cg_solvers
 use bicgstab_solvers
 use jacobi_solvers
-use ldu_solvers
+!use ldu_solvers
 
 ! Use the C wrapper module
-use wrapper
+!use wrapper
 
 ! Use other auxiliary modules
 use eigensolver
