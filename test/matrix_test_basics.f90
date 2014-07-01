@@ -156,12 +156,33 @@ implicit none
             do i = 1, nn
                 call A%get_row(nodes, slice, i)
 
+                ! First, check that every entry returned from the sparse
+                ! matrix `A` corresponds to the right value in the
+                ! reference matrix `B`
                 do k = 1, d
                     j = nodes(k)
                     if (j /= 0) then
                         if (slice(k) /= B(i, j)) then
                             print *, 'Getting row of sparse matrix failed.'
                             print *, 'Terminating.'
+                            call exit(1)
+                        endif
+                    endif
+                enddo
+
+                ! Next, check that every non-zero entry in row `i` of
+                ! `B` was actually returned by `get_row`
+                do j = 1, nn
+                    if (B(i, j) /= 0) then
+                        correct = .false.
+                        do k = 1, d
+                            correct = correct .or. (nodes(k) == j)
+                        enddo
+
+                        if (.not. correct) then
+                            print *, 'Getting row of sparse matrix failed,'
+                            print *, 'did not return entry that is in '
+                            print *, 'the row. Terminating.'
                             call exit(1)
                         endif
                     endif
@@ -175,8 +196,24 @@ implicit none
                     i = nodes(k)
                     if (i /= 0) then
                         if (slice(k) /= B(i, j)) then
-                            print *, 'Getting column of sparse matrix failed.'
+                            print *, 'Getting col of sparse matrix failed.'
                             print *, 'Terminating.'
+                            call exit(1)
+                        endif
+                    endif
+                enddo
+
+                do i = 1, nn
+                    if (B(i, j) /= 0) then
+                        correct = .false.
+                        do k = 1, d
+                            correct = correct .or. (nodes(k) == i)
+                        enddo
+
+                        if (.not. correct) then
+                            print *, 'Getting col of sparse matrix failed,'
+                            print *, 'did not return entry that is in '
+                            print *, 'the col. Terminating.'
                             call exit(1)
                         endif
                     endif
