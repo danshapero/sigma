@@ -108,6 +108,9 @@ subroutine get_slice_discontiguous(g, val, nodes, slice, k)                !
     ! Set the index in `nodes` and `slice` of the next entry to 0
     next = 0
 
+    ! Set the returned nodes to 0
+    nodes = 0
+
     ! Set the return values to 0
     slice = 0.0_dp
 

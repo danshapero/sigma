@@ -25,7 +25,7 @@ implicit none
     real(dp), allocatable :: x(:), y(:)
 
     ! integer indices
-    integer :: i, j, k, nn, frmt, ordering
+    integer :: i, j, k, d, nn, frmt, ordering
 
     ! permutation
     integer, allocatable :: p(:)
@@ -80,6 +80,9 @@ implicit none
         k = count(B(:, j) /= 0)
         col_degree = max(k, col_degree)
     enddo
+
+    d = max(row_degree, col_degree)
+    allocate( nodes(d), slice(d) )
 
 
 
@@ -149,7 +152,44 @@ implicit none
                 enddo
             enddo
 
+            ! Check that getting an entire row / column of the matrix works
+            do i = 1, nn
+                call A%get_row(nodes, slice, i)
+
+                do k = 1, d
+                    j = nodes(k)
+                    if (j /= 0) then
+                        if (slice(k) /= B(i, j)) then
+                            print *, 'Getting row of sparse matrix failed.'
+                            print *, 'Terminating.'
+                            call exit(1)
+                        endif
+                    endif
+                enddo
+            enddo
+
+            do j = 1, nn
+                call A%get_column(nodes, slice, j)
+
+                do k = 1, d
+                    i = nodes(k)
+                    if (i /= 0) then
+                        if (slice(k) /= B(i, j)) then
+                            print *, 'Getting column of sparse matrix failed.'
+                            print *, 'Terminating.'
+                            call exit(1)
+                        endif
+                    endif
+                enddo
+            enddo
+
+
+            ! Destroy the matrix and graph so they're ready for the next
+            ! test
+            call A%destroy()
+            call g%destroy()
             deallocate(A)
+            deallocate(g)
         enddo
     enddo
 
