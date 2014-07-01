@@ -19,10 +19,10 @@ implicit none
 
     ! sparse and dense matrices
     class(sparse_matrix), pointer :: A
-    real(dp), allocatable :: B(:,:)
+    real(dp), allocatable :: B(:,:), BP(:,:)
 
     ! vectors
-    real(dp), allocatable :: x(:), y(:)
+    real(dp), allocatable :: x(:), y1(:), y2(:)
 
     ! integer indices
     integer :: i, j, k, d, nn, frmt, ordering
@@ -55,6 +55,7 @@ implicit none
     !----------------------------------------------------------------------!
 
     allocate(B(nn, nn))
+    allocate(x(nn), y1(nn), y2(nn))
     B = 0.0_dp
 
     do i = 1, nn
@@ -83,6 +84,29 @@ implicit none
 
     d = max(row_degree, col_degree)
     allocate( nodes(d), slice(d) )
+
+
+
+    !----------------------------------------------------------------------!
+    ! Make a random permutation and permute the reference matrix           !
+    !----------------------------------------------------------------------!
+    allocate(p(nn))
+    do i = 1, nn
+        p(i) = i
+    enddo
+
+    do i = nn, 2, -1
+        ! Pick a random number `j` between 1 and `i`
+        call random_number(z)
+        j = int(z * i) + 1
+
+        ! Swap `p(i)` and `p(j)`
+        k = p(i)
+        p(i) = p(j)
+        p(j) = k
+    enddo
+
+    allocate(BP(nn, nn))
 
 
 
@@ -121,6 +145,8 @@ implicit none
             ! Make a sparse matrix `A` on that graph
             A => sparse_matrix(nn, nn, g, orientation)
 
+
+            !--------
             ! Check that all the entries of `A` are zero
             do i = 1, nn
                 do j = 1, nn
@@ -133,6 +159,8 @@ implicit none
                 enddo
             enddo
 
+
+            !--------
             ! Set the entries of `A` to be the same as those of `B`
             do j = 1, nn
                 do i = 1, nn
@@ -141,6 +169,8 @@ implicit none
                 enddo
             enddo
 
+
+            !--------
             ! Check that the entries of `A` are the same as those of `B`
             do j = 1, nn
                 do i = 1, nn
@@ -152,6 +182,8 @@ implicit none
                 enddo
             enddo
 
+
+            !--------
             ! Check that getting an entire row / column of the matrix works
             do i = 1, nn
                 call A%get_row(nodes, slice, i)
@@ -221,6 +253,69 @@ implicit none
             enddo
 
 
+            !--------
+            ! Check matrix multiplication
+            call random_number(x)
+            y1 = 0.0_dp
+            y2 = 0.0_dp
+
+            call A%matvec(x, y1)
+            y2 = matmul(B, x)
+
+            w = maxval(dabs(y1-y2)) / maxval(dabs(y2))
+            if (w > 1.0e-15) then
+                print *, 'Matrix-vector multiplication failed.'
+                print *, 'Error:', w
+                print *, 'Terminating.'
+                call exit(1)
+            endif
+
+
+            call random_number(x)
+            y1 = 0.0_dp
+            y2 = 0.0_dp
+
+            call A%matvec_t(x, y1)
+            y2 = matmul(transpose(B), x)
+
+            w = maxval(dabs(y1-y2)) / maxval(dabs(y2))
+            if (w > 1.0e-15) then
+                print *, 'Matrix transpose-vector multiplication failed.'
+                print *, 'Error:', w
+                print *, 'Terminating.'
+                call exit(1)
+            endif
+
+
+            !--------
+            ! Check matrix permutation
+            BP(:,p) = B(:,:)
+            call A%right_permute(p)
+
+            do j = 1, nn
+                do i = 1, nn
+                    z = A%get_value(i, j)
+                    if (z /= BP(i, j)) then
+                        print *, 'Right-permutation failed. Terminating.'
+                        call exit(1)
+                    endif
+                enddo
+            enddo
+
+            BP(p,:) = BP(:,:)
+            call A%left_permute(p)
+
+            do j = 1, nn
+                do i = 1, nn
+                    z = A%get_value(i, j)
+                    if (z /= BP(i, j)) then
+                        print *, 'Left-permutation failed. Terminating.'
+                        call exit(1)
+                    endif
+                enddo 
+            enddo
+
+
             ! Destroy the matrix and graph so they're ready for the next
             ! test
             call A%destroy()
@@ -229,6 +324,14 @@ implicit none
             deallocate(g)
         enddo
     enddo
+
+
+    call h%destroy()
+    deallocate(h)
+    deallocate(p)
+    deallocate(x, y1, y2)
+    deallocate(B, BP)
+    deallocate(nodes, slice)
 
 
 end program matrix_test_basics
