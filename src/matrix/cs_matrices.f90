@@ -1,19 +1,19 @@
 !==========================================================================!
 !==========================================================================!
-module default_matrices                                                    !
+module cs_matrices                                                         !
 !==========================================================================!
 !==========================================================================!
-!====     This module contains the definition of the default           ====!
-!==== implementation of sparse matrices. It uses no information about  ====!
-!==== the underlying graph type other than what is provided by the     ====!
-!==== graph interface. While it is very general, it is also not as     ====!
-!==== fast as other, more specific implementations.                    ====!
+!====     This module contains the definition of compressed sparse     ====!
+!==== matrices. These matrices explicitly use the compressed sparse    ====!
+!==== graph data type, but perform matrix operations faster than the   ====!
+!==== default matrix implementation.                                   ====!
 !==========================================================================!
 !==========================================================================!
 
 
 use types, only: dp
 use graph_interface
+use cs_graphs
 use default_sparse_matrix_kernels
 use sparse_matrix_interface
 
@@ -23,74 +23,89 @@ implicit none
 
 
 !--------------------------------------------------------------------------!
-type, extends(sparse_matrix) :: default_matrix                             !
+type, extends(sparse_matrix) :: cs_matrix                                  !
 !--------------------------------------------------------------------------!
-    class(graph), pointer :: g
+    class(cs_graph), pointer :: g
     real(dp), allocatable :: val(:)
 
 
-    !----------------
-    ! The default implementation of a sparse matrix relies on several
-    ! procedures defined in the module default_sparse_matrix_kernels.
-    ! These are associated to each matrix through various function
-    ! pointers.
+    !---------------
+    ! Function pointers for sundry matrix operations
     procedure(get_slice_kernel), pointer, nopass, private :: get_row_impl
     procedure(get_slice_kernel), pointer, nopass, private :: get_column_impl
 
     procedure(permute_kernel), pointer, nopass, private :: left_permute_impl
     procedure(permute_kernel), pointer, nopass, private :: right_permute_impl
 
+    procedure(cs_matvec_add_kernel), pointer, private :: matvec_add_impl
+    procedure(cs_matvec_add_kernel), pointer, private :: matvec_t_add_impl
+
 contains
     !--------------
     ! Constructors
     !--------------
-    procedure :: init => default_matrix_init
+    procedure :: init => cs_matrix_init
 
 
     !-----------
     ! Accessors
     !-----------
-    procedure :: get_value => default_matrix_get_value
-    procedure :: get_row => default_matrix_get_row
-    procedure :: get_column => default_matrix_get_column
+    procedure :: get_value => cs_matrix_get_value
+    procedure :: get_row => cs_matrix_get_row
+    procedure :: get_column => cs_matrix_get_column
 
 
     !-----------------------
     ! Edge, value iterators
     !-----------------------
-    procedure :: make_cursor => default_matrix_make_cursor
-    procedure :: get_edges => default_matrix_get_edges
-    procedure :: get_entries => default_matrix_get_entries
+    procedure :: make_cursor => cs_matrix_make_cursor
+    procedure :: get_edges => cs_matrix_get_edges
+    procedure :: get_entries => cs_matrix_get_entries
 
 
     !----------
     ! Mutators
     !----------
-    procedure :: set_value => default_matrix_set_value
-    procedure :: add_value => default_matrix_add_value
-    procedure :: zero => default_matrix_zero
-    procedure :: left_permute => default_matrix_left_permute
-    procedure :: right_permute => default_matrix_right_permute
+    procedure :: set_value => cs_matrix_set_value
+    procedure :: add_value => cs_matrix_add_value
+    procedure :: zero => cs_matrix_zero
+    procedure :: left_permute => cs_matrix_left_permute
+    procedure :: right_permute => cs_matrix_right_permute
 
 
     !------------------------------
     ! Matrix-vector multiplication
     !------------------------------
-    ! These procedures are provided by the parent class sparse_matrix.
+    procedure :: matvec_add   => cs_matvec_add
+    procedure :: matvec_t_add => cs_matvec_t_add
 
 
     !-------------
     ! Destructors
     !-------------
-    procedure :: destroy => default_matrix_destroy
+    procedure :: destroy => cs_matrix_destroy
 
-end type default_matrix
+end type cs_matrix
 
 
 
-interface default_matrix
-    module procedure default_matrix_factory
+!--------------------------------------------------------------------------!
+abstract interface                                                         !
+!--------------------------------------------------------------------------!
+    subroutine cs_matvec_add_kernel(A, x, y)
+        import :: cs_matrix, dp
+        class(cs_matrix), intent(in) :: A
+        real(dp), intent(in)    :: x(:)
+        real(dp), intent(inout) :: y(:)
+    end subroutine cs_matvec_add_kernel
 end interface
+
+
+
+interface cs_matrix
+    module procedure cs_matrix_factory
+end interface
+
 
 
 
@@ -105,29 +120,29 @@ contains
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-function default_matrix_factory(nrow, ncol, g, orientation) result(A)      !
+function cs_matrix_factory(nrow, ncol, g, orientation) result(A)           !
 !--------------------------------------------------------------------------!
     integer, intent(in) :: nrow, ncol
-    class(graph), pointer, intent(in) :: g
+    class(cs_graph), pointer, intent(in) :: g
     character(len=3), intent(in) :: orientation
     class(sparse_matrix), pointer :: A
 
-    allocate(default_matrix :: A)
+    allocate(cs_matrix :: A)
     select type(A)
-        class is(default_matrix)
+        class is(cs_matrix)
             call A%init(nrow, ncol, g, orientation)
     end select
 
-end function default_matrix_factory
+end function cs_matrix_factory
 
 
 
 !--------------------------------------------------------------------------!
-subroutine default_matrix_init(A, nrow, ncol, g, orientation)              !
+subroutine cs_matrix_init(A, nrow, ncol, g, orientation)                   !
 !--------------------------------------------------------------------------!
-    class(default_matrix), intent(inout) :: A
+    class(cs_matrix), intent(inout) :: A
     integer, intent(in) :: nrow, ncol
-    class(graph), pointer, intent(in) :: g
+    class(cs_graph), pointer, intent(in) :: g
     character(len=3), intent(in) :: orientation
 
     A%g => g
@@ -150,6 +165,9 @@ subroutine default_matrix_init(A, nrow, ncol, g, orientation)              !
 
             A%left_permute_impl  => graph_leftperm
             A%right_permute_impl => graph_rightperm
+
+            A%matvec_add_impl   => sparse_matrix_matvec_add
+            A%matvec_t_add_impl => sparse_matrix_matvec_t_add
         case('col')
             A%ord = [2, 1]
 
@@ -158,9 +176,12 @@ subroutine default_matrix_init(A, nrow, ncol, g, orientation)              !
 
             A%left_permute_impl  => graph_rightperm
             A%right_permute_impl => graph_leftperm
+
+            A%matvec_add_impl   => sparse_matrix_matvec_add
+            A%matvec_t_add_impl => sparse_matrix_matvec_t_add
     end select
 
-end subroutine default_matrix_init
+end subroutine cs_matrix_init
 
 
 
@@ -170,10 +191,10 @@ end subroutine default_matrix_init
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-function default_matrix_get_value(A, i, j) result(z)                       !
+function cs_matrix_get_value(A, i, j) result(z)                            !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(default_matrix), intent(in) :: A
+    class(cs_matrix), intent(in) :: A
     integer, intent(in) :: i, j
     real(dp) :: z
     ! local variables
@@ -188,41 +209,39 @@ function default_matrix_get_value(A, i, j) result(z)                       !
     ! Set the return value to 0
     z = 0.0_dp
 
-    ! Find the index k in A%g of the edge twixt (i, j)
-    k = A%g%find_edge(ind(1), ind(2))
+    do k = A%g%ptr(ind(1)), A%g%ptr(ind(1) + 1) - 1
+        if ( A%g%node(k) == ind(2) ) z = A%val(k)
+    enddo
 
-    ! If that edge exists, find the corresponding matrix entry & return it
-    if (k /= -1) z = A%val(k)
-
-end function default_matrix_get_value
+end function cs_matrix_get_value
 
 
 
 !--------------------------------------------------------------------------!
-subroutine default_matrix_get_row(A, nodes, slice, k)                      !
+subroutine cs_matrix_get_row(A, nodes, slice, k)                           !
 !--------------------------------------------------------------------------!
-    class(default_matrix), intent(in) :: A
+    class(cs_matrix), intent(in) :: A
     integer, intent(out) :: nodes(:)
     real(dp), intent(out) :: slice(:)
     integer, intent(in) :: k
 
     call A%get_row_impl( A%g, A%val, nodes, slice, k)
 
-end subroutine default_matrix_get_row
+end subroutine cs_matrix_get_row
 
 
 
 !--------------------------------------------------------------------------!
-subroutine default_matrix_get_column(A, nodes, slice, k)                   !
+subroutine cs_matrix_get_column(A, nodes, slice, k)                        !
 !--------------------------------------------------------------------------!
-    class(default_matrix), intent(in) :: A
+    class(cs_matrix), intent(in) :: A
     integer, intent(out) :: nodes(:)
     real(dp), intent(out) :: slice(:)
     integer, intent(in) :: k
 
     call A%get_column_impl( A%g, A%val, nodes, slice, k)
 
-end subroutine default_matrix_get_column
+end subroutine cs_matrix_get_column
 
 
 
@@ -232,22 +251,21 @@ end subroutine default_matrix_get_column
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-function default_matrix_make_cursor(A) result(cursor)                      !
+function cs_matrix_make_cursor(A) result(cursor)                           !
 !--------------------------------------------------------------------------!
-    class(default_matrix), intent(in) :: A
+    class(cs_matrix), intent(in) :: A
     type(graph_edge_cursor) :: cursor
 
     cursor = A%g%make_cursor()
 
-end function default_matrix_make_cursor
+end function cs_matrix_make_cursor
 
 
 
 !--------------------------------------------------------------------------!
-subroutine default_matrix_get_edges(A, edges, cursor, &                    !
-                                                & num_edges, num_returned) !
+subroutine cs_matrix_get_edges(A, edges, cursor, num_edges, num_returned)  !
 !--------------------------------------------------------------------------!
-    class(default_matrix), intent(in) :: A
+    class(cs_matrix), intent(in) :: A
     integer, intent(out) :: edges(2, num_edges)
     type(graph_edge_cursor), intent(inout) :: cursor
     integer, intent(in) :: num_edges
@@ -261,16 +279,16 @@ subroutine default_matrix_get_edges(A, edges, cursor, &                    !
     ! that's any faster
     edges = edges(A%ord, :)
 
-end subroutine default_matrix_get_edges
+end subroutine cs_matrix_get_edges
 
 
 
 !--------------------------------------------------------------------------!
-subroutine default_matrix_get_entries(A, edges, entries, cursor, &         !
+subroutine cs_matrix_get_entries(A, edges, entries, cursor, &              !
                                                 & num_edges, num_returned) !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(default_matrix), intent(in) :: A
+    class(cs_matrix), intent(in) :: A
     integer, intent(out) :: edges(2, num_edges)
     real(dp), intent(out) :: entries(num_edges)
     type(graph_edge_cursor), intent(inout) :: cursor
@@ -282,14 +300,14 @@ subroutine default_matrix_get_entries(A, edges, entries, cursor, &         !
     ! Store the current position of the cursor
     indx = cursor%current
 
-    ! Get the next batch of edges from A without the values
+    ! Get the next batch of eges from A without the values
     call A%get_edges(edges, cursor, num_edges, num_returned)
 
     ! Get the entries from A
     entries = 0.0_dp
     entries = A%val( indx + 1 : indx + num_returned )
 
-end subroutine default_matrix_get_entries
+end subroutine cs_matrix_get_entries
 
 
 
@@ -299,10 +317,10 @@ end subroutine default_matrix_get_entries
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine default_matrix_set_value(A, i, j, z)                            !
+subroutine cs_matrix_set_value(A, i, j, z)                                 !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(default_matrix), intent(inout) :: A
+    class(cs_matrix), intent(inout) :: A
     integer, intent(in) :: i, j
     real(dp), intent(in) :: z
     ! local variables
@@ -312,19 +330,19 @@ subroutine default_matrix_set_value(A, i, j, z)                            !
     ind(2) = j
     ind = ind(A%ord)
 
-    k = A%g%find_edge(ind(1), ind(2))
+    do k = A%g%ptr(ind(1)), A%g%ptr(ind(1) + 1) - 1
+        if (A%g%node(k) == ind(2)) A%val(k) = z
+    enddo
 
-    if (k /= -1) A%val(k) = z
-
-end subroutine default_matrix_set_value
+end subroutine cs_matrix_set_value
 
 
 
 !--------------------------------------------------------------------------!
-subroutine default_matrix_add_value(A, i, j, z)                            !
+subroutine cs_matrix_add_value(A, i, j, z)                                 !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(default_matrix), intent(inout) :: A
+    class(cs_matrix), intent(inout) :: A
     integer, intent(in) :: i, j
     real(dp), intent(in) :: z
     ! local variables
@@ -334,46 +352,46 @@ subroutine default_matrix_add_value(A, i, j, z)                            !
     ind(2) = j
     ind = ind(A%ord)
 
-    k = A%g%find_edge(ind(1), ind(2))
+    do k = A%g%ptr(ind(1)), A%g%ptr(ind(1) + 1) - 1
+        if (A%g%node(k) == ind(2)) A%val(k) = A%val(k) + z
+    enddo
 
-    if (k /= -1) A%val(k) = A%val(k) + z
-
-end subroutine default_matrix_add_value
+end subroutine cs_matrix_add_value
 
 
 
 !--------------------------------------------------------------------------!
-subroutine default_matrix_zero(A)                                          !
+subroutine cs_matrix_zero(A)                                               !
 !--------------------------------------------------------------------------!
-    class(default_matrix), intent(inout) :: A
+    class(cs_matrix), intent(inout) :: A
 
     A%val = 0.0_dp
 
-end subroutine default_matrix_zero
+end subroutine cs_matrix_zero
 
 
 
 !--------------------------------------------------------------------------!
-subroutine default_matrix_left_permute(A, p)                               !
+subroutine cs_matrix_left_permute(A, p)                                    !
 !--------------------------------------------------------------------------!
-    class(default_matrix), intent(inout) :: A
+    class(cs_matrix), intent(inout) :: A
     integer, intent(in) :: p(:)
 
     call A%left_permute_impl(A%g, A%val, p)
 
-end subroutine default_matrix_left_permute
+end subroutine cs_matrix_left_permute
 
 
 
 !--------------------------------------------------------------------------!
-subroutine default_matrix_right_permute(A, p)                              !
+subroutine cs_matrix_right_permute(A, p)                                   !
 !--------------------------------------------------------------------------!
-    class(default_matrix), intent(inout) :: A
+    class(cs_matrix), intent(inout) :: A
     integer, intent(in) :: p(:)
 
     call A%right_permute_impl(A%g, A%val, p)
 
-end subroutine default_matrix_right_permute
+end subroutine cs_matrix_right_permute
 
 
 
@@ -382,36 +400,91 @@ end subroutine default_matrix_right_permute
 !==== Matrix-vector multiplication                                     ====!
 !==========================================================================!
 
-! The parent sparse matrix class provides a default, if not very optimal,
-! implementation of these methods. The interface to the procedure is below
-! but commented out, for the user who wishes to copy this module and use it
-! as a guide to making her/his own matrix implementation.
+!--------------------------------------------------------------------------!
+subroutine cs_matvec_add(A, x, y)                                          !
+!--------------------------------------------------------------------------!
+    class(cs_matrix), intent(in) :: A
+    real(dp), intent(in)    :: x(:)
+    real(dp), intent(inout) :: y(:)
 
-!--------------------------------------------------------------------------!
-! subroutine default_matrix_matvec_add(A, x, y)                            !
-!--------------------------------------------------------------------------!
-!     class(cs_matrix), intent(in) :: A                                    !
-!     real(dp), intent(in)    :: x(:)                                      !
-!     real(dp), intent(inout) :: y(:)                                      !
-!                                                                          !
-!     << Your implementation goes here >>                                  !
-!                                                                          !
-! end subroutine default_matrix_matvec_add                                 !
-!--------------------------------------------------------------------------!
+    call A%matvec_add_impl(x, y)
+
+end subroutine cs_matvec_add
 
 
 
 !--------------------------------------------------------------------------!
-! subroutine default_matrix_matvec_t_add(A, x, y)                          !
+subroutine cs_matvec_t_add(A, x, y)                                        !
 !--------------------------------------------------------------------------!
-!     class(cs_matrix), intent(in) :: A                                    !
-!     real(dp), intent(in)    :: x(:)                                      !
-!     real(dp), intent(inout) :: y(:)                                      !
-!                                                                          !
-!     << Your implementation goes here >>                                  !
-!                                                                          !
-! end subroutine default_matrix_matvec_t_add                               !
+    class(cs_matrix), intent(in) :: A
+    real(dp), intent(in)    :: x(:)
+    real(dp), intent(inout) :: y(:)
+
+    call A%matvec_t_add_impl(x, y)
+
+end subroutine cs_matvec_t_add
+
+
+
 !--------------------------------------------------------------------------!
+subroutine csr_matvec_add(A, x, y)                                         !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(cs_matrix), intent(in) :: A
+    real(dp), intent(in)    :: x(:)
+    real(dp), intent(inout) :: y(:)
+    ! local variables
+    integer :: i, j, k
+    real(dp) :: z
+
+    associate( g => A%g )
+
+
+    do i = 1, g%n
+        z = 0.0_dp
+
+        do k = g%ptr(i), g%ptr(i + 1) - 1
+            j = g%node(k)
+            z = z + A%val(k) * x(j)
+        enddo
+
+        y(i) = y(i) + z
+    enddo
+
+
+    end associate
+
+end subroutine csr_matvec_add
+
+
+
+!--------------------------------------------------------------------------!
+subroutine csc_matvec_add(A, x, y)                                         !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(cs_matrix), intent(in) :: A
+    real(dp), intent(in)    :: x(:)
+    real(dp), intent(inout) :: y(:)
+    ! local variables
+    integer :: i, j, k
+    real(dp) :: z
+
+    associate( g => A%g )
+
+
+    do j = 1, g%n
+        z = x(j)
+
+        do k = g%ptr(j), g%ptr(j + 1) - 1
+            i = g%node(k)
+            y(i) = y(i) + A%val(k) * z
+        enddo
+    enddo
+
+
+    end associate
+
+end subroutine csc_matvec_add
 
 
 
@@ -421,9 +494,9 @@ end subroutine default_matrix_right_permute
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine default_matrix_destroy(A)                                       !
+subroutine cs_matrix_destroy(A)                                            !
 !--------------------------------------------------------------------------!
-    class(default_matrix), intent(inout) :: A
+    class(cs_matrix), intent(inout) :: A
 
     ! Deallocate the array of A's matrix entries
     deallocate(A%val)
@@ -435,8 +508,10 @@ subroutine default_matrix_destroy(A)                                       !
     ! still be other references to it someplace else.
     nullify(A%g)
 
-end subroutine default_matrix_destroy
+end subroutine cs_matrix_destroy
 
 
 
-end module default_matrices
+
+
+end module cs_matrices

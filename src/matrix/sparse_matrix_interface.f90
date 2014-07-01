@@ -31,7 +31,11 @@ implicit none
 !--------------------------------------------------------------------------!
 type, extends(linear_operator), abstract :: sparse_matrix                  !
 !--------------------------------------------------------------------------!
-    integer :: nnz, ord(2)
+    ! number of non-zero entries
+    integer :: nnz
+
+    ! ordering of the matrix -- [1, 2] if row-major, [2, 1] if column-major
+    integer :: ord(2)
 contains
     !--------------
     ! Constructors

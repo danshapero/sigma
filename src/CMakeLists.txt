@@ -11,6 +11,7 @@ set(MATRIX_SRCS
 matrix/sparse_matrix_interface.f90
 matrix/default_sparse_matrix_kernels.f90
 matrix/default_matrices.f90
+matrix/cs_matrices.f90
 matrix/sparse_matrices.f90
 )
 

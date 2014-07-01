@@ -8,6 +8,7 @@ use graphs
 use sparse_matrix_interface
 use default_sparse_matrix_kernels
 use default_matrices
+use cs_matrices
 
 implicit none
 
@@ -28,11 +29,11 @@ function sparse_matrix_factory(nrow, ncol, g, orientation) result(A)       !
     character(len=3), intent(in) :: orientation
     class(sparse_matrix), pointer :: A
 
-    allocate(default_matrix::A)
-
-    select type(A)
-        type is(default_matrix)
-            call A%init(nrow, ncol, g, orientation)
+    select type(g)
+        class is(cs_graph)
+            A => cs_matrix(nrow, ncol, g, orientation)
+        class default
+            A => default_matrix(nrow, ncol, g, orientation)
     end select
 
 end function sparse_matrix_factory

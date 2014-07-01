@@ -38,10 +38,35 @@ implicit none
     ! random numbers
     real(dp) :: c, w, z
 
+    ! command-line argument parsing
+    character(len=16) :: arg
+    logical :: verbose
+
     ! other junk
     logical :: correct, trans
     character(len=3) :: orientation
 
+
+
+    !----------------------------------------------------------------------!
+    ! Get command line arguments to see if we're running in verbose mode   !
+    !----------------------------------------------------------------------!
+    verbose = .false.
+    call getarg(1,arg)
+    select case(trim(arg))
+        case("-v")
+            verbose = .true.
+        case("-V")
+            verbose = .true.
+        case("--verbose")
+            verbose = .true.
+    end select
+
+
+
+    !----------------------------------------------------------------------!
+    ! Set the matrix size and initialize a random seed                     !
+    !----------------------------------------------------------------------!
 
     nn = 64
     c = log(1.0_dp * nn) / log(2.0_dp) / nn
@@ -137,6 +162,8 @@ implicit none
                 orientation = "col"
                 trans = .true.
             endif
+
+            if (verbose) print *, 'Format #',frmt, '; order: ',orientation
 
             ! Make a copy `g` of `h`, possibly with the edges reversed
             call choose_graph_type(g, frmt)

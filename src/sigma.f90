@@ -18,6 +18,7 @@ use linear_operators
 use sparse_matrix_interface
 use default_sparse_matrix_kernels
 use default_matrices
+use cs_matrices
 use sparse_matrices
 
 ! Use the solver and preconditioner modules
