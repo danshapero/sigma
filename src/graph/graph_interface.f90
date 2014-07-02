@@ -60,6 +60,11 @@ contains
     ! Find the index of the edge between the two vertices (i,j), if it
     ! exists; return -1 if it does not.
 
+    procedure, nopass :: is_get_neighbors_fast => get_neighbors_is_not_fast
+    ! Returns true if the graph is in a storage format for which getting
+    ! all the neighbors of a vertex can be done in O(max_degree) time;
+    ! used for optimizing sparse matrix-matrix multiplication
+
 
     !---------------
     ! Edge iterator
@@ -265,6 +270,28 @@ integer, parameter :: batch_size = 64
 
 
 contains
+
+
+
+!--------------------------------------------------------------------------!
+function get_neighbors_is_not_fast() result(fast)                          !
+!--------------------------------------------------------------------------!
+    logical :: fast
+
+    fast = .false.
+
+end function get_neighbors_is_not_fast
+
+
+
+!--------------------------------------------------------------------------!
+function get_neighbors_is_fast() result(fast)                              !
+!--------------------------------------------------------------------------!
+    logical :: fast
+
+    fast = .true.
+
+end function get_neighbors_is_fast
 
 
 

@@ -24,6 +24,7 @@ contains
     procedure :: get_neighbors => cs_get_neighbors
     procedure :: connected => cs_connected
     procedure :: find_edge => cs_find_edge
+    procedure, nopass :: is_get_neighbors_fast => get_neighbors_is_fast
 
     !---------------
     ! Edge iterator
