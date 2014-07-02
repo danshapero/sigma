@@ -506,7 +506,6 @@ subroutine ellpack_graph_compress(g,edge_p)                                !
     ! the storage needed
     if (g%max_neighbors/=g%max_degree) then
         allocate(node(g%max_degree,g%n))
-        g%max_neighbors = g%max_degree
         g%capacity = g%max_degree * g%n
 
         ! Copy the array g%node into a smaller temporary array node
@@ -527,6 +526,8 @@ subroutine ellpack_graph_compress(g,edge_p)                                !
                 edge_p(3,i) = g%max_degree
             enddo
         endif
+
+        g%max_neighbors = g%max_degree
     else
         if (present(edge_p)) allocate(edge_p(0,0))
     endif

@@ -152,7 +152,6 @@ program matrix_test_assembly                                               !
             do i = 1, nn
                 z = B(i, j)
                 if (A%get_value(i, j) /= z) then
-                    print *, i, j, z, A%get_value(i, j)
                     print *, 'Assembly of A failed, matrix entries have '
                     print *, 'changed. Terminating.'
                     call exit(1)
