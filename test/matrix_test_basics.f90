@@ -35,6 +35,11 @@ implicit none
     integer, allocatable :: nodes(:)
     real(dp), allocatable :: slice(:)
 
+    ! variables for matrix value iterators
+    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    real(dp) :: entries(batch_size)
+    type(graph_edge_cursor) :: cursor
+
     ! random numbers
     real(dp) :: c, w, z
 
@@ -154,202 +159,227 @@ implicit none
     ! Test each matrix type                                                !
     !----------------------------------------------------------------------!
     do frmt = 1, 4
-        do ordering = 1, 2
-            orientation = "row"
-            trans = .false.
+    do ordering = 1, 2
+        orientation = "row"
+        trans = .false.
 
-            if (ordering == 2) then
-                orientation = "col"
-                trans = .true.
-            endif
+        if (ordering == 2) then
+            orientation = "col"
+            trans = .true.
+        endif
 
-            if (verbose) print *, 'Format #',frmt, '; order: ',orientation
+        if (verbose) print *, 'Format #',frmt, '; order: ',orientation
 
-            ! Make a copy `g` of `h`, possibly with the edges reversed
-            call choose_graph_type(g, frmt)
-            call g%copy(h, trans)
+        ! Make a copy `g` of `h`, possibly with the edges reversed
+        call choose_graph_type(g, frmt)
+        call g%copy(h, trans)
 
-            ! Make a sparse matrix `A` on that graph
-            A => sparse_matrix(nn, nn, g, orientation)
-
-
-            !--------
-            ! Check that all the entries of `A` are zero
-            do i = 1, nn
-                do j = 1, nn
-                    z = A%get_value(i, j)
-                    if (z /= 0) then
-                        print *, 'Entries of a just-initialized sparse '
-                        print *, 'matrix should be zero! Terminating.'
-                        call exit(1)
-                    endif
-                enddo
-            enddo
+        ! Make a sparse matrix `A` on that graph
+        A => sparse_matrix(nn, nn, g, orientation)
 
 
-            !--------
-            ! Set the entries of `A` to be the same as those of `B`
+        !--------
+        ! Check that all the entries of `A` are zero
+        do i = 1, nn
             do j = 1, nn
-                do i = 1, nn
-                    z = B(i, j)
-                    if (z /= 0) call A%set_value(i, j, z)
-                enddo
+                z = A%get_value(i, j)
+                if (z /= 0) then
+                    print *, 'Entries of a just-initialized sparse matrix'
+                    print *, 'should be zero! Terminating.'
+                    call exit(1)
+                endif
             enddo
-
-
-            !--------
-            ! Check that the entries of `A` are the same as those of `B`
-            do j = 1, nn
-                do i = 1, nn
-                    z = B(i, j)
-                    if (A%get_value(i, j) /= z) then
-                        print *, 'Setting entry of A failed. Terminating.'
-                        call exit(1)
-                    endif
-                enddo
-            enddo
-
-
-            !--------
-            ! Check that getting an entire row / column of the matrix works
-            do i = 1, nn
-                call A%get_row(nodes, slice, i)
-
-                ! First, check that every entry returned from the sparse
-                ! matrix `A` corresponds to the right value in the
-                ! reference matrix `B`
-                do k = 1, d
-                    j = nodes(k)
-                    if (j /= 0) then
-                        if (slice(k) /= B(i, j)) then
-                            print *, 'Getting row of sparse matrix failed.'
-                            print *, 'Terminating.'
-                            call exit(1)
-                        endif
-                    endif
-                enddo
-
-                ! Next, check that every non-zero entry in row `i` of
-                ! `B` was actually returned by `get_row`
-                do j = 1, nn
-                    if (B(i, j) /= 0) then
-                        correct = .false.
-                        do k = 1, d
-                            correct = correct .or. (nodes(k) == j)
-                        enddo
-
-                        if (.not. correct) then
-                            print *, 'Getting row of sparse matrix failed,'
-                            print *, 'did not return entry that is in '
-                            print *, 'the row. Terminating.'
-                            call exit(1)
-                        endif
-                    endif
-                enddo
-            enddo
-
-            do j = 1, nn
-                call A%get_column(nodes, slice, j)
-
-                do k = 1, d
-                    i = nodes(k)
-                    if (i /= 0) then
-                        if (slice(k) /= B(i, j)) then
-                            print *, 'Getting col of sparse matrix failed.'
-                            print *, 'Terminating.'
-                            call exit(1)
-                        endif
-                    endif
-                enddo
-
-                do i = 1, nn
-                    if (B(i, j) /= 0) then
-                        correct = .false.
-                        do k = 1, d
-                            correct = correct .or. (nodes(k) == i)
-                        enddo
-
-                        if (.not. correct) then
-                            print *, 'Getting col of sparse matrix failed,'
-                            print *, 'did not return entry that is in '
-                            print *, 'the col. Terminating.'
-                            call exit(1)
-                        endif
-                    endif
-                enddo
-            enddo
-
-
-            !--------
-            ! Check matrix multiplication
-            call random_number(x)
-            y1 = 0.0_dp
-            y2 = 0.0_dp
-
-            call A%matvec(x, y1)
-            y2 = matmul(B, x)
-
-            w = maxval(dabs(y1-y2)) / maxval(dabs(y2))
-            if (w > 1.0e-15) then
-                print *, 'Matrix-vector multiplication failed.'
-                print *, 'Error:', w
-                print *, 'Terminating.'
-                call exit(1)
-            endif
-
-
-            call random_number(x)
-            y1 = 0.0_dp
-            y2 = 0.0_dp
-
-            call A%matvec_t(x, y1)
-            y2 = matmul(transpose(B), x)
-
-            w = maxval(dabs(y1-y2)) / maxval(dabs(y2))
-            if (w > 1.0e-15) then
-                print *, 'Matrix transpose-vector multiplication failed.'
-                print *, 'Error:', w
-                print *, 'Terminating.'
-                call exit(1)
-            endif
-
-
-            !--------
-            ! Check matrix permutation
-            BP(:,p) = B(:,:)
-            call A%right_permute(p)
-
-            do j = 1, nn
-                do i = 1, nn
-                    z = A%get_value(i, j)
-                    if (z /= BP(i, j)) then
-                        print *, 'Right-permutation failed. Terminating.'
-                        call exit(1)
-                    endif
-                enddo
-            enddo
-
-            BP(p,:) = BP(:,:)
-            call A%left_permute(p)
-
-            do j = 1, nn
-                do i = 1, nn
-                    z = A%get_value(i, j)
-                    if (z /= BP(i, j)) then
-                        print *, 'Left-permutation failed. Terminating.'
-                        call exit(1)
-                    endif
-                enddo 
-            enddo
-
-
-            ! Destroy the matrix and graph so they're ready for the next
-            ! test
-            call A%destroy()
-            call g%destroy()
-            deallocate(A)
-            deallocate(g)
         enddo
+
+
+        !--------
+        ! Set the entries of `A` to be the same as those of `B`
+        do j = 1, nn
+            do i = 1, nn
+                z = B(i, j)
+                if (z /= 0) call A%set_value(i, j, z)
+            enddo
+        enddo
+
+
+        !--------
+        ! Check that the entries of `A` are the same as those of `B`
+        do j = 1, nn
+            do i = 1, nn
+                z = B(i, j)
+                if (A%get_value(i, j) /= z) then
+                    print *, 'Setting entry of A failed. Terminating.'
+                    call exit(1)
+                endif
+            enddo
+        enddo
+
+
+        !--------
+        ! Check that getting an entire row / column of the matrix works
+        do i = 1, nn
+            call A%get_row(nodes, slice, i)
+
+            ! First, check that every entry returned from the sparse
+            ! matrix `A` corresponds to the right value in the
+            ! reference matrix `B`
+            do k = 1, d
+                j = nodes(k)
+                if (j /= 0) then
+                    if (slice(k) /= B(i, j)) then
+                        print *, 'Getting row of sparse matrix failed.'
+                        print *, 'Terminating.'
+                        call exit(1)
+                    endif
+                endif
+            enddo
+
+            ! Next, check that every non-zero entry in row `i` of
+            ! `B` was actually returned by `get_row`
+            do j = 1, nn
+                if (B(i, j) /= 0) then
+                    correct = .false.
+                    do k = 1, d
+                        correct = correct .or. (nodes(k) == j)
+                    enddo
+
+                    if (.not. correct) then
+                        print *, 'Getting row of sparse matrix failed, did'
+                        print *, 'not return entry that is in the row.'
+                        print *, 'Terminating.'
+                        call exit(1)
+                    endif
+                endif
+            enddo
+        enddo
+
+        do j = 1, nn
+            call A%get_column(nodes, slice, j)
+
+            do k = 1, d
+                i = nodes(k)
+                if (i /= 0) then
+                    if (slice(k) /= B(i, j)) then
+                        print *, 'Getting column of sparse matrix failed.'
+                        print *, 'Terminating.'
+                        call exit(1)
+                    endif
+                endif
+            enddo
+
+            do i = 1, nn
+                if (B(i, j) /= 0) then
+                    correct = .false.
+                    do k = 1, d
+                        correct = correct .or. (nodes(k) == i)
+                    enddo
+
+                    if (.not. correct) then
+                        print *, 'Getting col of sparse matrix failed, did'
+                        print *, 'not return entry that is in the column.'
+                        print *, 'Terminating.'
+                        call exit(1)
+                    endif
+                endif
+            enddo
+        enddo
+
+
+        !--------
+        ! Check iterating through all matrix values
+        cursor = A%make_cursor()
+        num_batches = (cursor%final - cursor%start)/batch_size + 1
+
+        do n = 1, num_batches
+            call A%get_entries(edges, entries, cursor, &
+                                                & batch_size, num_returned)
+
+            do k = 1, num_returned
+                i = edges(1, k)
+                j = edges(2, k)
+
+                if (i /= 0 .and. j /= 0) then
+                    if (entries(k) /= B(i, j)) then
+                        print *, 'Matrix value iterator returned '
+                        print *, 'entry', i, j, entries(k)
+                        print *, 'that differs from reference matrix.'
+                        print *, 'Terminating.'
+                        call exit(1)
+                    endif
+                endif
+            enddo
+        enddo
+
+
+        !--------
+        ! Check matrix multiplication
+        call random_number(x)
+        y1 = 0.0_dp
+        y2 = 0.0_dp
+
+        call A%matvec(x, y1)
+        y2 = matmul(B, x)
+
+        w = maxval(dabs(y1-y2)) / maxval(dabs(y2))
+        if (w > 1.0e-15) then
+            print *, 'Matrix-vector multiplication failed.'
+            print *, 'Error:', w
+            print *, 'Terminating.'
+            call exit(1)
+        endif
+
+
+        call random_number(x)
+        y1 = 0.0_dp
+        y2 = 0.0_dp
+
+        call A%matvec_t(x, y1)
+        y2 = matmul(transpose(B), x)
+
+        w = maxval(dabs(y1-y2)) / maxval(dabs(y2))
+        if (w > 1.0e-15) then
+            print *, 'Matrix transpose-vector multiplication failed.'
+            print *, 'Error:', w
+            print *, 'Terminating.'
+            call exit(1)
+        endif
+
+
+        !--------
+        ! Check matrix permutation
+        BP(:,p) = B(:,:)
+        call A%right_permute(p)
+
+        do j = 1, nn
+            do i = 1, nn
+                z = A%get_value(i, j)
+                if (z /= BP(i, j)) then
+                    print *, 'Right-permutation failed. Terminating.'
+                    call exit(1)
+                endif
+            enddo
+        enddo
+
+        BP(p,:) = BP(:,:)
+        call A%left_permute(p)
+
+        do j = 1, nn
+            do i = 1, nn
+                z = A%get_value(i, j)
+                if (z /= BP(i, j)) then
+                    print *, 'Left-permutation failed. Terminating.'
+                    call exit(1)
+                endif
+            enddo 
+        enddo
+
+
+        ! Destroy the matrix and graph so they're ready for the next test
+        call A%destroy()
+        call g%destroy()
+        deallocate(A)
+        deallocate(g)
+    enddo
     enddo
 
 
