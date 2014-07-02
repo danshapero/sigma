@@ -36,11 +36,14 @@ type, extends(linear_operator), abstract :: sparse_matrix                  !
 
     ! ordering of the matrix -- [1, 2] if row-major, [2, 1] if column-major
     integer :: ord(2)
+
+    ! assembled state of the matrix
+    logical :: assembled = .false.
 contains
     !--------------
     ! Constructors
     !--------------
-    ! The sparse_matrix interface does not require a constructors. Much of
+    ! The sparse_matrix interface does not require a constructor. Much of
     ! the work for building sparse matrices will be handled by factory
     ! methods.
 
@@ -90,6 +93,15 @@ contains
 
     procedure(sparse_mat_permute_ifc), deferred :: right_permute
     ! Permute the columns of a matrix
+
+    procedure(sparse_mat_assemble_ifc), deferred :: assemble
+    ! Compress the connectivity structure of the matrix. The underlying
+    ! graph becomes immutable, so we can only alter matrix entries (i, j)
+    ! that are already connected.
+    ! However, assembled matrices can perform matvec faster.
+
+    procedure(sparse_mat_assemble_ifc), deferred :: disassemble
+    ! Reverse the assemble operation
 
 
     !------------------------------
@@ -162,7 +174,7 @@ abstract interface                                                         !
         integer, intent(out) :: num_returned
     end subroutine sparse_mat_get_entries_ifc
 
-    subroutine sparse_mat_set_value_ifc(A,i,j,z)
+    subroutine sparse_mat_set_value_ifc(A, i, j, z)
         import :: sparse_matrix, dp
         class(sparse_matrix), intent(inout) :: A
         integer, intent(in) :: i, j
@@ -174,11 +186,16 @@ abstract interface                                                         !
         class(sparse_matrix), intent(inout) :: A
     end subroutine sparse_mat_zero_ifc
 
-    subroutine sparse_mat_permute_ifc(A,p)
+    subroutine sparse_mat_permute_ifc(A, p)
         import :: sparse_matrix
         class(sparse_matrix), intent(inout) :: A
         integer, intent(in) :: p(:)
     end subroutine sparse_mat_permute_ifc
+
+    subroutine sparse_mat_assemble_ifc(A)
+        import :: sparse_matrix
+        class(sparse_matrix), intent(inout) :: A
+    end subroutine sparse_mat_assemble_ifc
 
     subroutine sparse_mat_destroy_ifc(A)
         import :: sparse_matrix

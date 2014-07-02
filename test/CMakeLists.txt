@@ -6,6 +6,7 @@ graph_tests_2.f90
 graph_tests_3.f90
 graph_tests_4.f90
 matrix_test_basics.f90
+matrix_test_assembly.f90
 #test/matrix_tests_1.f90
 #test/matrix_tests_2.f90
 #test/matrix_tests_3.f90

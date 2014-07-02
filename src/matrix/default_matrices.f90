@@ -71,6 +71,8 @@ contains
     procedure :: zero => default_matrix_zero
     procedure :: left_permute => default_matrix_left_permute
     procedure :: right_permute => default_matrix_right_permute
+    procedure :: assemble => default_matrix_assemble
+    procedure :: disassemble => default_matrix_disassemble
 
 
     !------------------------------
@@ -374,6 +376,33 @@ subroutine default_matrix_right_permute(A, p)                              !
     call A%right_permute_impl(A%g, A%val, p)
 
 end subroutine default_matrix_right_permute
+
+
+
+!--------------------------------------------------------------------------!
+subroutine default_matrix_assemble(A)                                      !
+!--------------------------------------------------------------------------!
+    class(default_matrix), intent(inout) :: A
+
+    ! Defer to a routine in default_sparse_matrix_kernels
+    call assemble_matrix(A%g, A%val)
+
+    A%assembled = .true.
+
+end subroutine default_matrix_assemble
+
+
+
+!--------------------------------------------------------------------------!
+subroutine default_matrix_disassemble(A)                                   !
+!--------------------------------------------------------------------------!
+    class(default_matrix), intent(inout) :: A
+
+    call A%g%decompress()
+
+    A%assembled = .false.
+
+end subroutine default_matrix_disassemble
 
 
 

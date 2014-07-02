@@ -39,12 +39,6 @@ abstract interface                                                         !
         real(dp), intent(inout) :: val(:)
         integer, intent(in) :: p(:)
     end subroutine permute_kernel
-
-    subroutine assemble_kernel(g, val)
-        import :: graph, dp
-        class(graph), pointer, intent(inout) :: g
-        real(dp), allocatable, intent(inout) :: val(:)
-    end subroutine assemble_kernel
 end interface
 
 
@@ -183,6 +177,38 @@ subroutine graph_rightperm(g, val, p)                                      !
     deallocate(edge_p)
 
 end subroutine graph_rightperm
+
+
+
+!--------------------------------------------------------------------------!
+subroutine assemble_matrix(g, val)                                         !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(graph) :: g
+    real(dp), allocatable :: val(:)
+    ! local variables
+    integer :: k, source, dest, num
+    integer, allocatable :: edge_p(:,:)
+    real(dp), allocatable :: val_temp(:)
+
+    call g%compress(edge_p)
+
+    if (size(edge_p, 2) /= 0) then
+        ! Make a temporary array for the matrix entries
+        allocate( val_temp(g%capacity) )
+
+        do k = 1, size(edge_p, 2)
+            source = edge_p(1, k)
+            dest   = edge_p(2, k)
+            num    = edge_p(3, k)
+
+            val_temp(dest : dest + num - 1) = val(source : source + num - 1)
+        enddo
+
+        call move_alloc(from = val_temp, to = val)
+    endif
+
+end subroutine assemble_matrix
 
 
 

@@ -71,6 +71,8 @@ contains
     procedure :: zero => cs_matrix_zero
     procedure :: left_permute => cs_matrix_left_permute
     procedure :: right_permute => cs_matrix_right_permute
+    procedure :: assemble => cs_matrix_assemble
+    procedure :: disassemble => cs_matrix_disassemble
 
 
     !------------------------------
@@ -165,9 +167,6 @@ subroutine cs_matrix_init(A, nrow, ncol, g, orientation)                   !
 
             A%left_permute_impl  => graph_leftperm
             A%right_permute_impl => graph_rightperm
-
-            A%matvec_add_impl   => sparse_matrix_matvec_add
-            A%matvec_t_add_impl => sparse_matrix_matvec_t_add
         case('col')
             A%ord = [2, 1]
 
@@ -176,10 +175,10 @@ subroutine cs_matrix_init(A, nrow, ncol, g, orientation)                   !
 
             A%left_permute_impl  => graph_rightperm
             A%right_permute_impl => graph_leftperm
-
-            A%matvec_add_impl   => sparse_matrix_matvec_add
-            A%matvec_t_add_impl => sparse_matrix_matvec_t_add
     end select
+
+    A%matvec_add_impl   => sparse_matrix_matvec_add
+    A%matvec_t_add_impl => sparse_matrix_matvec_t_add
 
 end subroutine cs_matrix_init
 
@@ -392,6 +391,48 @@ subroutine cs_matrix_right_permute(A, p)                                   !
     call A%right_permute_impl(A%g, A%val, p)
 
 end subroutine cs_matrix_right_permute
+
+
+
+!--------------------------------------------------------------------------!
+subroutine cs_matrix_assemble(A)                                           !
+!--------------------------------------------------------------------------!
+    class(cs_matrix), intent(inout) :: A
+
+    ! Defer to a routine in default_sparse_matrix_kernels
+    call assemble_matrix(A%g, A%val)
+
+    ! Re-assign the matvec function pointers to the optimized routines
+    select case(A%ord(1))
+        case(1)
+            A%matvec_add_impl   => csr_matvec_add
+            A%matvec_t_add_impl => csc_matvec_add
+        case(2)
+            A%matvec_add_impl   => csc_matvec_add
+            A%matvec_t_add_impl => csr_matvec_add
+    end select
+
+    A%assembled = .true.
+
+end subroutine cs_matrix_assemble
+
+
+
+!--------------------------------------------------------------------------!
+subroutine cs_matrix_disassemble(A)                                        !
+!--------------------------------------------------------------------------!
+    class(cs_matrix), intent(inout) :: A
+
+    ! Decompress the graph
+    call A%g%decompress()
+
+    ! Re-assign the matvec function pointers to the slow but safe routines
+    A%matvec_add_impl   => sparse_matrix_matvec_add
+    A%matvec_t_add_impl => sparse_matrix_matvec_t_add
+
+    A%assembled = .false.
+
+end subroutine cs_matrix_disassemble
 
 
 
