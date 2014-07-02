@@ -40,13 +40,11 @@ abstract interface                                                         !
         integer, intent(in) :: p(:)
     end subroutine permute_kernel
 
-    subroutine matvec_kernel(g, val, x, y)
+    subroutine assemble_kernel(g, val)
         import :: graph, dp
-        class(graph), intent(in) :: g
-        real(dp), intent(in) :: val(:)
-        real(dp), intent(in)    :: x(:)
-        real(dp), intent(inout) :: y(:)
-    end subroutine matvec_kernel
+        class(graph), pointer, intent(inout) :: g
+        real(dp), allocatable, intent(inout) :: val(:)
+    end subroutine assemble_kernel
 end interface
 
 
@@ -148,32 +146,14 @@ subroutine graph_leftperm(g,val,p)                                         !
     real(dp), intent(inout) :: val(:)
     integer, intent(in) :: p(:)
     ! local variables
-    integer :: i, source, dest, num_nodes
     integer, allocatable :: edge_p(:,:)
-    real(dp), allocatable :: val_tmp(:)
 
     ! Permute the graph and get an array edge_p describing the permutation
     ! of the edges
     call g%left_permute(p, edge_p)
 
-    ! If the edges require permutation,
-    if (size(edge_p,2) > 0) then
-        ! make a temporary array for the matrix values
-        allocate( val_tmp(g%capacity) )
-        val_tmp = val
-
-        ! Rearrange the values
-        do i=1,size(edge_p,2)
-            source = edge_p(1,i)
-            dest = edge_p(2,i)
-            num_nodes = edge_p(3,i)
-
-            val(dest:dest+num_nodes-1) = val_tmp(source:source+num_nodes-1)
-        enddo
-
-        ! Deallocate the temporary array
-        deallocate(val_tmp)
-    endif
+    ! Rearrange the array `val` according to the edge permutation
+    call rearrange_array_with_compressed_permutation(val, edge_p)
 
     ! Deallocate the array describing the edge permutation
     deallocate(edge_p)
@@ -183,45 +163,68 @@ end subroutine graph_leftperm
 
 
 !--------------------------------------------------------------------------!
-subroutine graph_rightperm(g,val,p)                                        !
+subroutine graph_rightperm(g, val, p)                                      !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(graph), intent(inout) :: g
     real(dp), intent(inout) :: val(:)
     integer, intent(in) :: p(:)
     ! local variables
-    integer :: i, source, dest, num_nodes
     integer, allocatable :: edge_p(:,:)
-    real(dp), allocatable :: val_tmp(:)
 
     ! Permute the graph and get an array edge_p describing the permutation
     ! of the edges
     call g%right_permute(p, edge_p)
 
-    ! If the edges require permutation,
-    if (size(edge_p,2) > 0) then
-        ! make a temporary array for the matrix values
-        allocate( val_tmp(g%capacity) )
-        val_tmp = val
+    ! Rearrange the array `val` according to the edge permutation
+    call rearrange_array_with_compressed_permutation(val, edge_p)
 
-        ! Rearrange the values
-        do i=1,size(edge_p,2)
-            source = edge_p(1,i)
-            dest = edge_p(2,i)
-            num_nodes = edge_p(3,i)
-
-            val(dest:dest+num_nodes-1) = val_tmp(source:source+num_nodes-1)
-        enddo
-
-        ! Deallocate the temporary array
-        deallocate(val_tmp)
-    endif
-
-    ! Deallocate the array describing the edge permutation
+    ! Deallocate the permutation array
     deallocate(edge_p)
 
 end subroutine graph_rightperm
 
+
+
+!--------------------------------------------------------------------------!
+subroutine rearrange_array_with_compressed_permutation(val, p)             !
+!--------------------------------------------------------------------------!
+!     This is a commonly used routine. A compressed permutation `p` is an  !
+! array of dimension `p(3, m)`; it specifies how an array `val` of length  !
+! `n` is to be permuted according to the following rule:                   !
+!     p(1, k) = source index in `val` of block `k`                         !
+!     p(2, k) = destination index in the permuted array of block `k`       !
+!     p(3, k) = size of block `k`.                                         !
+! In this fashion, a permutation can be represented with much less space   !
+! when we are moving around large contiguous chunks of the array. For      !
+! example, the compressed permutation                                      !
+!     [ 1, n/2 + 1, n/2;                                                   !
+!       n/2 + 1, 1, n/2 ]                                                  !
+! represents swapping the first and second halves of an array with only 6  !
+! integers, no matter what the array size `n` is.                          !
+!     In general, so long as the average block size to move is greater     !
+! 3, this routine is faster than the usual approach.                       !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    real(dp), intent(inout) :: val(:)
+    integer, intent(in) :: p(:,:)
+    ! local variables
+    integer :: k, source, dest, num
+    real(dp) :: val_temp(size(val))
+
+    if (size(p, 2) /= 0) then
+        val_temp = val
+
+        do k = 1, size(p, 2)
+            source = p(1, k)
+            dest   = p(2, k)
+            num    = p(3, k)
+
+            val(dest : dest + num - 1) = val_temp(source : source + num - 1)
+        enddo
+    endif
+
+end subroutine rearrange_array_with_compressed_permutation
 
 
 
