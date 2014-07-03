@@ -324,14 +324,26 @@ subroutine cs_matrix_set_value(A, i, j, z)                                 !
     real(dp), intent(in) :: z
     ! local variables
     integer :: k, ind(2)
+    logical :: found
 
     ind(1) = i
     ind(2) = j
     ind = ind(A%ord)
 
+    found = .false.
+
     do k = A%g%ptr(ind(1)), A%g%ptr(ind(1) + 1) - 1
-        if (A%g%node(k) == ind(2)) A%val(k) = z
+        if (A%g%node(k) == ind(2)) then
+            A%val(k) = z
+            found = .true.
+        endif
     enddo
+
+    if (.not. found) then
+        call set_matrix_value_with_reallocation(A%g, A%val, &
+                                                    & ind(1), ind(2), z)
+        A%nnz = A%nnz + 1
+    endif
 
 end subroutine cs_matrix_set_value
 
@@ -346,14 +358,26 @@ subroutine cs_matrix_add_value(A, i, j, z)                                 !
     real(dp), intent(in) :: z
     ! local variables
     integer :: k, ind(2)
+    logical :: found
 
     ind(1) = i
     ind(2) = j
     ind = ind(A%ord)
 
+    found = .false.
+
     do k = A%g%ptr(ind(1)), A%g%ptr(ind(1) + 1) - 1
-        if (A%g%node(k) == ind(2)) A%val(k) = A%val(k) + z
+        if (A%g%node(k) == ind(2)) then
+            A%val(k) = A%val(k) + z
+            found = .true.
+        endif
     enddo
+
+    if (.not. found) then
+        call set_matrix_value_with_reallocation(A%g, A%val, &
+                                                    & ind(1), ind(2), z)
+        A%nnz = A%nnz + 1
+    endif
 
 end subroutine cs_matrix_add_value
 

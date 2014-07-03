@@ -176,6 +176,11 @@ program matrix_test_assembly                                               !
             call exit(1)
         endif
 
+        call g%destroy()
+        deallocate(g)
+        call A%destroy()
+        deallocate(A)
+
     enddo
     enddo
 

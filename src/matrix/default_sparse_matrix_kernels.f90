@@ -133,6 +133,50 @@ end subroutine get_slice_discontiguous
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
+subroutine set_matrix_value_with_reallocation(g, val, i, j, z)             !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(graph), intent(inout) :: g
+    real(dp), allocatable :: val(:)
+    integer, intent(in) :: i, j
+    real(dp), intent(in) :: z
+    ! local variables
+    real(dp), allocatable :: val_temp(:)
+    integer :: k, l, m, indx
+    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    type(graph_edge_cursor) :: cursor
+    class(graph), pointer :: h
+
+    allocate(h, mold = g)
+    call h%copy(g)
+
+    call g%add_edge(i, j)
+
+    allocate(val_temp(g%capacity))
+    indx = g%find_edge(i, j)
+    val_temp(indx) = z
+
+    cursor = g%make_cursor()
+    num_batches = (cursor%final - cursor%start)/batch_size + 1
+
+    do n = 1, num_batches
+        call g%get_edges(edges, cursor, batch_size, num_returned)
+
+        do m = 1, num_returned
+            k = edges(1, k)
+            l = edges(2, k)
+            indx = g%find_edge(k, l)
+            val_temp(indx) = val(batch_size * (n - 1) + m)
+        enddo
+    enddo
+
+    call move_alloc(from = val_temp, to = val)
+
+end subroutine set_matrix_value_with_reallocation
+
+
+
+!--------------------------------------------------------------------------!
 subroutine graph_leftperm(g,val,p)                                         !
 !--------------------------------------------------------------------------!
     ! input/output variables
@@ -211,6 +255,11 @@ subroutine assemble_matrix(g, val)                                         !
 end subroutine assemble_matrix
 
 
+
+
+!==========================================================================!
+!==== Auxiliary routines                                               ====!
+!==========================================================================!
 
 !--------------------------------------------------------------------------!
 subroutine rearrange_array_with_compressed_permutation(val, p)             !

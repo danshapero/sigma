@@ -316,7 +316,13 @@ subroutine default_matrix_set_value(A, i, j, z)                            !
 
     k = A%g%find_edge(ind(1), ind(2))
 
-    if (k /= -1) A%val(k) = z
+    if (k /= -1) then
+        A%val(k) = z
+    else
+        call set_matrix_value_with_reallocation(A%g, A%val, &
+                                                    & ind(1), ind(2), z)
+        A%nnz = A%nnz + 1
+    endif
 
 end subroutine default_matrix_set_value
 
@@ -338,7 +344,13 @@ subroutine default_matrix_add_value(A, i, j, z)                            !
 
     k = A%g%find_edge(ind(1), ind(2))
 
-    if (k /= -1) A%val(k) = A%val(k) + z
+    if (k /= -1) then
+        A%val(k) = A%val(k) + z
+    else
+        call set_matrix_value_with_reallocation(A%g, A%val, &
+                                                        & ind(1), ind(2), z)
+        A%nnz = A%nnz + 1
+    endif
 
 end subroutine default_matrix_add_value
 
