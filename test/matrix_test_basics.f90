@@ -147,8 +147,8 @@ implicit none
     allocate(ll_graph :: h)
     call h%init(nn, nn)
 
-    do i = 1, nn
-        do j = 1, nn
+    do j = 1, nn
+        do i = 1, nn
             if (B(i,j) /= 0) call h%add_edge(i, j)
         enddo
     enddo
