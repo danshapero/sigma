@@ -289,7 +289,7 @@ subroutine default_matrix_get_entries(A, edges, entries, cursor, &         !
 
     ! Get the entries from A
     entries = 0.0_dp
-    entries = A%val( indx + 1 : indx + num_returned )
+    entries(1 : num_returned) = A%val(indx + 1 : indx + num_returned)
 
 end subroutine default_matrix_get_entries
 

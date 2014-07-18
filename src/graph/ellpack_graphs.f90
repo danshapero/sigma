@@ -224,7 +224,7 @@ subroutine ellpack_get_neighbors(g,neighbors,i)                            !
     integer, intent(in) :: i
 
     neighbors = 0
-    neighbors(1:g%max_degree) = g%node(:,i)
+    neighbors(1:g%max_degree) = g%node(1:g%max_degree, i)
 
 end subroutine ellpack_get_neighbors
 
