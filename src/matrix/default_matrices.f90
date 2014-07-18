@@ -132,6 +132,9 @@ subroutine default_matrix_init(A, nrow, ncol, g, orientation)              !
     class(graph), pointer, intent(in) :: g
     character(len=3), intent(in) :: orientation
 
+    A%nrow = nrow
+    A%ncol = ncol
+
     A%g => g
 
     call A%g%add_reference()
