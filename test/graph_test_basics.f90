@@ -147,6 +147,7 @@ implicit none
         ! Initialize the graph, knowing that the maximum degree is `d`
         call g%init(nn, nn, max_degree)
 
+
         ! Check that the graph has correctly entered the capacity and number
         ! of nodes of the graph
         if (g%capacity < nn * max_degree) then
@@ -161,6 +162,7 @@ implicit none
             call exit(1)
         endif
 
+
         ! Add in the edges from the dense array
         do j = 1, nn
             do i = 1, nn
@@ -168,12 +170,14 @@ implicit none
             enddo
         enddo
 
+
         ! Check that `g` has the right number of edges now
         if (g%ne /= ne) then
             print *, '    After inserting edges, total number should be', ne
             print *, '    Number of edges found:', g%ne
             call exit(1)
         endif
+
 
         ! Check that the `connected` method works
         do j = 1, nn
@@ -189,6 +193,7 @@ implicit none
             enddo
         enddo
 
+
         ! Check that the graph's maximum degree is correct
         if (g%max_degree /= max_degree) then
             print *, '    Max degree of g should be:', max_degree
@@ -196,12 +201,22 @@ implicit none
             call exit(1)
         endif
 
+
         ! Check that converting the graph to a dense array works properly
         call g%to_dense_graph(B)
         if ( maxval(abs(A - B)) /= 0 ) then
             print *, '    Converting graph to dense array failed.'
             call exit(1)
         endif
+
+        call g%to_dense_graph(B, trans = .true.)
+        if ( maxval(abs(transpose(A) - B)) /= 0 ) then
+            print *, '    Converting graph transpose to dense array failed.'
+            call exit(1)
+        endif
+
+        call g%to_dense_graph(B)
+
 
         ! Check that finding the degree of a vertex works
         do i = 1, nn
@@ -333,6 +348,7 @@ implicit none
             print *, '    Connectivity not preserved after compression.'
             call exit(1)
         endif
+
 
         ! Check that the graph edge iterator returns no null edges.
         cursor = g%make_cursor()
