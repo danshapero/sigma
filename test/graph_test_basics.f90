@@ -229,6 +229,7 @@ implicit none
             endif
         enddo
 
+
         ! Check that finding all neighbors of a vertex works
         do i = 1, nn
             ! Get all the neighbors of vertex `i`
@@ -265,6 +266,7 @@ implicit none
         ! Convert g to a dense graph again
         call g%to_dense_graph(B)
 
+
         ! Check that iterating through the graph's edges works
         cursor = g%make_cursor()
         num_batches = (cursor%final - cursor%start) / batch_size + 1
@@ -279,6 +281,7 @@ implicit none
                 if (i /= 0 .and. j /= 0) B(i, j) = A(i, j) - 1
             enddo
         enddo
+
 
         ! If the edge iterator worked properly, `B` should be zero;
         ! see comment above for neighbors check for explanation.

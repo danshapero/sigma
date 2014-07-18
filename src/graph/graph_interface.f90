@@ -334,7 +334,7 @@ subroutine to_dense_graph(g,A,trans)                                       !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(graph), intent(in) :: g
-    integer, intent(out) :: A(g%n,g%m)
+    integer, intent(out) :: A(:,:)
     logical, intent(in), optional :: trans
     ! local variables
     integer :: k,ind(2),ord(2)

@@ -2,6 +2,7 @@ set( test_list
 type_tests.f90
 util_tests.f90
 graph_test_basics.f90
+graph_test_copy.f90
 graph_tests_1.f90
 graph_tests_2.f90
 graph_tests_3.f90
