@@ -9,7 +9,8 @@ matrix_test_basics.f90
 matrix_test_assembly.f90
 matrix_test_set_entry_with_realloc.f90
 linear_operator_test_algebra.f90
-solver_test_laplacian_1d.f90
+solver_test_diffusion_1d.f90
+solver_test_advection_diffusion_1d.f90
 #test/matrix_tests_2.f90
 #test/matrix_tests_4.f90
 #test/matrix_tests_5.f90

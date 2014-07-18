@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------!
-program solver_test_laplacian_1d                                           !
+program solver_test_advection_diffusion_1d                                 !
 !--------------------------------------------------------------------------!
 
 use sigma
@@ -12,7 +12,7 @@ implicit none
     ! sparse matrix
     class(sparse_matrix), pointer :: A
 
-    ! linear solver
+    ! linear_solver
     class(linear_solver), pointer :: solver
 
     ! vectors
@@ -21,8 +21,11 @@ implicit none
     ! integer indices
     integer :: i, nn
 
-    ! mesh spacing
-    real(dp) :: dx
+    ! position and mesh spacing
+    real(dp) :: x, dx
+
+    ! advection velocity
+    real(dp) :: c
 
     ! error of linear solver
     real(dp) :: misfit
@@ -45,10 +48,11 @@ implicit none
 
 
     !----------------------------------------------------------------------!
-    ! Create a matrix discretizing the operator - d^2 / dx^2               !
+    ! Create a matrix discretizing the operator - d^2 / dx^2 + c * d / dx  !
     !----------------------------------------------------------------------!
-    nn = 127
+    nn = 1024
     dx = 1.0_dp / (nn + 1)
+    c = 0.5_dp
 
     allocate(cs_graph :: g)
     call g%init(nn, nn, 3)
@@ -63,13 +67,17 @@ implicit none
 
     do i = 1, nn - 1
         call A%set_value(i, i,     +2.0_dp)
-        call A%set_value(i, i + 1, -1.0_dp)
-        call A%set_value(i + 1, i, -1.0_dp)
+        call A%set_value(i, i + 1, -1.0_dp + c * dx/2)
+        call A%set_value(i + 1, i, -1.0_dp - c * dx/2)
     enddo
     call A%set_value(nn, nn, 2.0_dp)
 
+    call A%assemble()
 
-    if (verbose) print *, 'Done creating matrix for 1d Laplace operator'
+
+    if (verbose) then
+        print *, 'Done creating matrix for 1d advection/diffusion operator'
+    endif
 
 
 
@@ -79,10 +87,11 @@ implicit none
 
     allocate( u(nn), v(nn), f(nn) )
     u = 0.0_dp
-    f = 2.0 * dx**2
+    f = 2.0_dp * dx**2
 
     do i = 1, nn
-        v(i) = i * dx * (1.0_dp - i * dx)
+        x = i * dx
+        v(i) = 2.0_dp * ( x - (exp(c * x) - 1) / (exp(c) - 1) )/c
     enddo
 
     if (verbose) print *, 'Done creating reference solution'
@@ -90,10 +99,10 @@ implicit none
 
 
     !----------------------------------------------------------------------!
-    ! Test that the solver gives the correct answer                        !
+    ! Test that the linear solver gives the correct answer                 !
     !----------------------------------------------------------------------!
 
-    solver => cg(1.d-16)
+    solver => bicgstab(1.0d-12)
     call solver%setup(A)
 
     if (verbose) print *, 'Done setting up linear solver'
@@ -104,9 +113,9 @@ implicit none
 
     if (verbose) print *, 'Done solving system'
 
-    if ( misfit > 1.0e-14 ) then
-        print *, 'CG solver failed.'
-        print *, 'Should have error <', 1.0e-14
+    if ( misfit > 1.0e-8 ) then
+        print *, 'BiCG-Stab solver failed.'
+        print *, 'Should have error <', 1.0e-8
         print *, 'Error found:', misfit
         call exit(1)
     endif
@@ -119,5 +128,8 @@ implicit none
     call A%destroy()
     call solver%destroy()
 
+    deallocate(g, A, solver)
 
-end program solver_test_laplacian_1d
+
+
+end program solver_test_advection_diffusion_1d
