@@ -156,17 +156,20 @@ subroutine set_matrix_value_with_reallocation(g, val, i, j, z)             !
     indx = g%find_edge(i, j)
     val_temp(indx) = z
 
-    cursor = g%make_cursor()
+    cursor = h%make_cursor()
     num_batches = (cursor%final - cursor%start)/batch_size + 1
 
     do n = 1, num_batches
-        call g%get_edges(edges, cursor, batch_size, num_returned)
+        call h%get_edges(edges, cursor, batch_size, num_returned)
 
         do m = 1, num_returned
-            k = edges(1, k)
-            l = edges(2, k)
-            indx = g%find_edge(k, l)
-            val_temp(indx) = val(batch_size * (n - 1) + m)
+            k = edges(1, m)
+            l = edges(2, m)
+
+            if (k /= 0 .and. l /= 0) then
+                indx = g%find_edge(k, l)
+                val_temp(indx) = val(batch_size * (n - 1) + m)
+            endif
         enddo
     enddo
 
