@@ -21,7 +21,7 @@ module sparse_matrix_interface                                             !
 
 use types, only: dp
 use linear_operator_interface
-use graph_interface
+use graph_interface, only: graph_edge_cursor, batch_size
 
 implicit none
 
