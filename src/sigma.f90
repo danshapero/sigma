@@ -33,7 +33,6 @@ use jacobi_solvers
 ! Use other auxiliary modules
 use eigensolver
 use permutations
-use conversions
 use vectors
 
 

@@ -17,7 +17,6 @@ solver_test_jacobi.f90
 #test/wrapper_tests.c
 )
 
-#file(GLOB test_list RELATIVE ${PROJECT_SOURCE_DIR}/test ${PROJECT_SOURCE_DIR}/test/*.f90)
 
 foreach(test ${test_list})
     string(REPLACE ".f90" "" test ${test})

@@ -12,6 +12,10 @@ interface choose_graph_type
     module procedure choose_graph_type_by_int, choose_graph_type_by_name
 end interface
 
+interface convert_graph_type
+    module procedure convert_graph_type_by_int, convert_graph_type_by_name
+end interface
+
 private :: graph_product_optimized
 
 contains
@@ -20,7 +24,7 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine choose_graph_type_by_name(g,frmt)                               !
+subroutine choose_graph_type_by_name(g, frmt)                              !
 !--------------------------------------------------------------------------!
 !     Take in a polymorphic graph pointer and allocate to a graph type     !
 ! according to a string specifying the name of the desried storage format. !
@@ -30,8 +34,8 @@ subroutine choose_graph_type_by_name(g,frmt)                               !
 
     nullify(g)
 
-    select case(trim(frmt))
-        case("ll","lol","list oflists")
+    select case( trim(frmt) )
+        case("ll", "lol", "list oflists")
             allocate(ll_graph::g)
 
         case("coo","coordinate")
@@ -49,7 +53,7 @@ end subroutine choose_graph_type_by_name
 
 
 !--------------------------------------------------------------------------!
-subroutine choose_graph_type_by_int(g,t)                                   !
+subroutine choose_graph_type_by_int(g, t)                                  !
 !--------------------------------------------------------------------------!
 !     Take in a polymorphic graph pointer and allocate it to a graph type  !
 ! according to an integer input:                                           !
@@ -80,6 +84,50 @@ subroutine choose_graph_type_by_int(g,t)                                   !
     end select
 
 end subroutine choose_graph_type_by_int
+
+
+
+!--------------------------------------------------------------------------!
+subroutine convert_graph_type_by_name(g, frmt)                             !
+!--------------------------------------------------------------------------!
+    ! input/output variables 
+    class(graph), pointer, intent(inout) :: g
+    character(len=*), intent(in) :: frmt
+    ! local variables
+    class(graph), pointer :: h
+
+    h => g
+    nullify(g)
+
+    call choose_graph_type(g, frmt)
+    call g%copy(h)
+
+    call h%destroy()
+    deallocate(h)
+
+end subroutine convert_graph_type_by_name
+
+
+
+!--------------------------------------------------------------------------!
+subroutine convert_graph_type_by_int(g, t)                                 !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(graph), pointer, intent(inout) :: g
+    integer, intent(in) :: t
+    ! local variables
+    class(graph), pointer :: h
+
+    h => g
+    nullify(g)
+
+    call choose_graph_type(g, t)
+    call g%copy(h)
+
+    call h%destroy()
+    deallocate(h)
+
+end subroutine convert_graph_type_by_int
 
 
 
