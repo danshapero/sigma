@@ -41,9 +41,14 @@ implicit none
     !----------------------------------------------------------------------!
     verbose = .false.
     call getarg(1,arg)
-    if (trim(arg)=="-v" .or. trim(arg)=="--verbose") then
-        verbose = .true.
-    endif
+    select case(trim(arg))
+        case("-v")
+            verbose = .true.
+        case("-V")
+            verbose = .true.
+        case("--verbose")
+            verbose = .true.
+    end select
 
 
 
