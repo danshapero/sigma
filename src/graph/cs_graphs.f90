@@ -69,12 +69,9 @@ contains
 !--------------------------------------------------------------------------!
 subroutine cs_graph_init(g, n, m)                                          !
 !--------------------------------------------------------------------------!
-    ! input/output variables
     class(cs_graph), intent(inout) :: g
     integer, intent(in) :: n
     integer, intent(in), optional :: m
-    ! local variables
-    integer :: k, ne
 
     ! Set the number of (left-)nodes in the graph and allocate the node
     ! pointer array ptr
@@ -88,7 +85,6 @@ subroutine cs_graph_init(g, n, m)                                          !
     else
         g%m = n
     endif
-
 
     ! Allocate the node array. If we're making an empty CS graph, that
     ! array has size 0.

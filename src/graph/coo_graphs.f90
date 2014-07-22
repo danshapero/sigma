@@ -62,12 +62,9 @@ contains
 !--------------------------------------------------------------------------!
 subroutine coo_graph_init(g, n, m)                                         !
 !--------------------------------------------------------------------------!
-    ! input/output variables
     class(coo_graph), intent(inout) :: g
     integer, intent(in) :: n
     integer, intent(in), optional :: m
-    ! local variables
-    integer :: ne
 
     g%n = n
 
@@ -224,7 +221,7 @@ subroutine coo_get_neighbors(g, neighbors, i)                              !
     integer, intent(out) :: neighbors(:)
     integer, intent(in) :: i
     ! local variables
-    integer :: j, k, l, next
+    integer :: j, k, l
     logical :: found
     type(dynamic_array) :: nbrs
 

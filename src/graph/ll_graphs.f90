@@ -71,7 +71,7 @@ subroutine ll_graph_init(g, n, m)                                          !
     integer, intent(in) :: n
     integer, intent(in), optional :: m
     ! local variables
-    integer :: k, ne
+    integer :: k
 
     g%n = n
     allocate(g%lists(n))
@@ -364,7 +364,7 @@ subroutine ll_delete_edge(g, i, j)                                         !
 !--------------------------------------------------------------------------!
     class(ll_graph), intent(inout) :: g
     integer, intent(in) :: i, j
-    integer :: k, jt, degree, cap
+    integer :: k, jt, degree
 
     if (g%connected(i, j)) then
         ! Record the degree of vertex i and capacity
