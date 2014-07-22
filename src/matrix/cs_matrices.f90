@@ -37,9 +37,8 @@ type, extends(sparse_matrix) :: cs_matrix                                  !
     procedure(permute_kernel), pointer, nopass, private :: left_permute_impl
     procedure(permute_kernel), pointer, nopass, private :: right_permute_impl
 
-    procedure(cs_matvec_add_kernel), pointer, private :: matvec_add_impl
-    procedure(cs_matvec_add_kernel), pointer, private :: matvec_t_add_impl
-
+    procedure(cs_matvec_add_ifc), pointer, private :: matvec_add_impl
+    procedure(cs_matvec_add_ifc), pointer, private :: matvec_t_add_impl
 contains
     !--------------
     ! Constructors
@@ -71,8 +70,6 @@ contains
     procedure :: zero => cs_matrix_zero
     procedure :: left_permute => cs_matrix_left_permute
     procedure :: right_permute => cs_matrix_right_permute
-    procedure :: assemble => cs_matrix_assemble
-    procedure :: disassemble => cs_matrix_disassemble
 
 
     !------------------------------
@@ -94,12 +91,12 @@ end type cs_matrix
 !--------------------------------------------------------------------------!
 abstract interface                                                         !
 !--------------------------------------------------------------------------!
-    subroutine cs_matvec_add_kernel(A, x, y)
+    subroutine cs_matvec_add_ifc(A, x, y)
         import :: cs_matrix, dp
         class(cs_matrix), intent(in) :: A
         real(dp), intent(in)    :: x(:)
         real(dp), intent(inout) :: y(:)
-    end subroutine cs_matvec_add_kernel
+    end subroutine cs_matvec_add_ifc
 end interface
 
 
@@ -155,7 +152,7 @@ subroutine cs_matrix_init(A, nrow, ncol, g, orientation)                   !
     call A%g%add_reference()
 
     A%nnz = A%g%ne
-    allocate( A%val(A%g%capacity) )
+    allocate( A%val(A%g%ne) )
     A%val = 0.0_dp
 
     ! Set the `ord` attribute for the matrix, so that the indices are
@@ -170,6 +167,9 @@ subroutine cs_matrix_init(A, nrow, ncol, g, orientation)                   !
 
             A%left_permute_impl  => graph_leftperm
             A%right_permute_impl => graph_rightperm
+
+            A%matvec_add_impl   => csr_matvec_add
+            A%matvec_t_add_impl => csc_matvec_add
         case('col')
             A%ord = [2, 1]
 
@@ -178,10 +178,10 @@ subroutine cs_matrix_init(A, nrow, ncol, g, orientation)                   !
 
             A%left_permute_impl  => graph_rightperm
             A%right_permute_impl => graph_leftperm
-    end select
 
-    A%matvec_add_impl   => sparse_matrix_matvec_add
-    A%matvec_t_add_impl => sparse_matrix_matvec_t_add
+            A%matvec_add_impl   => csc_matvec_add
+            A%matvec_t_add_impl => csr_matvec_add
+    end select
 
 end subroutine cs_matrix_init
 
@@ -418,48 +418,6 @@ subroutine cs_matrix_right_permute(A, p)                                   !
     call A%right_permute_impl(A%g, A%val, p)
 
 end subroutine cs_matrix_right_permute
-
-
-
-!--------------------------------------------------------------------------!
-subroutine cs_matrix_assemble(A)                                           !
-!--------------------------------------------------------------------------!
-    class(cs_matrix), intent(inout) :: A
-
-    ! Defer to a routine in default_sparse_matrix_kernels
-    call assemble_matrix(A%g, A%val)
-
-    ! Re-assign the matvec function pointers to the optimized routines
-    select case(A%ord(1))
-        case(1)
-            A%matvec_add_impl   => csr_matvec_add
-            A%matvec_t_add_impl => csc_matvec_add
-        case(2)
-            A%matvec_add_impl   => csc_matvec_add
-            A%matvec_t_add_impl => csr_matvec_add
-    end select
-
-    A%assembled = .true.
-
-end subroutine cs_matrix_assemble
-
-
-
-!--------------------------------------------------------------------------!
-subroutine cs_matrix_disassemble(A)                                        !
-!--------------------------------------------------------------------------!
-    class(cs_matrix), intent(inout) :: A
-
-    ! Decompress the graph
-    call A%g%decompress()
-
-    ! Re-assign the matvec function pointers to the slow but safe routines
-    A%matvec_add_impl   => sparse_matrix_matvec_add
-    A%matvec_t_add_impl => sparse_matrix_matvec_t_add
-
-    A%assembled = .false.
-
-end subroutine cs_matrix_disassemble
 
 
 

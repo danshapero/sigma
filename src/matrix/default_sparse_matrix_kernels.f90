@@ -152,12 +152,12 @@ subroutine set_matrix_value_with_reallocation(g, val, i, j, z)             !
 
     call g%add_edge(i, j)
 
-    allocate(val_temp(g%capacity))
+    allocate(val_temp(g%ne))
     indx = g%find_edge(i, j)
     val_temp(indx) = z
 
     cursor = h%make_cursor()
-    num_batches = (cursor%final - cursor%start)/batch_size + 1
+    num_batches = (cursor%final - cursor%start) / batch_size + 1
 
     do n = 1, num_batches
         call h%get_edges(edges, cursor, batch_size, num_returned)
@@ -166,12 +166,12 @@ subroutine set_matrix_value_with_reallocation(g, val, i, j, z)             !
             k = edges(1, m)
             l = edges(2, m)
 
-            if (k /= 0 .and. l /= 0) then
-                indx = g%find_edge(k, l)
-                val_temp(indx) = val(batch_size * (n - 1) + m)
-            endif
+            indx = g%find_edge(k, l)
+            val_temp(indx) = val(batch_size * (n - 1) + m)
         enddo
     enddo
+
+    deallocate(h)
 
     call move_alloc(from = val_temp, to = val)
 
@@ -180,7 +180,7 @@ end subroutine set_matrix_value_with_reallocation
 
 
 !--------------------------------------------------------------------------!
-subroutine graph_leftperm(g,val,p)                                         !
+subroutine graph_leftperm(g, val, p)                                       !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(graph), intent(inout) :: g
@@ -224,38 +224,6 @@ subroutine graph_rightperm(g, val, p)                                      !
     deallocate(edge_p)
 
 end subroutine graph_rightperm
-
-
-
-!--------------------------------------------------------------------------!
-subroutine assemble_matrix(g, val)                                         !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(graph) :: g
-    real(dp), allocatable :: val(:)
-    ! local variables
-    integer :: k, source, dest, num
-    integer, allocatable :: edge_p(:,:)
-    real(dp), allocatable :: val_temp(:)
-
-    call g%compress(edge_p)
-
-    if (size(edge_p, 2) /= 0) then
-        ! Make a temporary array for the matrix entries
-        allocate( val_temp(g%capacity) )
-
-        do k = 1, size(edge_p, 2)
-            source = edge_p(1, k)
-            dest   = edge_p(2, k)
-            num    = edge_p(3, k)
-
-            val_temp(dest : dest + num - 1) = val(source : source + num - 1)
-        enddo
-
-        call move_alloc(from = val_temp, to = val)
-    endif
-
-end subroutine assemble_matrix
 
 
 

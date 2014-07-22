@@ -37,8 +37,6 @@ type, extends(linear_operator), abstract :: sparse_matrix                  !
     ! ordering of the matrix -- [1, 2] if row-major, [2, 1] if column-major
     integer :: ord(2)
 
-    ! assembled state of the matrix
-    logical :: assembled = .false.
 contains
     !--------------
     ! Constructors
@@ -93,15 +91,6 @@ contains
 
     procedure(sparse_mat_permute_ifc), deferred :: right_permute
     ! Permute the columns of a matrix
-
-    procedure(sparse_mat_assemble_ifc), deferred :: assemble
-    ! Compress the connectivity structure of the matrix. The underlying
-    ! graph becomes immutable, so we can only alter matrix entries (i, j)
-    ! that are already connected.
-    ! However, assembled matrices can perform matvec faster.
-
-    procedure(sparse_mat_assemble_ifc), deferred :: disassemble
-    ! Reverse the assemble operation
 
 
     !------------------------------
@@ -192,11 +181,6 @@ abstract interface                                                         !
         integer, intent(in) :: p(:)
     end subroutine sparse_mat_permute_ifc
 
-    subroutine sparse_mat_assemble_ifc(A)
-        import :: sparse_matrix
-        class(sparse_matrix), intent(inout) :: A
-    end subroutine sparse_mat_assemble_ifc
-
     subroutine sparse_mat_destroy_ifc(A)
         import :: sparse_matrix
         class(sparse_matrix), intent(inout) :: A
@@ -230,7 +214,7 @@ subroutine sparse_matrix_matvec_add(A, x, y)                               !
     type(graph_edge_cursor) :: cursor
 
     cursor = A%make_cursor()
-    num_batches = (cursor%final - cursor%start)/batch_size + 1
+    num_batches = (cursor%final - cursor%start) / batch_size + 1
 
     do n = 1, num_batches
         call A%get_entries(edges, vals, cursor, batch_size, num_returned)
@@ -239,7 +223,7 @@ subroutine sparse_matrix_matvec_add(A, x, y)                               !
             i = edges(1, k)
             j = edges(2, k)
 
-            if (i /= 0 .and. j /= 0) y(i) = y(i) + vals(k) * x(j)
+            y(i) = y(i) + vals(k) * x(j)
         enddo
     enddo
 
@@ -261,7 +245,7 @@ subroutine sparse_matrix_matvec_t_add(A, x, y)                             !
     type(graph_edge_cursor) :: cursor
 
     cursor = A%make_cursor()
-    num_batches = (cursor%final - cursor%start)/batch_size + 1
+    num_batches = (cursor%final - cursor%start) / batch_size + 1
 
     do n = 1, num_batches
         call A%get_entries(edges, vals, cursor, batch_size, num_returned)
@@ -270,9 +254,10 @@ subroutine sparse_matrix_matvec_t_add(A, x, y)                             !
             i = edges(2, k)
             j = edges(1, k)
 
-            if (i /= 0 .and. j /= 0) y(i) = y(i) + vals(k) * x(j)
+            y(i) = y(i) + vals(k) * x(j)
         enddo
     enddo
+
 end subroutine sparse_matrix_matvec_t_add
 
 
@@ -308,7 +293,7 @@ subroutine sparse_matrix_to_dense_matrix(A, B, trans)                      !
     ! Get a cursor for iterating through the matrix entries and find how
     ! many batches it will take
     cursor = A%make_cursor()
-    num_batches = (cursor%final - cursor%start)/batch_size + 1
+    num_batches = (cursor%final - cursor%start) / batch_size + 1
 
     do n = 1, num_batches
         ! Get a batch of entries from A
@@ -319,8 +304,15 @@ subroutine sparse_matrix_to_dense_matrix(A, B, trans)                      !
             i = edges(ord(1), k)
             j = edges(ord(2), k)
 
-            ! Set the corresponding entry in the output matrix B
-            if (i/=0 .and. j/=0) B(i,j) = vals(k)
+            ! Set the corresponding entry in the output matrix `B`
+            ! NOTE: In some graph formats (e.g. COO), it is permitted to
+            ! have more than one copy of the same edge stored in the graph.
+            ! With that in mind, we have to *add* contributions to each
+            ! entry of `B`, not set them. Depending on the order in which
+            ! the entries were added to `B`, we could set it to the true
+            ! value and then re-set it to zero later. By adding up all
+            ! contributions, we avoid that possibility.
+            B(i, j) = B(i, j) + vals(k)
         enddo
     enddo
 
@@ -364,7 +356,7 @@ subroutine sparse_matrix_to_file(A, filename, trans)                       !
     ! Get a cursor for iterating through the matrix entries and find how
     ! many batches it will take
     cursor = A%make_cursor()
-    num_batches = (cursor%final - cursor%current)/batch_size + 1
+    num_batches = (cursor%final - cursor%current) / batch_size + 1
 
     do n=1,num_batches
         ! Get a batch of entries from A
@@ -376,7 +368,7 @@ subroutine sparse_matrix_to_file(A, filename, trans)                       !
             j = edges(ord(2), k)
 
             ! Write out the edge and the corresponding matrix entry
-            if (i/=0 .and. j/=0) write(10, *) i, j, vals(k)
+            write(10, *) i, j, vals(k)
         enddo
     enddo
 

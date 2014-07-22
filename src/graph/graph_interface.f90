@@ -20,28 +20,17 @@ implicit none
 !--------------------------------------------------------------------------!
 type, abstract :: graph                                                    !
 !--------------------------------------------------------------------------!
-    integer :: n,m,ne,capacity,max_degree,reference_count = 0
-    logical :: mutable
+    integer :: n, m, ne, max_degree, reference_count = 0
 contains
     !--------------
     ! Constructors
     !--------------
-    procedure(init_graph_const_deg_ifc), deferred :: init_const_degree
-    ! Initialize a graph based on the number of left- and right-
-    ! vertices, and optionally the maximum number of neighbors for each
-    ! vertex.
-
-    procedure(init_graph_var_deg_ifc), deferred :: init_variable_degree
-    ! Initialize a graph based on the number of left- and right- vertices
-    ! and the number of neighbors each vertex can have, which may be
-    ! different from one vertex to the next.
+    procedure(init_graph_ifc), deferred :: init
+    ! Initialize an empty graph
 
     procedure(copy_graph_ifc), deferred :: copy
     ! Copy the connectivity structure of another graph, which may well
     ! be of a different type.
-
-    generic :: init => init_const_degree, init_variable_degree, copy
-    ! Overload all the previous constructors
 
 
     !-----------
@@ -83,14 +72,9 @@ contains
     !----------
     procedure(change_edge_ifc), deferred :: add_edge
     ! Add in a new edge if it does not already exist.
-    ! The behavior of this procedure will change depending on the graph's
-    ! mutability state; if the graph has been compressed, it will be
-    ! rendered immutable, and attemting to add an edge will instead
-    ! yield an error.
 
     procedure(change_edge_ifc), deferred :: delete_edge
     ! Delete an edge if it does exist.
-    ! Will result in an error if invoked when the graph is immutable.
 
     procedure(permute_graph_ifc), deferred :: left_permute
     ! Apply a permutation to the graph's left-vertices.
@@ -104,18 +88,10 @@ contains
     ! Apply a permutation to the graph's right-vertices.
     ! Optionally return compact array describing edge permutation.
 
-    procedure(compress_graph_ifc), deferred :: compress
-    ! Compress the graph. This eliminates any extra space which has been
-    ! pre-allocated for adding edges. Reduces memory usage and branching
-    ! but renders the graph immutable.
-
-    procedure :: decompress
-    ! Reverses the compress operation and makes the graph mutable, but
-    ! there will be additional branching due to null edges.
-
     procedure :: add_reference
     ! Whenever another object, such as a matrix, points to a graph, we
-    ! need to increment the graph's reference counter. If the reference
+    ! need to increment the graph's reference counter.
+    !TODO If the reference
     ! counter goes above 2, the graph needs to be made immutable.
 
     procedure :: remove_reference
@@ -158,52 +134,45 @@ end type graph_edge_cursor
 !--------------------------------------------------------------------------!
 abstract interface                                                         !
 !--------------------------------------------------------------------------!
-    subroutine init_graph_const_deg_ifc(g,n,m,degree)
+    subroutine init_graph_ifc(g, n, m)
         import :: graph
         class(graph), intent(inout) :: g
         integer, intent(in) :: n
-        integer, intent(in), optional :: m, degree
-    end subroutine init_graph_const_deg_ifc
-
-    subroutine init_graph_var_deg_ifc(g,n,m,degrees)
-        import :: graph
-        class(graph), intent(inout) :: g
-        integer, intent(in) :: n, degrees(:)
         integer, intent(in), optional :: m
-    end subroutine init_graph_var_deg_ifc
+    end subroutine init_graph_ifc
 
-    subroutine copy_graph_ifc(g,h,trans)
+    subroutine copy_graph_ifc(g, h, trans)
         import :: graph
         class(graph), intent(inout) :: g
         class(graph), intent(in)    :: h
         logical, intent(in), optional :: trans
     end subroutine copy_graph_ifc
 
-    function degree_ifc(g,i) result(d)
+    function degree_ifc(g, i) result(d)
         import :: graph
         class(graph), intent(in) :: g
         integer, intent(in) :: i
         integer :: d
     end function degree_ifc
 
-    subroutine get_neighbors_ifc(g,neighbors,i)
+    subroutine get_neighbors_ifc(g, neighbors, i)
         import :: graph
         class(graph), intent(in) :: g
         integer, intent(in) :: i
         integer, intent(out) :: neighbors(:)
     end subroutine get_neighbors_ifc
 
-    function connected_ifc(g,i,j)
+    function connected_ifc(g, i, j)
         import :: graph
         class(graph), intent(in) :: g
-        integer, intent(in) :: i,j
+        integer, intent(in) :: i, j
         logical :: connected_ifc
     end function connected_ifc
 
-    function find_edge_ifc(g,i,j)
+    function find_edge_ifc(g, i, j)
         import :: graph
         class(graph), intent(in) :: g
-        integer, intent(in) :: i,j
+        integer, intent(in) :: i, j
         integer :: find_edge_ifc
     end function find_edge_ifc
 
@@ -213,40 +182,34 @@ abstract interface                                                         !
         type(graph_edge_cursor) :: cursor
     end function make_cursor_ifc
 
-    subroutine get_edges_ifc(g,edges,cursor,num_edges,num_returned)
+    subroutine get_edges_ifc(g, edges, cursor, num_edges, num_returned)
         import :: graph, graph_edge_cursor
         class(graph), intent(in) :: g
-        integer, intent(out) :: edges(2,num_edges)
+        integer, intent(out) :: edges(2, num_edges)
         type(graph_edge_cursor), intent(inout) :: cursor
         integer, intent(in) :: num_edges
         integer, intent(out) :: num_returned
     end subroutine get_edges_ifc
 
-    subroutine change_edge_ifc(g,i,j)
+    subroutine change_edge_ifc(g, i, j)
         import :: graph
         class(graph), intent(inout) :: g
-        integer, intent(in) :: i,j
+        integer, intent(in) :: i, j
     end subroutine change_edge_ifc
 
-    subroutine permute_graph_ifc(g,p,edge_p)
+    subroutine permute_graph_ifc(g, p, edge_p)
         import :: graph
         class(graph), intent(inout) :: g
         integer, intent(in) :: p(:)
         integer, allocatable, intent(out), optional :: edge_p(:,:)
     end subroutine permute_graph_ifc
 
-    subroutine compress_graph_ifc(g,edge_p)
-        import :: graph
-        class(graph), intent(inout) :: g
-        integer, allocatable, intent(inout), optional :: edge_p(:,:)
-    end subroutine compress_graph_ifc
-
     subroutine destroy_graph_ifc(g)
         import :: graph
         class(graph), intent(inout) :: g
     end subroutine destroy_graph_ifc
 
-    subroutine dump_edges_ifc(g,edges)
+    subroutine dump_edges_ifc(g, edges)
         import :: graph
         class(graph), intent(in) :: g
         integer, intent(out) :: edges(:,:)
@@ -296,23 +259,12 @@ end function get_neighbors_is_fast
 
 
 !--------------------------------------------------------------------------!
-subroutine decompress(g)                                                   !
-!--------------------------------------------------------------------------!
-    class(graph), intent(inout) :: g
-
-    g%mutable = .true.
-
-end subroutine decompress
-
-
-
-!--------------------------------------------------------------------------!
 subroutine add_reference(g)                                                !
 !--------------------------------------------------------------------------!
     class(graph), intent(inout) :: g
 
-    g%reference_count = g%reference_count+1
-    if (g%reference_count > 1) g%mutable = .false.
+    g%reference_count = g%reference_count + 1
+    !TODO reimplement: if (g%reference_count > 1) g%mutable = .false.
 
 end subroutine add_reference
 
@@ -323,7 +275,7 @@ subroutine remove_reference(g)                                             !
 !--------------------------------------------------------------------------!
     class(graph), intent(inout) :: g
 
-    g%reference_count = g%reference_count-1
+    g%reference_count = g%reference_count - 1
 
 end subroutine remove_reference
 
@@ -337,7 +289,7 @@ subroutine to_dense_graph(g,A,trans)                                       !
     integer, intent(out) :: A(:,:)
     logical, intent(in), optional :: trans
     ! local variables
-    integer :: k,ind(2),ord(2)
+    integer :: i, j, k, ord(2)
     integer :: n, num_batches, num_returned, edges(2,batch_size)
     type(graph_edge_cursor) :: cursor
 
@@ -350,16 +302,17 @@ subroutine to_dense_graph(g,A,trans)                                       !
     A = 0
 
     cursor = g%make_cursor()
-    num_batches = (cursor%final-cursor%start)/batch_size+1
+    num_batches = (cursor%final - cursor%start) / batch_size + 1
 
-    ! Iterate through all the edges (i,j) of g
-    do n=1,num_batches
-        call g%get_edges(edges,cursor,batch_size,num_returned)
+    ! Iterate through all the edges (i, j) of g
+    do n = 1, num_batches
+        call g%get_edges(edges, cursor, batch_size, num_returned)
 
-        do k=1,num_returned
-            ind = edges(ord,k)
+        do k = 1, num_returned
+            i = edges(ord(1), k)
+            j = edges(ord(2), k)
 
-            if (ind(1)/=0 .and. ind(2)/=0) A(ind(1),ind(2)) = 1
+            A(i, j) = 1
         enddo
     enddo
 
@@ -374,21 +327,22 @@ subroutine write_graph_to_file(g,filename)                                 !
     class(graph), intent(in) :: g
     character(len=*), intent(in) :: filename
     ! local variables
-    integer :: i,j,k,n
+    integer :: i, j, k
     type(graph_edge_cursor) :: cursor
-    integer :: num_batches, num_returned, edges(2,batch_size)
+    integer :: n, num_batches, num_returned, edges(2, batch_size)
 
+    !TODO make sure this unit number is safe
     open(unit=10,file=trim(filename))
-    write(10,*) g%n, g%m, g%capacity
+    write(10,*) g%n, g%m, g%ne
 
     cursor = g%make_cursor()
-    num_batches = (cursor%final-cursor%start)/batch_size+1
+    num_batches = (cursor%final - cursor%start) / batch_size + 1
     do n=1,num_batches
-        call g%get_edges(edges,cursor,batch_size,num_returned)
+        call g%get_edges(edges, cursor, batch_size, num_returned)
 
-        do k=1,num_returned
-            i = edges(1,k)
-            j = edges(2,k)
+        do k = 1, num_returned
+            i = edges(1, k)
+            j = edges(2, k)
 
             write(10,*) i, j
         enddo
