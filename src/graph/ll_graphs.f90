@@ -9,7 +9,11 @@ implicit none
 !--------------------------------------------------------------------------!
 type, extends(graph) :: ll_graph                                           !
 !--------------------------------------------------------------------------!
+    ! List of `n` lists, each of which stores the neighbors of vertex `i`
     type(dynamic_array), allocatable :: lists(:)
+
+    ! Maximum degree of all vertices of the graph
+    integer :: max_d
 contains
     !--------------
     ! Constructors
@@ -19,6 +23,7 @@ contains
     !-----------
     ! Accessors
     procedure :: degree => ll_degree
+    procedure :: max_degree => ll_max_degree
     procedure :: get_neighbors => ll_get_neighbors
     procedure :: connected => ll_connected
     procedure :: find_edge => ll_find_edge
@@ -85,7 +90,7 @@ subroutine ll_graph_init(g, n, m)                                          !
 
     ! The total number of edges and max degree at initialization is zero
     g%ne = 0
-    g%max_degree = 0
+    g%max_d = 0
 
 end subroutine ll_graph_init
 
@@ -156,6 +161,18 @@ function ll_degree(g, i) result(d)                                         !
     d = g%lists(i)%length
 
 end function ll_degree
+
+
+
+!--------------------------------------------------------------------------!
+function ll_max_degree(g) result(d)                                        !
+!--------------------------------------------------------------------------!
+    class(ll_graph), intent(in) :: g
+    integer :: d
+
+    d = g%max_d
+
+end function ll_max_degree
 
 
 
@@ -295,7 +312,8 @@ subroutine ll_get_edges(g, edges, cursor, num_edges, num_returned)         !
         !! Check that this is right
         !cursor%indx = mod(cursor%indx+num_from_this_row,g%lists(i)%length)
 
-        ! If we returned all nodes from this row, increment the row
+        ! If we returned all nodes neighboring this vertex, increment
+        ! the vertex
         !TODO replace this with bit-shifting magic
         if (num_from_this_row == g%lists(i)%length - cursor%indx) then
             i = i + 1
@@ -325,14 +343,13 @@ subroutine ll_add_edge(g, i, j)                                            !
 !--------------------------------------------------------------------------!
     class(ll_graph), intent(inout) :: g
     integer, intent(in) :: i, j
-    integer :: cap
 
     if (.not. g%connected(i, j)) then
         ! Push the new neighbor node j onto the list of i's neighbors
         call g%lists(i)%push(j)
 
         ! Change the graph's max degree if need be
-        g%max_degree = max(g%max_degree, g%lists(i)%length)
+        g%max_d = max(g%max_d, g%lists(i)%length)
 
         ! Increment the number of edges and graph capacity
         g%ne = g%ne + 1
@@ -369,10 +386,10 @@ subroutine ll_delete_edge(g, i, j)                                         !
         ! If the degree of vertex i was the max degree of the graph,
         ! check that the max degree of the graph hasn't decreased.
         !!Make this a guaranteed O(1) operation somehow
-        if (degree == g%max_degree) then
-            g%max_degree = 0
+        if (degree == g%max_d) then
+            g%max_d = 0
             do k=1, g%n
-                g%max_degree = max(g%max_degree, g%lists(k)%length)
+                g%max_d = max(g%max_d, g%lists(k)%length)
             enddo
         endif
 
@@ -489,7 +506,7 @@ subroutine ll_destroy(g)                                                   !
     g%n = 0
     g%m = 0
     g%ne = 0
-    g%max_degree = 0
+    g%max_d = 0
 
 end subroutine ll_destroy
 

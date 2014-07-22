@@ -86,7 +86,7 @@ implicit none
         enddo
     enddo
 
-    d = g%max_degree
+    d = g%max_degree()
     allocate(nodes(d))
 
     if (verbose) then

@@ -63,8 +63,6 @@ implicit none
         call h%add_edge(j, i)
     enddo
 
-    call h%compress()
-
 
 
     !----------------------------------------------------------------------!

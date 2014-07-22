@@ -145,15 +145,14 @@ implicit none
         call choose_graph_type(g, frmt)
 
         ! Initialize the graph, knowing that the maximum degree is `d`
-        call g%init(nn, nn, max_degree)
+        call g%init(nn, nn)
 
 
-        ! Check that the graph has correctly entered the capacity and number
-        ! of nodes of the graph
-        if (g%capacity < nn * max_degree) then
-            print *, '    Graph capacity should be >', nn * max_degree
-            print *, '    Capacity found:', g%capacity
-            call exit(1)
+        ! Check that the graph has the right number of nodes and edges
+        if (g%n /= nn) then
+            print *, '    Initializing graph failed, number of nodes'
+            print *, '    should be:   ', nn
+            print *, '    Number found:', g%n
         endif
 
         if (g%ne /= 0) then
@@ -166,7 +165,9 @@ implicit none
         ! Add in the edges from the dense array
         do j = 1, nn
             do i = 1, nn
-                if (A(i, j) /= 0) call g%add_edge(i, j)
+                if (A(i, j) /= 0) then
+                    call g%add_edge(i, j)
+                endif
             enddo
         enddo
 
@@ -195,9 +196,9 @@ implicit none
 
 
         ! Check that the graph's maximum degree is correct
-        if (g%max_degree /= max_degree) then
+        if (g%max_degree() /= max_degree) then
             print *, '    Max degree of g should be:', max_degree
-            print *, '    Max degree found:', g%max_degree
+            print *, '    Max degree found:', g%max_degree()
             call exit(1)
         endif
 
@@ -278,7 +279,14 @@ implicit none
                 i = edges(1, k)
                 j = edges(2, k)
 
-                if (i /= 0 .and. j /= 0) B(i, j) = A(i, j) - 1
+                ! Check that the edge returned is not null
+                if (i == 0 .or. j == 0) then
+                    print *, '    Graph edge iterator failed; edge #', k
+                    print *, '    returned a 0 vertex.'
+                    call exit(1)
+                endif
+
+                B(i, j) = A(i, j) - 1
             enddo
         enddo
 
@@ -340,37 +348,6 @@ implicit none
             print *, '    Deleting edges failed.'
             call exit(1)
         endif
-
-
-        ! Check that compressing the graph works
-        call g%compress()
-        call g%to_dense_graph(BP)
-
-        if ( maxval(abs(B - BP)) > 0 ) then
-            print *, '    Graph compression failed.'
-            print *, '    Connectivity not preserved after compression.'
-            call exit(1)
-        endif
-
-
-        ! Check that the graph edge iterator returns no null edges.
-        cursor = g%make_cursor()
-        num_batches = (cursor%final - cursor%start) / batch_size + 1
-
-        do n = 1, num_batches
-            call g%get_edges(edges, cursor, batch_size, num_returned)
-
-            do k = 1, num_returned
-                i = edges(1, k)
-                j = edges(2, k)
-
-                if ( i == 0 .or. j == 0 ) then
-                    print *, '    Graph compression failed.'
-                    print *, '    Iterator returned a null edge.'
-                    call exit(1)
-                endif
-            enddo
-        enddo
 
 
         ! Clear the graph data structure for the next test.

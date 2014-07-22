@@ -55,8 +55,8 @@ implicit none
     nn = 127
     dx = 1.0_dp / (nn + 1)
 
-    allocate(cs_graph :: g)
-    call g%init(nn, nn, 3)
+    allocate(ll_graph :: g)
+    call g%init(nn, nn)
     do i = 1, nn - 1
         call g%add_edge(i, i)
         call g%add_edge(i, i + 1)
@@ -72,9 +72,6 @@ implicit none
         call A%set_value(i + 1, i, -1.0_dp)
     enddo
     call A%set_value(nn, nn, 2.0_dp)
-
-    call A%assemble()
-
 
     if (verbose) print *, 'Done creating matrix for 1d Laplace operator'
 

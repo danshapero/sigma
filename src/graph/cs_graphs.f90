@@ -10,7 +10,13 @@ implicit none
 !--------------------------------------------------------------------------!
 type, extends(graph) :: cs_graph                                           !
 !--------------------------------------------------------------------------!
+    ! The array `node` stores the ending vertices of every edge in the
+    ! graph, while the array `ptr` stores the starting index in `node` of
+    ! neighbors of each vertex
     integer, allocatable :: ptr(:), node(:)
+
+    ! Maximum degree of all vertices in the graph
+    integer, private :: max_d
 contains
     !--------------
     ! Constructors
@@ -20,6 +26,7 @@ contains
     !-----------
     ! Accessors
     procedure :: degree => cs_degree
+    procedure :: max_degree => cs_max_degree
     procedure :: get_neighbors => cs_get_neighbors
     procedure :: connected => cs_connected
     procedure :: find_edge => cs_find_edge
@@ -73,6 +80,7 @@ subroutine cs_graph_init(g, n, m)                                          !
     ! pointer array ptr
     g%n = n
     allocate( g%ptr(n+1) )
+    g%ptr = 1
 
     ! If the graph is not square, set the number of right-nodes
     if (present(m)) then
@@ -88,7 +96,7 @@ subroutine cs_graph_init(g, n, m)                                          !
 
     ! Set the number of edges and max degree
     g%ne = 0
-    g%max_degree = 0
+    g%max_d = 0
 
 end subroutine cs_graph_init
 
@@ -121,7 +129,7 @@ subroutine cs_graph_copy(g, h, trans)                                      !
     g%n = nv(1)
     g%m = nv(2)
     g%ne = h%ne
-    g%max_degree = h%max_degree
+    g%max_d = h%max_degree()
 
     ! Allocate g's ptr and node arrays
     allocate(g%ptr(g%n+1), g%node(h%ne))
@@ -193,6 +201,18 @@ function cs_degree(g, i) result(d)                                         !
     d = g%ptr(i + 1) - g%ptr(i)
 
 end function cs_degree
+
+
+
+!--------------------------------------------------------------------------!
+function cs_max_degree(g) result(d)                                        !
+!--------------------------------------------------------------------------!
+    class(cs_graph), intent(in) :: g
+    integer :: d
+
+    d = g%max_d
+
+end function cs_max_degree
 
 
 
@@ -354,6 +374,7 @@ subroutine cs_add_edge(g, i, j)                                            !
     if (.not. g%connected(i, j)) then
         ! Make a temporary array
         allocate(node(g%ne + 1))
+        node = 0
 
         ! Store the location within the temporary array where the new edge
         ! will go
@@ -363,12 +384,15 @@ subroutine cs_add_edge(g, i, j)                                            !
         node(1 : indx - 1) = g%node(1 : indx - 1)
         node(indx + 1 : g%ne + 1) = g%node(indx : g%ne)
 
+        ! Put the new edge into the temporary array
+        node(indx) = j
+
         ! Transfer the allocation status from the temporary array to `g`
         call move_alloc(from = node, to = g%node)
 
         ! Update the `ptr` array to reflect the new connectivity structure
         ! of `g`
-        do k = i + 1, g%n
+        do k = i + 1, g%n + 1
             g%ptr(k) = g%ptr(k) + 1
         enddo
 
@@ -377,7 +401,7 @@ subroutine cs_add_edge(g, i, j)                                            !
 
         ! Increment the max degree of `g` if need be
         d = g%ptr(i + 1) - g%ptr(i)
-        g%max_degree = max(g%max_degree, d)
+        g%max_d = max(g%max_d, d)
     endif
 
 end subroutine cs_add_edge
@@ -423,10 +447,10 @@ subroutine cs_delete_edge(g, i, j)                                         !
 
         ! If the vertex `i` was of maximal degree, it's possible that the
         ! max degree of all the graph's vertices has decreased.
-        if (d == g%max_degree) then
+        if (d == g%max_d) then
             do k = 1, g%n
                 d = g%ptr(k + 1) - g%ptr(k)
-                g%max_degree = max(g%max_degree, d)
+                g%max_d = max(g%max_d, d)
             enddo
         endif
 
@@ -527,7 +551,7 @@ subroutine cs_destroy(g)                                                   !
     g%n = 0
     g%m = 0
     g%ne = 0
-    g%max_degree = 0
+    g%max_d = 0
 
 end subroutine cs_destroy
 

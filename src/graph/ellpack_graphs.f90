@@ -9,7 +9,13 @@ implicit none
 !--------------------------------------------------------------------------!
 type, extends(graph) :: ellpack_graph                                      !
 !--------------------------------------------------------------------------!
-    integer, allocatable :: node(:,:), degrees(:)
+    ! Column `i` of the array `node` stores the neighbors of vertex `i`,
+    ! with duplicates to fill out the remaining entries
+    integer, allocatable :: node(:,:)
+
+    ! Degrees of every vertex and max degree of the graph
+    integer, allocatable :: degrees(:)
+    integer, private :: max_d
 contains
     !--------------
     ! Constructors
@@ -19,6 +25,7 @@ contains
     !-----------
     ! Accessors
     procedure :: degree => ellpack_degree
+    procedure :: max_degree => ellpack_max_degree
     procedure :: get_neighbors => ellpack_get_neighbors
     procedure :: connected => ellpack_connected
     procedure :: find_edge => ellpack_find_edge
@@ -81,7 +88,7 @@ subroutine ellpack_graph_init(g, n, m)                                     !
     allocate(g%degrees(g%n), g%node(1, g%n))
     g%degrees = 0
     g%node = 1
-    g%max_degree = 0
+    g%max_d = 0
     g%ne = 0
 
 end subroutine ellpack_graph_init
@@ -96,45 +103,89 @@ subroutine ellpack_graph_copy(g, h, trans)                                 !
     class(graph), intent(in)            :: h
     logical, intent(in), optional :: trans
     ! local variables
-    integer :: ind(2), order(2), nv(2), k
+    integer :: i, j, k, d, ord(2), nv(2)
     integer :: n, num_batches, num_returned, edges(2, batch_size)
     type(graph_edge_cursor) :: cursor
+    logical :: tr
 
     nv = [h%n, h%m]
-    order = [1, 2]
+    ord = [1, 2]
 
     ! Check if we're copying h or h with all directed edges reversed
-    if (present(trans)) then
-        if (trans) then
-            nv = [h%m, h%n]
-            order = [2, 1]
-        endif
+    tr = .false.
+    if (present(trans)) tr = trans
+
+    if (tr) then
+        nv = [h%m, h%n]
+        ord = [2, 1]
     endif
 
-    ! Copy all the attributes of g from those of h
+    ! Copy the attributes of `g` from those of `h`
     g%n = nv(1)
     g%m = nv(2)
-    g%ne = 0
-    g%max_degree = h%max_degree
+    g%ne = h%ne
 
-    ! Allocate space for the main node array of g
-    allocate(g%node(g%max_degree, g%n), g%degrees(g%n))
+    ! Initialize the array of vertex degrees of `g`
+    allocate(g%degrees(g%n))
+    g%degrees = 0
+
+
+    ! If we're copying the transpose of `h`, we need to do some extra work
+    ! to find the maximum degree of `g`. If the in-degree of `h` is greater
+    ! than the out-degree, we could inadvertently end up allocating too
+    ! little space for the `node` array.
+    if (tr) then
+        ! Make an edge iterator for the copied graph `h`
+        cursor = h%make_cursor()
+        num_batches = (cursor%final - cursor%start) / batch_size + 1
+
+        ! Iterate through all the edges of `h`
+        do n = 1, num_batches
+            call h%get_edges(edges, cursor, batch_size, num_returned)
+
+            ! For each edge, increment the degree of the starting vertex
+            do k = 1, num_returned
+                i = edges(ord(1), k)
+                j = edges(ord(2), k)
+
+                g%degrees(i) = g%degrees(i) + 1
+            enddo
+        enddo
+
+        ! Compute the maximum degree of `g` and allocate space for the
+        ! node array
+        g%max_d = maxval(g%degrees)
+
+        ! Reset the `degrees` array to 0 once we've found the maximum
+        ! degree, we'll use it as a temporary soon
+        g%degrees = 0
+
+    ! If we're not copying the transpose of `h`, then the max degree of
+    ! `g` is the same as the max degree of `h`.
+    else
+        g%max_d = h%max_degree()
+    endif
+
+    ! Knowing the max degree of `g`, allocate space for the `node` array 
+    allocate(g%node(g%max_d, g%n))
     g%node = 0
 
-    ! Make an edge iterator for the copied graph h
+    ! Iterate through the edges of `h`
     cursor = h%make_cursor()
     num_batches = (cursor%final - cursor%start) / batch_size + 1
 
-    ! Iterate through all the edges of h
     do n = 1, num_batches
-        ! Get a chunk of edges from h
         call h%get_edges(edges, cursor, batch_size, num_returned)
 
-        ! Add each edge from the chunk into g
+        ! Add each edge of `h` into `g`
         do k = 1, num_returned
-            ind = edges(order, k)
-            call g%add_edge(ind(1),ind(2))
-            g%degrees(ind(1)) = g%degrees(ind(1)) + 1
+            i = edges(ord(1), k)
+            j = edges(ord(2), k)
+
+            d = g%degrees(i)
+            g%node(d + 1 :, i) = j
+
+            g%degrees(i) = g%degrees(i) + 1
         enddo
     enddo
 
@@ -157,6 +208,18 @@ function ellpack_degree(g, i) result(d)                                    !
     d = g%degrees(i)
 
 end function ellpack_degree
+
+
+
+!--------------------------------------------------------------------------!
+function ellpack_max_degree(g) result(d)                                   !
+!--------------------------------------------------------------------------!
+    class(ellpack_graph), intent(in) :: g
+    integer :: d
+
+    d = g%max_d
+
+end function ellpack_max_degree
 
 
 
@@ -191,7 +254,7 @@ function ellpack_connected(g, i, j)                                        !
 
     ellpack_connected = .false.
 
-    do k = 1, g%max_degree
+    do k = 1, g%max_d
         if (g%node(k, i) == j) then
             ellpack_connected = .true.
             exit
@@ -214,9 +277,9 @@ function ellpack_find_edge(g, i, j)                                        !
 
     ellpack_find_edge = -1
 
-    do k = g%max_degree, 1, -1
+    do k = g%max_d, 1, -1
         if (g%node(k, i) == j) then
-            ellpack_find_edge = (i - 1) * g%max_degree + k
+            ellpack_find_edge = (i - 1) * g%max_d + k
             exit
         endif
     enddo
@@ -256,7 +319,7 @@ subroutine ellpack_get_edges(g, edges, cursor, num_edges, num_returned)    !
     integer, intent(in) :: num_edges
     integer, intent(out) :: num_returned
     ! local variables
-    integer :: i, d, i1, i2, num_added, num_from_this_row
+    integer :: i, num_added, num_from_this_row
 
     ! Set up the returned edges to be 0
     edges = 0
@@ -264,17 +327,13 @@ subroutine ellpack_get_edges(g, edges, cursor, num_edges, num_returned)    !
     ! Find out how many nodes' edges the current request encompasses
     num_returned = min(num_edges, cursor%final - cursor%current)
 
-    ! Find the starting and ending nodes for this edge retrieval
-    i1 = cursor%current / g%max_degree + 1
-    i2 = (cursor%current + num_returned - 1) / g%max_degree + 1
+    ! Find the last vertex we left off at
+    i = cursor%edge(1)
 
-    ! Set the number of edges added to 0
     num_added = 0
-
-    ! Loop from the starting node to the ending node
-    do i = i1, i2
+    do while(num_added < num_returned)
         ! Find how many edges we're retrieving from this row
-        num_from_this_row = min(g%max_degree - cursor%indx, &
+        num_from_this_row = min(g%degrees(i) - cursor%indx, &
                                 & num_returned - num_added)
 
         ! Fill in the return array
@@ -282,14 +341,22 @@ subroutine ellpack_get_edges(g, edges, cursor, num_edges, num_returned)    !
         edges(2, num_added + 1 : num_added + num_from_this_row) = &
             & g%node(cursor%indx + 1 : cursor%indx + num_from_this_row, i)
 
+        ! If we returned all nodes neighboring this vertex, increment
+        ! the vertex
+        !TODO replace this with bit-shifting magic
+        if (num_from_this_row == g%degrees(i) - cursor%indx) then
+            i = i + 1
+            cursor%indx = 0
+        else
+            cursor%indx = cursor%indx + num_from_this_row
+        endif
+
         ! Increment the number of edges added
         num_added = num_added + num_from_this_row
-
-        ! Modify the index storing the place within the row that we left off
-        cursor%indx = mod(cursor%indx + num_from_this_row, g%max_degree)
     enddo
 
     cursor%current = cursor%current + num_returned
+    cursor%edge(1) = i
 
 end subroutine ellpack_get_edges
 
@@ -315,11 +382,11 @@ subroutine ellpack_add_edge(g, i, j)                                       !
         k = g%degrees(i)
 
         ! If there is room to add j, then do so
-        if (k < g%max_degree) then
+        if (k < g%max_d) then
             ! Set the entire rest of the row in the array `node` to be
             ! equal to `j`. That way, the edge iterator never returns `0`,
             ! only duplicates of edges that already exist.
-            g%node(k + 1 : g%max_degree, i) = j
+            g%node(k + 1 :, i) = j
 
             ! Increment the degree count for vertex `i`
             g%degrees(i) = g%degrees(i) + 1
@@ -354,26 +421,25 @@ subroutine ellpack_delete_edge(g, i, j)                                    !
     ! delete and thus nothing to do
     if (g%connected(i,j)) then
         ! Record what the max degree of `g` was before removing the edge
-        d = g%max_degree
+        d = g%max_d
 
         ! Set a boolean to be true if we're removing an edge from a node
         ! of maximum degree
         max_degree_decrease = (g%degrees(i) == d)
 
         ! Find the location indx in memory where edge (i,j) is stored
-        do indx = 1, g%max_degree
+        do indx = 1, g%max_d
             if (g%node(indx, i) == j) exit
         enddo
 
         ! Overwrite indx with the other nodes connected to i
-        g%node(indx : g%max_degree - 1, i) &
-                                    & = g%node(indx + 1 : g%max_degree, i)
+        g%node(indx : g%max_d - 1, i) = g%node(indx + 1 : g%max_d, i)
 
         ! Replace the last vertex connected to `i` with a copy of the
         ! previous edge. This is so there are no `0` entries in the array
         ! `node`.
-        if (g%max_degree > 0) then
-            g%node(g%max_degree, i) = g%node(g%max_degree - 1, i)
+        if (g%max_d > 0) then
+            g%node(g%max_d, i) = g%node(g%max_d - 1, i)
         endif
 
         ! Decrement the number of edges
@@ -385,17 +451,17 @@ subroutine ellpack_delete_edge(g, i, j)                                    !
         ! If node i had max degree, check all the other nodes to see if
         ! the max degree has decreased
         if (max_degree_decrease) then
-            g%max_degree = maxval(g%degrees)
+            g%max_d = maxval(g%degrees)
 
             ! If the max degree really has decreased, we need to reduce
             ! the storage space for `g`
-            if (g%max_degree < d) then
+            if (g%max_d < d) then
                 ! Make a temporary array of size sufficient for the reduced
                 ! number of edges of `g`
-                allocate(node(g%max_degree, g%n))
+                allocate(node(g%max_d, g%n))
 
                 ! Copy the parts of `g` that still remain to the temporary
-                node(1 : g%max_degree, :) = g%node(1 : g%max_degree, :)
+                node(1 : g%max_d, :) = g%node(1 : g%max_d, :)
 
                 ! Move the allocation status from the temporary to `g`
                 call move_alloc(from = node, to = g%node)
@@ -416,22 +482,28 @@ subroutine ellpack_graph_left_permute(g, p, edge_p)                        !
     integer, intent(in) :: p(:)
     integer, allocatable, intent(out), optional :: edge_p(:,:)
     ! local variables
-    integer :: i, node(g%max_degree, g%n)
+    integer :: i, node(g%max_d, g%n)
 
-    do i=1,g%n
+    ! Copy the list of neighbors of vertex `i` from `g` to the temporary
+    ! array `node` in column `p(i)`
+    do i = 1, g%n
         node(:, p(i)) = g%node(:, i)
     enddo
 
+    ! Copy the temporary array into `g`
     g%node = node
+
+    ! Update the degrees of all the vertices
+    g%degrees(p) = g%degrees
 
     if (present(edge_p)) then
         ! Report the resulting edge permutation
         allocate(edge_p(3, g%n))
 
         do i=1,g%n
-            edge_p(1, i) = g%max_degree * (i - 1) + 1
-            edge_p(2, i) = g%max_degree * (p(i) - 1) + 1
-            edge_p(3, i) = g%max_degree
+            edge_p(1, i) = g%max_d * (i - 1) + 1
+            edge_p(2, i) = g%max_d * (p(i) - 1) + 1
+            edge_p(3, i) = g%max_d
         enddo
     endif
 
@@ -450,7 +522,7 @@ subroutine ellpack_graph_right_permute(g, p, edge_p)                       !
     integer :: i, j, k
 
     do i = 1, g%n
-        do k = 1, g%max_degree
+        do k = 1, g%max_d
             j = g%node(k, i)
             if (j /= 0) g%node(k, i) = p(j)
         enddo
@@ -476,7 +548,7 @@ subroutine ellpack_destroy(g)                                              !
     g%n = 0
     g%m = 0
     g%ne = 0
-    g%max_degree = 0
+    g%max_d = 0
 
 end subroutine ellpack_destroy
 
@@ -526,20 +598,22 @@ subroutine add_edge_with_reallocation(g, i, j)                             !
     integer, allocatable :: node(:, :)
 
     ! Make a temporary array sufficient for the new size of `g`
-    allocate(node(g%max_degree + 1, g%n))
+    allocate(node(g%max_d + 1, g%n))
     node = 0
 
     ! Copy all the old entries from `g` into the temporary array
-    node(1 : g%max_degree, :) = g%node(1 : g%max_degree, :)
+    node(1 : g%max_d, :) = g%node(1 : g%max_d, :)
 
     ! Get rid of all `0` entries in the array by putting in copies of 
     ! already-existing edges
-    do k = 1, g%n
-        g%node(g%max_degree + 1, k) = g%node(g%max_degree, k)
-    enddo
+    if (g%max_d > 0) then
+        do k = 1, g%n
+            node(g%max_d + 1, k) = node(g%max_d, k)
+        enddo
+    endif
 
     ! Put vertex `j` in the list of neighbors of vertex `i`
-    node(g%max_degree + 1, i) = j
+    node(g%max_d + 1, i) = j
 
     ! Move the allocation status from the temporary to `g`
     call move_alloc(from = node, to = g%node)
@@ -551,7 +625,7 @@ subroutine add_edge_with_reallocation(g, i, j)                             !
     g%degrees(i) = g%degrees(i) + 1
 
     ! Increment the max degree of `g`
-    g%max_degree = g%max_degree + 1
+    g%max_d = g%max_d + 1
 
 end subroutine add_edge_with_reallocation
 

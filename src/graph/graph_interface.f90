@@ -20,7 +20,7 @@ implicit none
 !--------------------------------------------------------------------------!
 type, abstract :: graph                                                    !
 !--------------------------------------------------------------------------!
-    integer :: n, m, ne, max_degree, reference_count = 0
+    integer :: n, m, ne, reference_count = 0
 contains
     !--------------
     ! Constructors
@@ -36,8 +36,11 @@ contains
     !-----------
     ! Accessors
     !-----------
-    procedure(degree_ifc), deferred    :: degree
+    procedure(degree_ifc), deferred :: degree
     ! Return the degree of a given vertex
+
+    procedure(max_degree_ifc), deferred :: max_degree
+    ! Return the maximum degree among all vertices of the graph
 
     procedure(get_neighbors_ifc), deferred :: get_neighbors
     ! Return all neighbors of a given vertex
@@ -154,6 +157,12 @@ abstract interface                                                         !
         integer, intent(in) :: i
         integer :: d
     end function degree_ifc
+
+    function max_degree_ifc(g) result(d)
+        import :: graph
+        class(graph), intent(in) :: g
+        integer :: d
+    end function max_degree_ifc
 
     subroutine get_neighbors_ifc(g, neighbors, i)
         import :: graph

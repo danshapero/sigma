@@ -3,9 +3,7 @@ type_tests.f90
 util_tests.f90
 graph_test_basics.f90
 graph_test_copy.f90
-graph_test_add_edge_with_realloc.f90
 matrix_test_basics.f90
-matrix_test_assembly.f90
 matrix_test_set_entry_with_realloc.f90
 linear_operator_test_algebra.f90
 solver_test_diffusion_1d.f90

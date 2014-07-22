@@ -17,7 +17,7 @@ implicit none
     integer, allocatable :: A(:,:), B(:,:)
 
     ! integer indices
-    integer :: i, j, k, nn, frmt, ordering
+    integer :: i, j, nn, frmt, ordering
 
     ! random numbers
     real(dp) :: c, z
@@ -83,7 +83,7 @@ implicit none
         print *, 'Random graph generated.'
         print *, 'Number of vertices:', nn
         print *, 'Number of edges:   ', h%ne
-        print *, 'Max vertex degree: ', h%max_degree
+        print *, 'Max vertex degree: ', h%max_degree()
         print *, ' '
     endif
 

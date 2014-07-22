@@ -90,7 +90,7 @@ implicit none
         print *, 'Done building random graphs.'
         print *, '    Number of vertices:', nn
         print *, '    Number of edges:   ', g%ne, h%ne
-        print *, '    Max vertex degree: ', g%max_degree, h%max_degree
+        print *, '    Max vertex degree: ', g%max_degree(), h%max_degree()
     endif
 
 

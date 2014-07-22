@@ -20,6 +20,7 @@ contains
     !-----------
     ! Accessors
     procedure :: degree => coo_degree
+    procedure :: max_degree => coo_max_degree
     procedure :: get_neighbors => coo_get_neighbors
     procedure :: connected => coo_connected
     procedure :: find_edge => coo_find_edge
@@ -81,7 +82,6 @@ subroutine coo_graph_init(g, n, m)                                         !
 
     ! At initialization, the number of edges and max degree is zero
     g%ne = 0
-    g%max_degree = 0
 
 end subroutine coo_graph_init
 
@@ -114,7 +114,6 @@ subroutine coo_graph_copy(g, h, trans)                                     !
     g%n = nv(1)
     g%m = nv(2)
     g%ne = h%ne
-    g%max_degree = h%max_degree
 
     ! Allocate space in the two dynamic arrays for the edges of g
     call g%edges(1)%init(capacity = g%ne + 16)
@@ -189,6 +188,28 @@ function coo_degree(g, i) result(d)                                        !
     d = neighbors%length
 
 end function coo_degree
+
+
+
+!--------------------------------------------------------------------------!
+function coo_max_degree(g) result(d)                                       !
+!--------------------------------------------------------------------------!
+!     NOTE: This procedure is very inefficient, being an n-fold repetition !
+! of the already very inefficient `degree` method.                         !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(coo_graph), intent(in) :: g
+    integer :: d
+    ! local variables
+    integer :: i
+
+    d = 0
+
+    do i = 1, g%n
+        d = max(d, g%degree(i))
+    enddo
+
+end function coo_max_degree
 
 
 
@@ -365,31 +386,24 @@ subroutine coo_delete_edge(g, i, j)                                        !
     class(coo_graph), intent(inout) :: g
     integer, intent(in) :: i, j
     ! local variables
-    integer :: k, it, jt, ir, jr
+    integer :: k, it, jt
+    type(dynamic_array) :: edges(2)
 
-    ! Find an edge `(ir, jr)` distinct from `(i, j)`
+    call edges(1)%init(capacity = 4)
+    call edges(2)%init(capacity = 4)
+
     do k = 1, g%ne
         it = g%edges(1)%get_entry(k)
         jt = g%edges(2)%get_entry(k)
 
         if (it /= i .or. jt /= j) then
-            ir = it
-            jr = jt
+            call edges(1)%push(it)
+            call edges(2)%push(jt)
         endif
     enddo
 
-    ! Find any instances of the edge `(i, j)` and replace them with a
-    ! duplicate of the edge `(ir, jr)`. Note that COO graphs are allowed to
-    ! store duplicate edges.
-    do k = 1, g%ne
-        it = g%edges(1)%get_entry(k)
-        jt = g%edges(2)%get_entry(k)
-
-        if (it == i .and. jt == j) then
-            call g%edges(1)%set_entry(k, ir)
-            call g%edges(2)%set_entry(k, ir)
-        endif
-    enddo
+    g%edges = edges
+    g%ne = g%edges(1)%length
 
 end subroutine coo_delete_edge
 
@@ -447,7 +461,6 @@ subroutine coo_destroy(g)                                                  !
     g%n = 0
     g%m = 0
     g%ne = 0
-    g%max_degree = 0
 
 end subroutine coo_destroy
 
