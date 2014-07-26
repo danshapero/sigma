@@ -118,7 +118,7 @@ subroutine get_slice_discontiguous(g, val, nodes, slice, k)                !
             ! make l the next node of the slice
             nodes(next) = l
 
-            ! and put the corresponding matrix entry into the array `vals`
+            ! and put in the corresponding matrix entry
             slice(next) = val(ind)
         endif
     enddo

@@ -19,7 +19,7 @@ implicit none
 
     ! sparse and dense matrices
     class(sparse_matrix), pointer :: A
-    real(dp), allocatable :: B(:,:), BP(:,:)
+    real(dp), allocatable :: B(:,:), BP(:,:), AD(:,:)
 
     ! vectors
     real(dp), allocatable :: x(:), y1(:), y2(:)
@@ -34,11 +34,6 @@ implicit none
     integer :: row_degree, col_degree
     integer, allocatable :: nodes(:)
     real(dp), allocatable :: slice(:)
-
-    ! variables for matrix value iterators
-    integer :: n, num_batches, num_returned, edges(2, batch_size)
-    real(dp) :: entries(batch_size)
-    type(graph_edge_cursor) :: cursor
 
     ! random numbers
     real(dp) :: c, w, z
@@ -152,6 +147,8 @@ implicit none
             if (B(i,j) /= 0) call h%add_edge(i, j)
         enddo
     enddo
+
+    allocate(AD(nn, nn))
 
 
 
@@ -286,29 +283,13 @@ implicit none
 
 
         !--------
-        ! Check iterating through all matrix values
-        cursor = A%make_cursor()
-        num_batches = (cursor%final - cursor%start)/batch_size + 1
-
-        do n = 1, num_batches
-            call A%get_entries(edges, entries, cursor, &
-                                                & batch_size, num_returned)
-
-            do k = 1, num_returned
-                i = edges(1, k)
-                j = edges(2, k)
-
-                if (i /= 0 .and. j /= 0) then
-                    if (entries(k) /= B(i, j)) then
-                        print *, 'Matrix value iterator returned '
-                        print *, 'entry', i, j, entries(k)
-                        print *, 'that differs from reference matrix.'
-                        print *, 'Terminating.'
-                        call exit(1)
-                    endif
-                endif
-            enddo
-        enddo
+        ! Check converting to a dense matrix
+        call A%to_dense_matrix(AD)
+        if (maxval(dabs(AD - B)) > 1.0e-15) then
+            print *, 'Converting sparse to dense matrix yielded incorrect,'
+            print *, 'result, likely a failure of matrix value iterator.'
+            call exit(1)
+        endif
 
 
         !--------

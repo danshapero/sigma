@@ -15,7 +15,7 @@ type, extends(graph) :: ellpack_graph                                      !
 
     ! Degrees of every vertex and max degree of the graph
     integer, allocatable :: degrees(:)
-    integer, private :: max_d
+    integer :: max_d
 contains
     !--------------
     ! Constructors
@@ -250,11 +250,12 @@ function ellpack_connected(g, i, j)                                        !
     integer, intent(in) :: i, j
     logical :: ellpack_connected
     ! local variables
-    integer :: k
+    integer :: k, d
 
     ellpack_connected = .false.
 
-    do k = 1, g%max_d
+    d = g%degrees(i)
+    do k = 1, d
         if (g%node(k, i) == j) then
             ellpack_connected = .true.
             exit
@@ -273,15 +274,13 @@ function ellpack_find_edge(g, i, j)                                        !
     integer, intent(in) :: i, j
     integer :: ellpack_find_edge
     ! local variables
-    integer :: k
+    integer :: k, d
 
     ellpack_find_edge = -1
 
-    do k = g%max_d, 1, -1
-        if (g%node(k, i) == j) then
-            ellpack_find_edge = (i - 1) * g%max_d + k
-            exit
-        endif
+    d = g%degrees(i)
+    do k = 1, d
+        if (g%node(k, i) == j) ellpack_find_edge = g%max_d * (i - 1) + k
     enddo
 
 end function ellpack_find_edge
@@ -300,7 +299,7 @@ function ellpack_make_cursor(g) result(cursor)                             !
     type(graph_edge_cursor) :: cursor
 
     cursor%start = 1
-    cursor%final = g%ne
+    cursor%final = g%max_d * g%n
     cursor%current = 0
     cursor%edge = [1, g%node(1, 1)]
     cursor%indx = 0
@@ -319,7 +318,7 @@ subroutine ellpack_get_edges(g, edges, cursor, num_edges, num_returned)    !
     integer, intent(in) :: num_edges
     integer, intent(out) :: num_returned
     ! local variables
-    integer :: i, num_added, num_from_this_row
+    integer :: i, i1, i2, num_added, num_from_this_row
 
     ! Set up the returned edges to be 0
     edges = 0
@@ -327,36 +326,36 @@ subroutine ellpack_get_edges(g, edges, cursor, num_edges, num_returned)    !
     ! Find out how many nodes' edges the current request encompasses
     num_returned = min(num_edges, cursor%final - cursor%current)
 
-    ! Find the last vertex we left off at
-    i = cursor%edge(1)
+    ! Find the vertices from which the edge iterator will start and end
+    i1 = cursor%current / g%max_d + 1
+    i2 = (cursor%current + num_returned - 1) / g%max_d + 1
 
     num_added = 0
-    do while(num_added < num_returned)
-        ! Find how many edges we're retrieving from this row
-        num_from_this_row = min(g%degrees(i) - cursor%indx, &
-                                & num_returned - num_added)
+
+    do i = i1, i2
+        ! Find how many edges we're retrieving from this row. Two cases:
+        !     o the current request for an edge batch calls for more edges
+        !       than there are remaining in this row, so we should get all
+        !       of those;
+        !     o the current request for an edge batch calls for fewer edges
+        !       than there are remaining in this row, so only return those
+        !       asked for.
+        num_from_this_row = min( g%max_d - cursor%indx, &
+                                                & num_returned - num_added)
 
         ! Fill in the return array
         edges(1, num_added + 1 : num_added + num_from_this_row) = i
         edges(2, num_added + 1 : num_added + num_from_this_row) = &
-            & g%node(cursor%indx + 1 : cursor%indx + num_from_this_row, i)
-
-        ! If we returned all nodes neighboring this vertex, increment
-        ! the vertex
-        !TODO replace this with bit-shifting magic
-        if (num_from_this_row == g%degrees(i) - cursor%indx) then
-            i = i + 1
-            cursor%indx = 0
-        else
-            cursor%indx = cursor%indx + num_from_this_row
-        endif
+            & g%node( cursor%indx + 1 : cursor%indx + num_from_this_row, i)
 
         ! Increment the number of edges added
         num_added = num_added + num_from_this_row
+
+        ! Update the index storing where we left off within the row
+        cursor%indx = mod(cursor%indx + num_from_this_row, g%max_d)
     enddo
 
     cursor%current = cursor%current + num_returned
-    cursor%edge(1) = i
 
 end subroutine ellpack_get_edges
 

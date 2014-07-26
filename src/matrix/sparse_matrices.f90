@@ -9,6 +9,7 @@ use sparse_matrix_interface
 use default_sparse_matrix_kernels
 use default_matrices
 use cs_matrices
+use ellpack_matrices
 
 implicit none
 
@@ -32,6 +33,8 @@ function sparse_matrix_factory(nrow, ncol, g, orientation) result(A)       !
     select type(g)
         class is(cs_graph)
             A => cs_matrix(nrow, ncol, g, orientation)
+        class is(ellpack_graph)
+            A => ellpack_matrix(nrow, ncol, g, orientation)
         class default
             A => default_matrix(nrow, ncol, g, orientation)
     end select

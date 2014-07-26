@@ -524,6 +524,8 @@ subroutine cs_matrix_destroy(A)                                            !
 !--------------------------------------------------------------------------!
     class(cs_matrix), intent(inout) :: A
 
+    A%nnz = 0
+
     ! Deallocate the array of A's matrix entries
     deallocate(A%val)
 

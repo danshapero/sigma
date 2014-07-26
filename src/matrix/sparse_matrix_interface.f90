@@ -305,8 +305,8 @@ subroutine sparse_matrix_to_dense_matrix(A, B, trans)                      !
             j = edges(ord(2), k)
 
             ! Set the corresponding entry in the output matrix `B`
-            ! NOTE: In some graph formats (e.g. COO), it is permitted to
-            ! have more than one copy of the same edge stored in the graph.
+            ! NOTE: In some graph formats (e.g. COO, ellpack), more than
+            ! one copy of an edge can be stored in the graph.
             ! With that in mind, we have to *add* contributions to each
             ! entry of `B`, not set them. Depending on the order in which
             ! the entries were added to `B`, we could set it to the true

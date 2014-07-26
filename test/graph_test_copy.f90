@@ -20,7 +20,7 @@ implicit none
     integer :: i, j, nn, frmt, ordering
 
     ! random numbers
-    real(dp) :: c, z
+    real(dp) :: p, z
 
     ! command-line argument parsing
     character(len=16) :: arg
@@ -52,8 +52,8 @@ implicit none
     ! Set the graph size and initialize a random seed                      !
     !----------------------------------------------------------------------!
 
-    nn = 10
-    c = log(1.0_dp * nn) / log(2.0_dp) / nn
+    nn = 64
+    p = log(1.0_dp * nn) / log(2.0_dp) / nn
 
     call init_seed()
 
@@ -72,8 +72,13 @@ implicit none
         do j = 1, nn
             call random_number(z)
 
-            if (z < c) call h%add_edge(i, j)
+            if (z < p) call h%add_edge(i, j)
         enddo
+
+        if (h%degree(i) == 0) then
+            print *, 'Degree of node', i, 'is zero. Watch for errors in'
+            print *, 'ellpack format!'
+        endif
     enddo
 
     ! Copy `h` to a dense array `B`
