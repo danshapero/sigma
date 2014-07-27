@@ -103,7 +103,7 @@ implicit none
 20  format('Done randomly removing edges; ',i8,' edges remain.')
 
     ! Convert `g` to a nicer format
-    call convert_graph_type(g, 'compressed-sparse')
+    call convert_graph_type(g, 'compressed sparse')
 
 
 

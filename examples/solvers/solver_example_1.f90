@@ -67,7 +67,7 @@ implicit none
     enddo
 
     ! Convert `g` to a nicer format
-    call convert_graph_type(g, 'compressed-sparse')
+    call convert_graph_type(g, 'compressed sparse')
 
 
 
