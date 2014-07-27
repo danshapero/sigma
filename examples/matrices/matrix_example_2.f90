@@ -102,17 +102,17 @@ implicit none
     write(*,20) g%ne / 2
 20  format('Done randomly removing edges; ',i8,' edges remain.')
 
-	! Convert `g` to a nicer format
-	call convert_graph_type(g, 'compressed-sparse')
+    ! Convert `g` to a nicer format
+    call convert_graph_type(g, 'compressed-sparse')
 
 
 
     !----------------------------------------------------------------------!
     ! Make the Laplacian matrix of g                                       !
     !----------------------------------------------------------------------!
-	A => sparse_matrix(nx * ny, nx * ny, g, 'row')
+    A => sparse_matrix(nx * ny, nx * ny, g, 'row')
 
-	d = g%max_degree()
+    d = g%max_degree()
     allocate(neighbors(d))
     do i = 1, A%nrow
         di = g%degree(i) - 1

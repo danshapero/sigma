@@ -16,7 +16,7 @@ use sigma
 implicit none
 
     ! a CS-graph representing the lattice
-    type(cs_graph) :: g
+    type(ll_graph) :: g
     real(dp) :: z(2), p
 
     ! integer indices
@@ -130,7 +130,7 @@ implicit none
 
     ! Make an array `components` which will indicate which connected
     ! component of the graph each node belongs to
-	d = g%max_degree()
+    d = g%max_degree()
     allocate(component(nx, ny), neighbors(d))
     component = 0
 

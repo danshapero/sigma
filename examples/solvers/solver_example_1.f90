@@ -66,8 +66,8 @@ implicit none
         enddo
     enddo
 
-	! Convert `g` to a nicer format
-	call convert_graph_type(g, 'compressed-sparse')
+    ! Convert `g` to a nicer format
+    call convert_graph_type(g, 'compressed-sparse')
 
 
 
@@ -77,7 +77,7 @@ implicit none
     A => sparse_matrix(nn, nn, g, 'row')
     call A%zero()
 
-	d = g%max_degree()
+    d = g%max_degree()
     allocate(neighbors(d))
 
     ! For each vertex of the graph,

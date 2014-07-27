@@ -35,7 +35,7 @@ implicit none
     ! initialize a random seed and choose the probability of two vertices
     ! being connected
     call init_seed()
-	nn = 512
+    nn = 512
     p = 6.25 / nn
 
 

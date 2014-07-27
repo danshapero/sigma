@@ -117,7 +117,7 @@ implicit none
     !----------------------------------------------------------------------!
     ! Compute the clustering coefficient of the Watts-Strogatz graph       !
     !----------------------------------------------------------------------!
-	d = g%max_degree()
+    d = g%max_degree()
     allocate(neighbors(d), adj(d, d))
 
     clustering = 0.0_dp

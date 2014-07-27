@@ -62,7 +62,7 @@ implicit none
     !----------------------------------------------------------------------!
     ! Depth-first search the graph to see if it's connected                !
     !----------------------------------------------------------------------!
-	d = g%max_degree()
+    d = g%max_degree()
     allocate(neighbors(d))
     found = .false.
 

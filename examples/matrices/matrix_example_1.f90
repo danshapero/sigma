@@ -66,7 +66,7 @@ implicit none
         if (g%degree(i) == 0) call g%add_edge(i, i)
     enddo
 
-	d = g%max_degree()
+    d = g%max_degree()
     write(*,10) d
 10  format('Done generating random graph; max degree: ',i4)
 
