@@ -20,7 +20,7 @@ implicit none
     real(dp) :: p
 
     ! other variables
-    integer :: i,j,d,nn,iter,trial,num
+    integer :: i, j, d, nn, iter, trial, num
     real(dp) :: z
     type(circular_array) :: q
 
@@ -37,17 +37,17 @@ implicit none
     do i=1,iargc()
         call getarg(i,arg)
         select case(trim(arg))
-            case("--graph","-g")
-                call getarg(i+1,graph_name)
-            case("--n","-n")
-                call getarg(i+1,int_param1)
-            case("--k","-k")
-                call getarg(i+1,int_param2)
-            case("--p","-p")
-                call getarg(i+1,real_param)
-            case("--iter","-i")
-                call getarg(i+1,iter_name)
-            case("-v","--verbose","-V")
+            case("--graph", "-g")
+                call getarg(i + 1, graph_name)
+            case("--n", "-n")
+                call getarg(i + 1, int_param1)
+            case("--k", "-k")
+                call getarg(i + 1, int_param2)
+            case("--p", "-p")
+                call getarg(i + 1, real_param)
+            case("--iter", "-i")
+                call getarg(i + 1, iter_name)
+            case("-v", "--verbose", "-V")
                 verbose = .true.
         end select
     enddo
@@ -61,60 +61,58 @@ implicit none
     !----------------------------------------------------------------------!
     ! Create the "medium", a graph                                         !
     !----------------------------------------------------------------------!
+    allocate(ll_graph::g)
     select case(trim(graph_name))
         case("torus")
-            allocate(cs_graph::g)
             if (verbose) then
-                write(*,10) n,k
+                write(*,10) n, k
 10              format('Constructing a 2-torus of dimensions ',i4,' x ',i4)
             endif
-            call torus(g,n,k)
+            call torus(g, n, k)
 
 
         case("petersen")
-            allocate(cs_graph::g)
             if (verbose) then
-                write(*,20) n,k
+                write(*,20) n, k
 20              format('Constructing a Petersen graph with ',i4,',',i4)
             endif
-            call petersen(g,n,k)
+            call petersen(g, n, k)
 
 
-        case("snark","flower-snark","flower_snark","flowersnark")
-            allocate(cs_graph::g)
+        case("snark", "flower-snark", "flower_snark", "flowersnark")
             if (verbose) then
-                write(*,30) 4*n
+                write(*,30) 4 * n
 30              format('Constructing a flower snark on ',i4,' vertices.')
             endif
-            call flower_snark(g,n)
+            call flower_snark(g, n)
 
 
         case("hypercube")
-            allocate(cs_graph::g)
-            k = min(n,10)
+            k = min(n, 10)
             if (verbose) then
                 write(*,40) 2**k
 40              format('Constructing hypercube graph on ',i4,' vertices.')
             endif
-            call hypercube(g,k)
+            call hypercube(g, k)
 
 
         case("erdos-renyi","erdos_renyi","erdosrenyi","er")
-            allocate(ll_graph::g)
-            call erdos_renyi(g,n,(1.0_dp*k)/n)
+            call erdos_renyi(g, n, (1.0_dp*k) / n)
+
         case("watts-strogatz","watts_strogatz","wattsstrogatz","ws", &
                 & "small-world","small_world","smallworld")
-            allocate(ll_graph::g)
-            call watts_strogatz(g,n,k,p)
+            call watts_strogatz(g, n, k, p)
+
         case("barabasi-albert","barabasi_albert","barabasialbert","ba", &
                 & "scale-free","scale_free","scalefree")
-            allocate(ll_graph::g)
-            call barabasi_albert(g,n,k)
+            call barabasi_albert(g, n, k)
     end select
 
-    call g%compress()
     nn = g%n
-    allocate(neighbors(g%max_degree), unvisited(g%max_degree), s(nn))
+    call convert_graph_type(g, 'compressed sparse')
+
+    d = g%max_degree()
+    allocate(neighbors(d), unvisited(d), s(nn))
 
 
     !----------------------------------------------------------------------!
@@ -124,17 +122,17 @@ implicit none
     allocate(histogram(0:nn))
     histogram = 0
 
-    do trial=1,iter
+    do trial = 1, iter
         ! Choose a random starting vertex
         call random_number(z)
-        i = min(int(z*nn)+1,nn)
+        i = int(z * nn) + 1
 
         ! Initialize the list indicating which vertices have been visited
         ! to zero
         s = 0
 
         ! Initialize a queue of visited vertices
-        call q%init(capacity=g%max_degree,min_capacity=2)
+        call q%init(capacity = d, min_capacity = 2)
 
         ! So long as there are unvisited neighbor vertices, keep walking
         unvisited = .true.
@@ -149,19 +147,19 @@ implicit none
 
             ! Check to see which neighbors of i have not been visited
             d = g%degree(i)
-            call g%get_neighbors(neighbors,i)
+            call g%get_neighbors(neighbors, i)
 
-            do k=1,d
+            do k = 1, d
                 j = neighbors(k)
-                unvisited(k) = ( s(j)==0 .and. j/=i )
+                unvisited(k) = ( s(j) == 0 .and. j /= i )
             enddo
 
             ! Pick one of the unvisited neighbors at random, then make it
             ! the next vertex
             call random_number(z)
-            num = min(int(count(unvisited)*z)+1,d)
+            num = min(int(count(unvisited) * z) + 1, d)
 
-            do k=1,d
+            do k = 1, d
                 j = neighbors(k)
 
                 if (unvisited(k) .and. num>0) then
@@ -172,13 +170,13 @@ implicit none
         enddo
 
         num = q%length
-        histogram(num) = histogram(num)+1
+        histogram(num) = histogram(num) + 1
 
         ! Clear the queue
         call q%free()
     enddo
 
-    do i=0,nn
+    do i = 0, nn
         print *, histogram(i)
     enddo
 
