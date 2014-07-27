@@ -18,5 +18,5 @@ include_directories("${PROJECT_SOURCE_DIR}/include")
 
 add_subdirectory("${CMAKE_SOURCE_DIR}/src")
 add_subdirectory("${CMAKE_SOURCE_DIR}/test")
-#add_subdirectory("${CMAKE_SOURCE_DIR}/examples")
+add_subdirectory("${CMAKE_SOURCE_DIR}/examples")
 #add_subdirectory("${CMAKE_SOURCE_DIR}/apps")
