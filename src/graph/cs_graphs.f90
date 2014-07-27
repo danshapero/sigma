@@ -434,7 +434,7 @@ subroutine cs_delete_edge(g, i, j)                                         !
         call move_alloc(from = node, to = g%node)
 
         ! Update the `ptr` array
-        do k = i + 1, g%n
+        do k = i + 1, g%n + 1
             g%ptr(k) = g%ptr(k) - 1
         enddo
 
