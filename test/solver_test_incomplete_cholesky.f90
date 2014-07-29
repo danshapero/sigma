@@ -1,8 +1,8 @@
 !--------------------------------------------------------------------------!
-program solver_test_jacobi                                                 !
+program solver_test_incomplete_cholesky                                    !
 !--------------------------------------------------------------------------!
-!     This program tests the Jacobi solver object, used both as a          !
-! stand-alone solver and as a preconditioner.                              !
+!     This program tests using incomplete matrix factorizations, both as   !
+! a stand-alone solver and as a preconditioner.                            !
 !--------------------------------------------------------------------------!
 
 use sigma
@@ -129,11 +129,11 @@ implicit none
 
 
     !----------------------------------------------------------------------!
-    ! Build Jacobi and CG solvers for `A`                                  !
+    ! Build incomplete Cholesky and CG solvers for `A`                     !
     !----------------------------------------------------------------------!
 
     solver => cg(1.d-16)
-    pc => jacobi()
+    pc => ldu(incomplete = .true., level = 0)
 
     call solver%setup(A)
     call pc%setup(A)
@@ -154,10 +154,10 @@ implicit none
     r = 0.0_dp
     q = 0.0_dp
 
-    ! Make v totally random
+    ! Make v random
     call random_number(v)
 
-    ! Apply the operator `I - D^{-1}A` to `v` to smooth it over somewhat.
+    ! Apply the the preconditioner once to smooth it over somewhat.
     ! A totally random vector is not very smooth and its dominant components
     ! will be in the span of `A`-eigenvectors corresponding to the way
     ! upper end of the spectrum.
@@ -174,7 +174,7 @@ implicit none
 
 
     !----------------------------------------------------------------------!
-    ! Test applying the Jacobi method as a solver                          !
+    ! Test using incomplete Cholesky as a solver                           !
     !----------------------------------------------------------------------!
 
     ! Since `u` is 0, the residual is initially equal to `f`
@@ -194,21 +194,21 @@ implicit none
     misfit = maxval(dabs(u - v))
 
     if (misfit > 1.0e-14) then
-        print *, 'Jacobi method failed to produce sufficiently accurate'
-        print *, 'solution after', 10 * nn, 'iterations.'
+        print *, 'Incomplete Cholesky failed to produce sufficiently'
+        print *, 'accurate solution after', 10 * nn, 'iterations.'
         print *, 'Error:', misfit
         call exit(1)
     endif
 
     if (verbose) then
-        print *, 'o Done solving with Jacobi method.'
+        print *, 'o Done solving with incomplete Cholesky.'
         print *, '    Error:', misfit
     endif
 
 
 
     !----------------------------------------------------------------------!
-    ! Test applying the Jacobi method as a preconditioner                  !
+    ! Test using incomplete Cholesky as a preconditioner                   !
     !----------------------------------------------------------------------!
 
     u = 0.0_dp
@@ -217,86 +217,17 @@ implicit none
     misfit = maxval(dabs(u - v))
 
     if (misfit > 1.0e-15) then
-        print *, 'Jacobi-preconditioned conjugate gradient method failed'
+        print *, 'ILDU-preconditioned conjugate gradient method failed'
         print *, 'to produce sufficiently accurate solution.'
         print *, 'Error:', misfit
         call exit(1)
     endif
 
     if (verbose) then
-        print *, 'o Done solving with Jacobi-preconditioned CG.'
+        print *, 'o Done solving with ILDU-preconditioned CG.'
         print *, '    Error:', misfit
     endif
 
-
-
-    !----------------------------------------------------------------------!
-    ! Add a random skew-symmetric perturbation to `A`                      !
-    !----------------------------------------------------------------------!
-
-    do i = 1, nn
-        call g%get_neighbors(nodes, i)
-
-        d = g%degree(i)
-        do k = 1, d
-            j = nodes(k)
-
-            if (j > i) then
-                call random_number(z)
-                z = (2 * z - 1)/16
-                call A%add_value(i, j, +z)
-                call A%add_value(j, i, -z)
-            endif
-        enddo
-    enddo
-
-    if (verbose) print *, 'o Added skew-symmetric perturbation to matrix'
-
-
-
-    !----------------------------------------------------------------------!
-    ! Rebuild the solver and preconditioner                                !
-    !----------------------------------------------------------------------!
-
-    call solver%destroy()
-    deallocate(solver)
-
-    solver => bicgstab(1.d-16)
-    call solver%setup(A)
-
-    ! Strictly speaking, this isn't necessary. The diagonal entries of `A`
-    ! have not changed, so we needn't update the Jacobi preconditioner to
-    ! reflect the changes to `A`. For any other preconditioner, this would
-    ! be necessary.
-    call pc%setup(A)
-
-    if (verbose) print *, 'o Done rebuilding solver and preconditioner'
-
-    call A%matvec(v, f)
-
-
-
-    !----------------------------------------------------------------------!
-    ! Solve the perturbed system                                           !
-    !----------------------------------------------------------------------!
-
-    u = 0.0_dp
-    call solver%solve(A, u, f, pc)
-
-    misfit = maxval(dabs(u - v))
-
-    if (misfit > 1.0e-15) then
-        print *, 'Jacobi-preconditioned BiCG-Stab method failed to produce'
-        print *, 'sufficiently accurate solution to non-symmetric system.'
-        print *, 'Error:', misfit
-        call exit(1)
-    endif
-
-    if (verbose) then
-        print *, 'o Done solving non-symmetric system with Jacobi-'
-        print *, '  preconditioned BiCG-Stab method.'
-        print *, '    Error:', misfit
-    endif
 
 
 
@@ -308,4 +239,4 @@ implicit none
     deallocate(g, A, solver, pc)
 
 
-end program solver_test_jacobi
+end program solver_test_incomplete_cholesky
