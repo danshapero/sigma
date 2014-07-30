@@ -17,7 +17,7 @@ implicit none
     integer, allocatable :: A(:,:), B(:,:)
 
     ! integer indices
-    integer :: i, j, nn, frmt, ordering
+    integer :: i, j, d, nn, frmt, ordering
 
     ! random numbers
     real(dp) :: p, z
@@ -63,26 +63,49 @@ implicit none
     ! Create a random sparse graph                                         !
     !----------------------------------------------------------------------!
 
-    ! Allocate and initialize `h`
-    allocate(ll_graph :: h)
-    call h%init(nn, nn)
+    allocate(A(nn, nn), B(nn, nn))
+    A = 0
 
     ! Randomly add edges
     do i = 1, nn
         do j = 1, nn
             call random_number(z)
 
-            if (z < p) call h%add_edge(i, j)
+            if (z < p) A(i, j) = 1
         enddo
+    enddo
 
-        if (h%degree(i) == 0) then
-            print *, 'Degree of node', i, 'is zero. Watch for errors in'
-            print *, 'ellpack format!'
+    ! Make sure that no vertex is isolated
+    do i = 1, nn
+        d = count(A(i, :) /= 0)
+
+        if (d == 0) then
+            call random_number(z)
+            j = int(z * nn) + 1
+            A(i, j) = 1
         endif
     enddo
 
-    ! Copy `h` to a dense array `B`
-    allocate(A(nn, nn), B(nn, nn))
+    do j = 1, nn
+        d = count(A(:, j) /= 0)
+
+        if (d == 0) then
+            call random_number(z)
+            i = int(z * nn) + 1
+            A(i, j) = 1
+        endif
+    enddo
+
+
+    ! Copy `h` from the dense array `A`
+    allocate(ll_graph :: h)
+    call h%init(nn, nn)
+
+    do j = 1, nn
+        do i = 1, nn
+            if (A(i, j) == 1) call h%add_edge(i, j)
+        enddo
+    enddo
 
     if (verbose) then
         print *, 'Random graph generated.'
