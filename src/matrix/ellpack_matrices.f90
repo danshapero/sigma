@@ -142,7 +142,7 @@ contains
 function ellpack_matrix_factory(nrow, ncol, g, orientation) result(A)      !
 !--------------------------------------------------------------------------!
     integer, intent(in) :: nrow, ncol
-    class(ellpack_graph), pointer, intent(in) :: g
+    class(ellpack_graph), target, intent(in) :: g
     character(len=3), intent(in) :: orientation
     class(sparse_matrix), pointer :: A
 
@@ -161,7 +161,7 @@ subroutine ellpack_matrix_init(A, nrow, ncol, g, orientation)              !
 !--------------------------------------------------------------------------!
     class(ellpack_matrix), intent(inout) :: A
     integer, intent(in) :: nrow, ncol
-    class(ellpack_graph), pointer, intent(in) :: g
+    class(ellpack_graph), target, intent(in) :: g
     character(len=3), intent(in) :: orientation
 
     A%nrow = nrow

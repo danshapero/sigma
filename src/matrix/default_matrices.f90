@@ -108,7 +108,7 @@ contains
 function default_matrix_factory(nrow, ncol, g, orientation) result(A)      !
 !--------------------------------------------------------------------------!
     integer, intent(in) :: nrow, ncol
-    class(graph), pointer, intent(in) :: g
+    class(graph), target, intent(in) :: g
     character(len=3), intent(in) :: orientation
     class(sparse_matrix), pointer :: A
 
@@ -127,7 +127,7 @@ subroutine default_matrix_init(A, nrow, ncol, g, orientation)              !
 !--------------------------------------------------------------------------!
     class(default_matrix), intent(inout) :: A
     integer, intent(in) :: nrow, ncol
-    class(graph), pointer, intent(in) :: g
+    class(graph), target, intent(in) :: g
     character(len=3), intent(in) :: orientation
 
     A%nrow = nrow
