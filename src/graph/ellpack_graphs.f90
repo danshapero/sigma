@@ -182,10 +182,12 @@ subroutine ellpack_graph_copy(g, h, trans)                                 !
             i = edges(ord(1), k)
             j = edges(ord(2), k)
 
-            d = g%degrees(i)
-            g%node(d + 1 :, i) = j
+            if (.not. g%connected(i, j)) then
+                d = g%degrees(i)
+                g%node(d + 1 :, i) = j
 
-            g%degrees(i) = g%degrees(i) + 1
+                g%degrees(i) = g%degrees(i) + 1
+            endif
         enddo
     enddo
 
