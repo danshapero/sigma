@@ -43,7 +43,8 @@ contains
     !--------------
     ! Constructors
     !--------------
-    procedure :: init => ellpack_matrix_init
+    procedure :: set_ordering => ellpack_matrix_set_ordering
+    procedure :: copy_graph_structure => ellpack_matrix_copy_graph_structure
 
 
     !-----------
@@ -83,6 +84,12 @@ contains
     ! Destructors
     !-------------
     procedure :: destroy => ellpack_matrix_destroy
+
+
+    !-------------------------
+    ! Testing, debugging, I/O
+    !-------------------------
+    procedure :: to_dense_matrix => ellpack_matrix_to_dense_matrix
 
 
     !--------------------
@@ -157,24 +164,10 @@ end function ellpack_matrix_factory
 
 
 !--------------------------------------------------------------------------!
-subroutine ellpack_matrix_init(A, nrow, ncol, g, orientation)              !
+subroutine ellpack_matrix_set_ordering(A, orientation)                     !
 !--------------------------------------------------------------------------!
     class(ellpack_matrix), intent(inout) :: A
-    integer, intent(in) :: nrow, ncol
-    class(ellpack_graph), target, intent(in) :: g
     character(len=3), intent(in) :: orientation
-
-    A%nrow = nrow
-    A%ncol = ncol
-
-    A%g => g
-
-    call A%g%add_reference()
-
-    A%nnz = A%g%ne
-    allocate(A%val(g%max_d, g%n))
-
-    A%val = 0.0_dp
 
     ! Set the `ord` attribute for the matrix, so that the indices are
     ! reverse if we use column-major ordering and so the right kernels
@@ -204,7 +197,49 @@ subroutine ellpack_matrix_init(A, nrow, ncol, g, orientation)              !
             A%matvec_t_add_impl => ellpackr_matvec_add
     end select
 
-end subroutine ellpack_matrix_init
+    A%ordering_set = .true.
+
+end subroutine ellpack_matrix_set_ordering
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ellpack_matrix_copy_graph_structure(A, g, trans)                !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(ellpack_matrix), intent(inout) :: A
+    class(graph), intent(in) :: g
+    logical, intent(in), optional :: trans
+    ! local variables
+    integer :: ord(2), nv(2)
+    logical :: tr
+
+    tr = .false.
+    if (present(trans)) tr = trans
+    ord = [1, 2]
+    if (tr) ord = [2, 1]
+
+    nv = [g%n, g%m]
+    nv = nv(ord)
+
+    if (A%nrow /= nv(1) .or. A%ncol /= nv(2)) then
+        print *, 'Attemped to set ellpack matrix connectivity structure to'
+        print *, 'graph with inconsistent dimensions.'
+        print *, 'Dimensions of matrix:', A%nrow, A%ncol
+        print *, 'Dimensions of graph: ', nv(1), nv(2)
+        call exit(1)
+    endif
+
+    allocate(A%g)
+    call A%g%copy(g, tr)
+
+    A%nnz = g%ne
+    allocate(A%val(A%g%max_d, A%g%n))
+    A%val = 0.0_dp
+
+    A%graph_set = .true.
+
+end subroutine ellpack_matrix_copy_graph_structure
 
 
 
@@ -221,7 +256,7 @@ function ellpack_matrix_get_value(A, i, j) result(z)                       !
     integer, intent(in) :: i, j
     real(dp) :: z
     ! local variables
-    integer :: k, ind(2)
+    integer :: k, d, ind(2)
 
     ! Reverse the indices (i,j) according to the ordering (row- or column-
     ! major) of the matrix
@@ -232,8 +267,9 @@ function ellpack_matrix_get_value(A, i, j) result(z)                       !
     ! Set the return value to 0
     z = 0.0_dp
 
-    do k = 1, A%g%max_d
-        if (A%g%node(k, ind(1)) == ind(2)) z = z + A%val(k, ind(1))
+    d = A%g%degrees(ind(1))
+    do k = 1, d
+        if (A%g%node(k, ind(1)) == ind(2)) z = A%val(k, ind(1))
     enddo
 
 end function ellpack_matrix_get_value
@@ -678,6 +714,48 @@ subroutine ellpack_matrix_destroy(A)                                       !
     nullify(A%g)
 
 end subroutine ellpack_matrix_destroy
+
+
+
+
+!==========================================================================!
+!==== Testing, debugging, I/O                                          ====!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
+subroutine ellpack_matrix_to_dense_matrix(A, B, trans)                     !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(ellpack_matrix), intent(in) :: A
+    real(dp), intent(out) :: B(:,:)
+    logical, intent(in), optional :: trans
+    ! local variables
+    integer :: i, j, k, d, ind(2), ord(2)
+
+    ! Set the dense matrix to 0
+    B = 0.0_dp
+
+    ! If we're actually making the transpose of A, set the variable `ord`
+    ! so that we reverse the orientation of all edges
+    ord = A%ord
+    if (present(trans)) then
+        if (trans) ord = [2, 1]
+    endif
+
+    do i = 1, A%nrow
+        d = A%g%degrees(i)
+
+        do k = 1, d
+            j = A%g%node(k, i)
+
+            ind = [i, j]
+            ind = ind(ord)
+
+            B(ind(1), ind(2)) = A%val(k, i)
+        enddo
+    enddo
+
+end subroutine ellpack_matrix_to_dense_matrix
 
 
 

@@ -21,7 +21,7 @@ module sparse_matrix_interface                                             !
 
 use types, only: dp
 use linear_operator_interface
-use graph_interface, only: graph_edge_cursor, batch_size
+use graph_interface
 
 implicit none
 
@@ -37,13 +37,31 @@ type, extends(linear_operator), abstract :: sparse_matrix                  !
     ! ordering of the matrix -- [1, 2] if row-major, [2, 1] if column-major
     integer :: ord(2)
 
+    ! variables to tell which phases of initializing the matrix have
+    ! already occurred
+    logical :: ordering_set = .false.
+    logical :: dimensions_set = .false.
+    logical :: graph_set = .false.
+
 contains
     !--------------
     ! Constructors
     !--------------
-    ! The sparse_matrix interface does not require a constructor. Much of
-    ! the work for building sparse matrices will be handled by factory
-    ! methods.
+    procedure :: init => sparse_matrix_init
+    ! Wraps all of the various initialization procedures in one method
+
+    procedure :: set_ordering => sparse_matrix_set_ordering
+    ! Make an empty sparse matrix and set its orientation to either row-
+    ! or column-major
+
+    procedure :: set_dimensions => set_sparse_matrix_dimensions
+    ! Set the row and column dimension of a sparse matrix
+
+    procedure(sparse_mat_copy_graph_structure_ifc), deferred :: &
+                                                      & copy_graph_structure
+    ! Given a sparse matrix and an input graph, initialize the matrix's
+    ! graph structure to be a copy of the input graph. The input graph need
+    ! not be of the same format as the matrix's graph.
 
 
     !-----------
@@ -128,6 +146,13 @@ end type sparse_matrix
 !--------------------------------------------------------------------------!
 abstract interface                                                         !
 !--------------------------------------------------------------------------!
+    subroutine sparse_mat_copy_graph_structure_ifc(A, g, trans)
+        import :: graph, sparse_matrix
+        class(sparse_matrix), intent(inout) :: A
+        class(graph), intent(in) :: g
+        logical, intent(in), optional :: trans
+    end subroutine sparse_mat_copy_graph_structure_ifc
+
     subroutine sparse_mat_get_slice_ifc(A, nodes, slice, k)
         import :: sparse_matrix, dp
         class(sparse_matrix), intent(in) :: A
@@ -192,6 +217,60 @@ end interface
 
 
 contains
+
+
+
+
+!==========================================================================!
+!==== Constructors                                                     ====!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
+subroutine sparse_matrix_init(A, nrow, ncol, g, orientation)               !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(inout) :: A
+    integer, intent(in) :: nrow, ncol
+    class(graph), intent(in) :: g
+    character(len=3), intent(in) :: orientation
+
+    call A%set_ordering(orientation)
+    call A%set_dimensions(nrow, ncol)
+    call A%copy_graph_structure(g)
+
+end subroutine sparse_matrix_init
+
+
+
+!--------------------------------------------------------------------------!
+subroutine sparse_matrix_set_ordering(A, orientation)                      !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(inout) :: A
+    character(len=3), intent(in) :: orientation
+
+    if (orientation == "col") then
+        A%ord = [2, 1]
+    else
+        A%ord = [1, 2]
+    endif
+
+    A%ordering_set = .true.
+
+end subroutine sparse_matrix_set_ordering
+
+
+
+!--------------------------------------------------------------------------!
+subroutine set_sparse_matrix_dimensions(A, nrow, ncol)                     !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(inout) :: A
+    integer, intent(in) :: nrow, ncol
+
+    A%nrow = nrow
+    A%ncol = ncol
+
+    A%dimensions_set = .true.
+
+end subroutine set_sparse_matrix_dimensions
 
 
 

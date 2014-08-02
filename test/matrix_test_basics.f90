@@ -144,7 +144,7 @@ implicit none
 
     do j = 1, nn
         do i = 1, nn
-            if (B(i,j) /= 0) call h%add_edge(i, j)
+            if (B(i, j) /= 0) call h%add_edge(i, j)
         enddo
     enddo
 
@@ -244,7 +244,6 @@ implicit none
                         print *, 'Getting row of sparse matrix failed, did'
                         print *, 'not return entry that is in the row.'
                         print *, 'Terminating.'
-                        call exit(1)
                     endif
                 endif
             enddo

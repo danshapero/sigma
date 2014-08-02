@@ -14,6 +14,7 @@ module default_matrices                                                    !
 
 use types, only: dp
 use graph_interface
+use ll_graphs
 use default_sparse_matrix_kernels
 use sparse_matrix_interface
 
@@ -44,7 +45,8 @@ contains
     !--------------
     ! Constructors
     !--------------
-    procedure :: init => default_matrix_init
+    procedure :: set_ordering => default_matrix_set_ordering
+    procedure :: copy_graph_structure => default_matrix_copy_graph_structure
 
 
     !-----------
@@ -123,23 +125,10 @@ end function default_matrix_factory
 
 
 !--------------------------------------------------------------------------!
-subroutine default_matrix_init(A, nrow, ncol, g, orientation)              !
+subroutine default_matrix_set_ordering(A, orientation)                     !
 !--------------------------------------------------------------------------!
     class(default_matrix), intent(inout) :: A
-    integer, intent(in) :: nrow, ncol
-    class(graph), target, intent(in) :: g
     character(len=3), intent(in) :: orientation
-
-    A%nrow = nrow
-    A%ncol = ncol
-
-    A%g => g
-
-    call A%g%add_reference()
-
-    A%nnz = A%g%ne
-    allocate( A%val(A%g%ne) )
-    A%val = 0.0_dp
 
     ! Set the `ord` attribute for the matrix, so that the indices are
     ! reversed if we use column-major ordering and so the right kernels
@@ -163,7 +152,54 @@ subroutine default_matrix_init(A, nrow, ncol, g, orientation)              !
             A%right_permute_impl => graph_leftperm
     end select
 
-end subroutine default_matrix_init
+    A%ordering_set = .true.
+
+end subroutine default_matrix_set_ordering
+
+
+
+!--------------------------------------------------------------------------!
+subroutine default_matrix_copy_graph_structure(A, g, trans)                !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(default_matrix), intent(inout) :: A
+    class(graph), intent(in) :: g
+    logical, intent(in), optional :: trans
+    ! local variables
+    integer :: ord(2), nv(2)
+    logical :: tr
+
+    tr = .false.
+    if (present(trans)) tr = trans
+    ord = [1, 2]
+    if (tr) ord = [2, 1]
+
+    nv = [g%n, g%m]
+    nv = nv(ord)
+
+    if (A%nrow /= nv(1) .or. A%ncol /= nv(2)) then
+        print *, 'Attemped to set default matrix connectivity structure to'
+        print *, 'graph with inconsistent dimensions.'
+        print *, 'Dimensions of matrix:', A%nrow, A%ncol
+        print *, 'Dimensions of graph: ', nv(1), nv(2)
+        call exit(1)
+    endif
+
+    ! Default to a list-of-lists graph for the underlying matrix format.
+    ! We could choose the same format as the input graph, but this will
+    ! work for the time being.
+    !TODO: make it allocate A%g as a mold of g
+    !allocate(ll_graph :: A%g)
+    allocate(A%g, mold = g)
+    call A%g%copy(g, tr)
+
+    A%nnz = g%ne
+    allocate(A%val(A%nnz))
+    A%val = 0.0_dp
+
+    A%graph_set = .true.
+
+end subroutine default_matrix_copy_graph_structure
 
 
 
@@ -449,6 +485,10 @@ subroutine default_matrix_destroy(A)                                       !
     ! Nullify A's pointer to its graph. Don't de-allocate it -- there might
     ! still be other references to it someplace else.
     nullify(A%g)
+
+    A%graph_set = .false.
+    A%dimensions_set = .false.
+    A%ordering_set = .false.
 
 end subroutine default_matrix_destroy
 
