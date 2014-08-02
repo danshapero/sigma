@@ -49,9 +49,47 @@ end function sparse_matrix_factory
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
+subroutine sparse_matrix_sum(A, B, C)                                      !
+!--------------------------------------------------------------------------!
+!     This routine computes the sum `A` of the sparse matrices `B`, `C`.   !
+! The actual work is passed off to two procedures (see below) that compute !
+! the connectivity structure of the matrix sum, then fill the entries.     !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(inout) :: A
+    class(sparse_matrix), intent(in)    :: B, C
+    ! local variables
+    type(ll_graph) :: g
+    logical :: trans
+
+    if (B%nrow /= C%nrow .or. B%ncol /= C%ncol) then
+        print *, 'Dimensions of matrices for sparse matrix sum'
+        print *, 'A = B+C are not consistent.'
+        print *, 'Dimensions of B:', B%nrow, B%ncol
+        print *, 'Dimensions of C:', C%nrow, C%ncol
+        print *, 'Terminating.'
+        call exit(1)
+    endif
+
+    if (.not. A%ordering_set) call A%set_ordering("row")
+
+    ! If `A` is stored with column-major ordering, we need to transpose
+    ! the graph with the structure of `B + C`
+    trans = A%ord(1) == 2
+
+    call A%set_dimensions(B%nrow, B%ncol)
+    call sparse_matrix_sum_graph(g, B, C)
+    call A%copy_graph_structure(g, trans)
+    call sparse_matrix_sum_fill_entries(A, B, C)
+
+end subroutine sparse_matrix_sum
+
+
+
+!--------------------------------------------------------------------------!
 subroutine sparse_matrix_sum_graph(g, B, C)                                !
 !--------------------------------------------------------------------------!
-!     This routines computes the graph `g` describing the underlying       !
+!     This routine computes the graph `g` describing the underlying        !
 ! connectivity structure of the sparse matrix sum `B + C`. It is a helper  !
 ! routine for other procedures which compute the entries of the sum.       !
 !--------------------------------------------------------------------------!
