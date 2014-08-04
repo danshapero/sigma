@@ -52,6 +52,10 @@ contains
     ! Testing, debugging & I/O
     procedure :: dump_edges => cs_dump_edges
 
+    !--------------------
+    ! Auxiliary routines
+    procedure, private :: prune_null_edges
+
 end type cs_graph
 
 
@@ -161,7 +165,7 @@ subroutine cs_graph_copy(g, h, trans)                                      !
 
     g%node = 0
 
-    do n=1,num_batches
+    do n = 1, num_batches
         call h%get_edges(edges, cursor, batch_size, num_returned)
 
         do k = 1,num_returned
@@ -170,6 +174,11 @@ subroutine cs_graph_copy(g, h, trans)                                      !
 
             !TODO check that this works, try to make it more efficient
             do l = g%ptr(i), g%ptr(i + 1) - 1
+                ! We need this provision for copying graphs whose iterators
+                ! might return the same edge more than once
+                if (g%node(l) == j) exit
+
+                ! Otherwise, find a free spot to insert the next edge
                 if (g%node(l) == 0) then
                     g%node(l) = j
                     exit
@@ -177,6 +186,13 @@ subroutine cs_graph_copy(g, h, trans)                                      !
             enddo
         enddo
     enddo
+
+    ! If we didn't fill up all the storage space of the graph, possibly
+    ! because the graph we were copying had null edges, then rebuild the
+    ! structure of `g` so it's at capacity.
+    if (minval(g%node) == 0) then
+        call g%prune_null_edges()
+    endif
 
 end subroutine cs_graph_copy
 
@@ -577,6 +593,53 @@ subroutine cs_dump_edges(g, edges)                                         !
 end subroutine cs_dump_edges
 
 
+
+
+!==========================================================================!
+!==== Auxiliary routines                                               ====!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
+subroutine prune_null_edges(g)                                             !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(cs_graph), intent(inout) :: g
+    ! local variables
+    integer :: i, j, k, next, ne
+    integer, allocatable :: ptr(:), node(:)
+
+    ne = count(g%node /= 0)
+
+    if (ne < size(g%node)) then
+        g%ne = ne
+
+        allocate(node(ne), ptr(g%n + 1))
+        ptr = 0
+        node = 0
+        ptr(1) = 1
+
+        g%max_d = 0
+        next = 1
+
+        do i = 1, g%n
+            do k = g%ptr(i), g%ptr(i + 1) - 1
+                j = g%node(k)
+                if (j /= 0) then
+                    node(next) = j
+                    next = next + 1
+                endif
+            enddo
+
+            ptr(i + 1) = next
+
+            g%max_d = max(g%max_d, g%ptr(i + 1) - g%ptr(i))
+        enddo
+
+        call move_alloc(from = node, to = g%node)
+        call move_alloc(from = ptr,  to = g%ptr )
+    endif
+
+end subroutine prune_null_edges
 
 
 end module cs_graphs
