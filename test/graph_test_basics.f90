@@ -136,7 +136,7 @@ implicit none
     !----------------------------------------------------------------------!
     ! Test each graph type                                                 !
     !----------------------------------------------------------------------!
-    do frmt = 1, 4
+    do frmt = 1, num_graph_types
         B = 0
 
         if (verbose) print *, 'Format #', frmt

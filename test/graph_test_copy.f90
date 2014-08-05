@@ -123,7 +123,7 @@ implicit none
 
     if (verbose) print *, 'Testing copy constructor.'
 
-    do frmt = 1, 4
+    do frmt = 1, num_graph_types
     do ordering = 1, 2
         if (verbose) print *, 'Format #', frmt, ';   ordering: ', ordering
 

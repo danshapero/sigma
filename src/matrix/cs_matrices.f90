@@ -110,7 +110,7 @@ contains
 
 
 !==========================================================================!
-!==== Constructors and factory methods                                 ====!
+!==== Constructors                                                     ====!
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
@@ -180,7 +180,7 @@ subroutine cs_matrix_copy_graph_structure(A, g, trans)                     !
         call exit(1)
     endif
 
-    allocate(A%g)
+    if (.not. associated(A%g)) allocate(A%g)
     call A%g%copy(g, tr)
 
     A%nnz = g%ne

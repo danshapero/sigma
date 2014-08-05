@@ -98,7 +98,7 @@ contains
 
 
 !==========================================================================!
-!==== Constructors and factory methods                                 ====!
+!==== Constructors                                                     ====!
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
@@ -166,7 +166,7 @@ subroutine default_matrix_copy_graph_structure(A, g, trans)                !
     ! We could choose the same format as the input graph, but this will
     ! work for the time being.
     !TODO: make it allocate A%g as a mold of g
-    allocate(ll_graph :: A%g)
+    if (.not. associated(A%g)) allocate(ll_graph :: A%g)
     call A%g%copy(g, tr)
 
     A%nnz = g%ne

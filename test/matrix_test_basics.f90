@@ -83,8 +83,8 @@ implicit none
     allocate(x(nn), y1(nn), y2(nn))
     B = 0.0_dp
 
-    do i = 1, nn
-        do j = 1, nn
+    do j = 1, nn
+        do i = 1, nn
             call random_number(z)
             if (z < c) then
                 call random_number(w)
@@ -155,7 +155,7 @@ implicit none
     !----------------------------------------------------------------------!
     ! Test each matrix type                                                !
     !----------------------------------------------------------------------!
-    do frmt = 1, 4
+    do frmt = 1, num_graph_types
     do ordering = 1, 2
         orientation = "row"
         trans = .false.

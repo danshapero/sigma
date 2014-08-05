@@ -8,6 +8,14 @@ use ellpack_graphs
 
 implicit none
 
+
+! Parameter giving the number of different graph formats available.
+! Test programs iterate over every graph type to check correctness of each
+! graph implementation.
+integer, parameter :: num_graph_types = 4
+
+
+
 interface choose_graph_type
     module procedure choose_graph_type_by_int, choose_graph_type_by_name
 end interface
