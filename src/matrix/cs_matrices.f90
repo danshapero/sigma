@@ -45,6 +45,7 @@ contains
     !--------------
     procedure :: set_ordering => cs_matrix_set_ordering
     procedure :: copy_graph_structure => cs_matrix_copy_graph_structure
+    procedure :: set_graph => cs_matrix_set_graph
 
 
     !-----------
@@ -102,13 +103,6 @@ end interface
 
 
 
-interface cs_matrix
-    module procedure cs_matrix_factory
-end interface
-
-
-
-
 contains
 
 
@@ -118,24 +112,6 @@ contains
 !==========================================================================!
 !==== Constructors and factory methods                                 ====!
 !==========================================================================!
-
-!--------------------------------------------------------------------------!
-function cs_matrix_factory(nrow, ncol, g, orientation) result(A)           !
-!--------------------------------------------------------------------------!
-    integer, intent(in) :: nrow, ncol
-    class(cs_graph), target, intent(in) :: g
-    character(len=3), intent(in) :: orientation
-    class(sparse_matrix), pointer :: A
-
-    allocate(cs_matrix :: A)
-    select type(A)
-        class is(cs_matrix)
-            call A%init(nrow, ncol, g, orientation)
-    end select
-
-end function cs_matrix_factory
-
-
 
 !--------------------------------------------------------------------------!
 subroutine cs_matrix_set_ordering(A, orientation)                          !
@@ -214,6 +190,39 @@ subroutine cs_matrix_copy_graph_structure(A, g, trans)                     !
     A%graph_set = .true.
 
 end subroutine cs_matrix_copy_graph_structure
+
+
+
+!--------------------------------------------------------------------------!
+subroutine cs_matrix_set_graph(A, g)                                       !
+!--------------------------------------------------------------------------!
+    class(cs_matrix), intent(inout) :: A
+    class(graph), target, intent(in) :: g
+
+    if (A%nrow /= g%n .or. A%ncol /= g%m) then
+        print *, 'Attempted to set CS matrix connectivity structure to'
+        print *, 'graph with inconsistent dimensions.'
+        print *, 'Dimensions of matrix:', A%nrow, A%ncol
+        print *, 'Dimensions of graph: ', g%n, g%m
+        call exit(1)
+    endif
+
+    select type(g)
+        class is(cs_graph)
+            A%g => g
+        class default
+            print *, 'Attempted to set CS matrix connectivity structure to'
+            print *, 'point to a graph which is not a CS graph.'
+            call exit(1)
+    end select
+
+    A%nnz = g%ne
+    allocate(A%val(A%nnz))
+    A%val = 0.0_dp
+
+    A%graph_set = .true.
+
+end subroutine cs_matrix_set_graph
 
 
 

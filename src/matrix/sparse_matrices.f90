@@ -26,18 +26,22 @@ contains
 function sparse_matrix_factory(nrow, ncol, g, orientation) result(A)       !
 !--------------------------------------------------------------------------!
     integer, intent(in) :: nrow, ncol
-    class(graph), pointer, intent(in) :: g
+    class(graph), target, intent(in) :: g
     character(len=3), intent(in) :: orientation
     class(sparse_matrix), pointer :: A
 
     select type(g)
         class is(cs_graph)
-            A => cs_matrix(nrow, ncol, g, orientation)
+            allocate(cs_matrix :: A)
         class is(ellpack_graph)
-            A => ellpack_matrix(nrow, ncol, g, orientation)
+            allocate(ellpack_matrix :: A)
         class default
-            A => default_matrix(nrow, ncol, g, orientation)
+            allocate(default_matrix :: A)
     end select
+
+    call A%set_ordering(orientation)
+    call A%set_dimensions(nrow, ncol)
+    call A%set_graph(g)
 
 end function sparse_matrix_factory
 

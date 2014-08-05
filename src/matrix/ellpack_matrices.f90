@@ -45,6 +45,7 @@ contains
     !--------------
     procedure :: set_ordering => ellpack_matrix_set_ordering
     procedure :: copy_graph_structure => ellpack_matrix_copy_graph_structure
+    procedure :: set_graph => ellpack_matrix_set_graph
 
 
     !-----------
@@ -127,13 +128,8 @@ abstract interface                                                         !
 end interface
 
 
-
-interface ellpack_matrix
-    module procedure ellpack_matrix_factory
-end interface ellpack_matrix
-
-
 private :: ellpack_matrix_leftperm, ellpack_matrix_rightperm
+
 
 
 contains
@@ -144,24 +140,6 @@ contains
 !==========================================================================!
 !==== Constructor and factory methods                                  ====!
 !==========================================================================!
-
-!--------------------------------------------------------------------------!
-function ellpack_matrix_factory(nrow, ncol, g, orientation) result(A)      !
-!--------------------------------------------------------------------------!
-    integer, intent(in) :: nrow, ncol
-    class(ellpack_graph), target, intent(in) :: g
-    character(len=3), intent(in) :: orientation
-    class(sparse_matrix), pointer :: A
-
-    allocate(ellpack_matrix :: A)
-    select type(A)
-        class is(ellpack_matrix)
-            call A%init(nrow, ncol, g, orientation)
-    end select
-
-end function ellpack_matrix_factory
-
-
 
 !--------------------------------------------------------------------------!
 subroutine ellpack_matrix_set_ordering(A, orientation)                     !
@@ -240,6 +218,39 @@ subroutine ellpack_matrix_copy_graph_structure(A, g, trans)                !
     A%graph_set = .true.
 
 end subroutine ellpack_matrix_copy_graph_structure
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ellpack_matrix_set_graph(A, g)                                  !
+!--------------------------------------------------------------------------!
+    class(ellpack_matrix), intent(inout) :: A
+    class(graph), target, intent(in) :: g
+
+    if (A%nrow /= g%n .or. A%ncol /= g%m) then
+        print *, 'Attempted to set ellpack matrix connectivity structure to'
+        print *, 'graph with inconsistent dimensions.'
+        print *, 'Dimensions of matrix:', A%nrow, A%ncol
+        print *, 'Dimensions of graph: ', g%n, g%m
+        call exit(1)
+    endif
+
+    select type(g)
+        class is(ellpack_graph)
+            A%g => g
+        class default
+            print *, 'Attempted to set ellpack graph connectivity structure'
+            print *, 'to point to a graph which is not an ellpack graph.'
+            call exit(1)
+    end select
+
+    A%nnz = g%ne
+    allocate(A%val(A%g%max_d, A%g%n))
+    A%val = 0.0_dp
+
+    A%graph_set = .true.
+
+end subroutine ellpack_matrix_set_graph
 
 
 

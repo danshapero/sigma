@@ -59,9 +59,14 @@ contains
 
     procedure(sparse_mat_copy_graph_structure_ifc), deferred :: &
                                                       & copy_graph_structure
-    ! Given a sparse matrix and an input graph, initialize the matrix's
-    ! graph structure to be a copy of the input graph. The input graph need
-    ! not be of the same format as the matrix's graph.
+    ! Given an input graph, initialize the matrix's graph structure to be a
+    ! copy of the input graph. The input graph need not be of the same format
+    ! as the matrix's graph.
+
+    procedure(sparse_mat_set_graph_ifc), deferred :: set_graph
+    ! Given an input graph with the `target` attribute, check if that graph
+    ! of a type compatible with the invoking matrix. If so, make the matrix
+    ! point to that graph; if not, throw an error
 
 
     !-----------
@@ -152,6 +157,12 @@ abstract interface                                                         !
         class(graph), intent(in) :: g
         logical, intent(in), optional :: trans
     end subroutine sparse_mat_copy_graph_structure_ifc
+
+    subroutine sparse_mat_set_graph_ifc(A, g)
+        import :: graph, sparse_matrix
+        class(sparse_matrix), intent(inout) :: A
+        class(graph), target, intent(in) :: g
+    end subroutine sparse_mat_set_graph_ifc
 
     subroutine sparse_mat_get_slice_ifc(A, nodes, slice, k)
         import :: sparse_matrix, dp
