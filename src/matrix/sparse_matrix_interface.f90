@@ -72,6 +72,10 @@ contains
     !-----------
     ! Accessors
     !-----------
+    procedure(sparse_mat_get_degree_ifc), deferred :: get_row_degree
+    procedure(sparse_mat_get_degree_ifc), deferred :: get_column_degree
+    ! Return the number of non-zero entries in a given row or column
+
     procedure(sparse_mat_get_slice_ifc), deferred :: get_row
     ! Return all the column indices of the non-zero entries in a given row
     ! and all the corresponding matrix entries
@@ -163,6 +167,13 @@ abstract interface                                                         !
         class(sparse_matrix), intent(inout) :: A
         class(graph), target, intent(in) :: g
     end subroutine sparse_mat_set_graph_ifc
+
+    function sparse_mat_get_degree_ifc(A, k) result(d)
+        import :: sparse_matrix
+        class(sparse_matrix), intent(in) :: A
+        integer, intent(in) :: k
+        integer :: d
+    end function sparse_mat_get_degree_ifc
 
     subroutine sparse_mat_get_slice_ifc(A, nodes, slice, k)
         import :: sparse_matrix, dp

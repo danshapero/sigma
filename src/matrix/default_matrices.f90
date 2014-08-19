@@ -35,6 +35,9 @@ type, extends(sparse_matrix) :: default_matrix                             !
     ! procedures defined in the module default_sparse_matrix_kernels.
     ! These are associated to each matrix through various function
     ! pointers.
+    procedure(get_degree_kernel), pointer, nopass, private :: row_deg_impl
+    procedure(get_degree_kernel), pointer, nopass, private :: col_deg_impl
+
     procedure(get_slice_kernel), pointer, nopass, private :: get_row_impl
     procedure(get_slice_kernel), pointer, nopass, private :: get_column_impl
 
@@ -54,6 +57,8 @@ contains
     ! Accessors
     !-----------
     procedure :: get_value => default_matrix_get_value
+    procedure :: get_row_degree => default_matrix_get_row_degree
+    procedure :: get_column_degree => default_matrix_get_column_degree
     procedure :: get_row => default_matrix_get_row
     procedure :: get_column => default_matrix_get_column
 
@@ -114,6 +119,9 @@ subroutine default_matrix_set_ordering(A, orientation)                     !
         case('row')
             A%ord = [1, 2]
 
+            A%row_deg_impl => get_degree_contiguous
+            A%col_deg_impl => get_degree_discontiguous
+
             A%get_row_impl    => get_slice_contiguous
             A%get_column_impl => get_slice_discontiguous
 
@@ -121,6 +129,9 @@ subroutine default_matrix_set_ordering(A, orientation)                     !
             A%right_permute_impl => graph_rightperm
         case('col')
             A%ord = [2, 1]
+
+            A%row_deg_impl => get_degree_discontiguous
+            A%col_deg_impl => get_degree_contiguous
 
             A%get_row_impl    => get_slice_discontiguous
             A%get_column_impl => get_slice_contiguous
@@ -236,6 +247,32 @@ function default_matrix_get_value(A, i, j) result(z)                       !
     if (k /= -1) z = A%val(k)
 
 end function default_matrix_get_value
+
+
+
+!--------------------------------------------------------------------------!
+function default_matrix_get_row_degree(A, k) result(d)                     !
+!--------------------------------------------------------------------------!
+    class(default_matrix), intent(in) :: A
+    integer, intent(in) :: k
+    integer :: d
+
+    d = A%row_deg_impl(A%g, k)
+
+end function default_matrix_get_row_degree
+
+
+
+!--------------------------------------------------------------------------!
+function default_matrix_get_column_degree(A, k) result(d)                  !
+!--------------------------------------------------------------------------!
+    class(default_matrix), intent(in) :: A
+    integer, intent(in) :: k
+    integer :: d
+
+    d = A%col_deg_impl(A%g, k)
+
+end function default_matrix_get_column_degree
 
 
 

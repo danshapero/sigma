@@ -31,6 +31,9 @@ type, extends(sparse_matrix) :: cs_matrix                                  !
 
     !---------------
     ! Function pointers for sundry matrix operations
+    procedure(get_degree_kernel), pointer, nopass, private :: row_deg_impl
+    procedure(get_degree_kernel), pointer, nopass, private :: col_deg_impl
+
     procedure(get_slice_kernel), pointer, nopass, private :: get_row_impl
     procedure(get_slice_kernel), pointer, nopass, private :: get_column_impl
 
@@ -52,6 +55,8 @@ contains
     ! Accessors
     !-----------
     procedure :: get_value => cs_matrix_get_value
+    procedure :: get_row_degree => cs_matrix_get_row_degree
+    procedure :: get_column_degree => cs_matrix_get_column_degree
     procedure :: get_row => cs_matrix_get_row
     procedure :: get_column => cs_matrix_get_column
 
@@ -126,6 +131,9 @@ subroutine cs_matrix_set_ordering(A, orientation)                          !
         case('row')
             A%ord = [1, 2]
 
+            A%row_deg_impl => get_degree_contiguous
+            A%col_deg_impl => get_degree_discontiguous
+
             A%get_row_impl    => get_slice_contiguous
             A%get_column_impl => get_slice_discontiguous
 
@@ -136,6 +144,9 @@ subroutine cs_matrix_set_ordering(A, orientation)                          !
             A%matvec_t_add_impl => csc_matvec_add
         case('col')
             A%ord = [2, 1]
+
+            A%row_deg_impl => get_degree_discontiguous
+            A%col_deg_impl => get_degree_contiguous
 
             A%get_row_impl    => get_slice_discontiguous
             A%get_column_impl => get_slice_contiguous
@@ -255,6 +266,32 @@ function cs_matrix_get_value(A, i, j) result(z)                            !
     enddo
 
 end function cs_matrix_get_value
+
+
+
+!--------------------------------------------------------------------------!
+function cs_matrix_get_row_degree(A, k) result(d)                          !
+!--------------------------------------------------------------------------!
+    class(cs_matrix), intent(in) :: A
+    integer, intent(in) :: k
+    integer :: d
+
+    d = A%row_deg_impl(A%g, k)
+
+end function cs_matrix_get_row_degree
+
+
+
+!--------------------------------------------------------------------------!
+function cs_matrix_get_column_degree(A, k) result(d)                       !
+!--------------------------------------------------------------------------!
+    class(cs_matrix), intent(in) :: A
+    integer, intent(in) :: k
+    integer :: d
+
+    d = A%col_deg_impl(A%g, k)
+
+end function cs_matrix_get_column_degree
 
 
 

@@ -213,6 +213,32 @@ implicit none
 
 
         !--------
+        ! Check that getting the number of non-zero entries of a matrix row
+        ! or column works
+        do i = 1, nn
+            k = A%get_row_degree(i)
+            if (k /= count(B(i, :) /= 0)) then
+                print *, 'Failed to get degree of row', i
+                print *, '# of non-zero entries in B:', count(B(i, :) /= 0)
+                print *, '# of non-zero entries in A:', k
+                print *, 'Terminating.'
+                call exit(1)
+            endif
+        enddo
+
+        do j = 1, nn
+            k = A%get_column_degree(j)
+            if (k /= count(B(:, j) /= 0)) then
+                print *, 'Failed to get degree of column', j
+                print *, '# of non-zero entries in B:', count(B(:, j) /= 0)
+                print *, '# of non-zero entries in A:', k
+                print *, 'Terminating.'
+                call exit(1)
+            endif
+        enddo
+
+
+        !--------
         ! Check that getting an entire row / column of the matrix works
         do i = 1, nn
             call A%get_row(nodes, slice, i)

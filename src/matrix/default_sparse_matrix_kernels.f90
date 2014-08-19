@@ -24,6 +24,13 @@ implicit none
 !--------------------------------------------------------------------------!
 abstract interface                                                         !
 !--------------------------------------------------------------------------!
+    function get_degree_kernel(g, k) result(d)
+        import :: graph
+        class(graph), intent(in) :: g
+        integer, intent(in) :: k
+        integer :: d
+    end function get_degree_kernel
+
     subroutine get_slice_kernel(g, val, nodes, slice, k)
         import :: graph, dp
         class(graph), intent(in) :: g
@@ -51,6 +58,39 @@ contains
 !==========================================================================!
 !==== Accessor kernels                                                 ====!
 !==========================================================================!
+
+!--------------------------------------------------------------------------!
+function get_degree_contiguous(g, k) result(d)                             !
+!--------------------------------------------------------------------------!
+    class(graph), intent(in) :: g
+    integer, intent(in) :: k
+    integer :: d
+
+    d = g%degree(k)
+
+end function get_degree_contiguous
+
+
+
+!--------------------------------------------------------------------------!
+function get_degree_discontiguous(g, k) result(d)                          !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(graph), intent(in) :: g
+    integer, intent(in) :: k
+    integer :: d
+    ! local variables
+    integer :: l
+
+    d = 0
+
+    do l = 1, g%n
+        if (g%connected(l, k)) d = d + 1
+    enddo
+
+end function get_degree_discontiguous
+
+
 
 !--------------------------------------------------------------------------!
 subroutine get_slice_contiguous(g, val, nodes, slice, k)                   !

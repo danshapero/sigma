@@ -16,6 +16,8 @@ use types, only: dp
 use graph_interface
 use ellpack_graphs
 use sparse_matrix_interface
+use default_sparse_matrix_kernels,  only: get_degree_kernel, &
+                        & get_degree_contiguous, get_degree_discontiguous
 
 implicit none
 
@@ -31,6 +33,9 @@ type, extends(sparse_matrix) :: ellpack_matrix                             !
 
     !--------------------
     ! Function pointers for sundry matrix operations
+    procedure(get_degree_kernel), pointer, nopass, private :: row_deg_impl
+    procedure(get_degree_kernel), pointer, nopass, private :: col_deg_impl
+
     procedure(ellpack_get_slice_ifc), pointer, private :: get_row_impl
     procedure(ellpack_get_slice_ifc), pointer, private :: get_col_impl
 
@@ -52,6 +57,8 @@ contains
     ! Accessors
     !-----------
     procedure :: get_value => ellpack_matrix_get_value
+    procedure :: get_row_degree => ellpack_matrix_get_row_degree
+    procedure :: get_column_degree => ellpack_matrix_get_column_degree
     procedure :: get_row => ellpack_matrix_get_row
     procedure :: get_column => ellpack_matrix_get_column
 
@@ -154,6 +161,9 @@ subroutine ellpack_matrix_set_ordering(A, orientation)                     !
         case('row')
             A%ord = [1, 2]
 
+            A%row_deg_impl => get_degree_contiguous
+            A%col_deg_impl => get_degree_discontiguous
+
             A%get_row_impl => ellpack_get_slice_contiguous
             A%get_col_impl => ellpack_get_slice_discontiguous
 
@@ -164,6 +174,9 @@ subroutine ellpack_matrix_set_ordering(A, orientation)                     !
             A%matvec_t_add_impl => ellpackc_matvec_add
         case('col')
             A%ord = [2, 1]
+
+            A%row_deg_impl => get_degree_discontiguous
+            A%col_deg_impl => get_degree_contiguous
 
             A%get_row_impl => ellpack_get_slice_discontiguous
             A%get_col_impl => ellpack_get_slice_contiguous
@@ -284,6 +297,32 @@ function ellpack_matrix_get_value(A, i, j) result(z)                       !
     enddo
 
 end function ellpack_matrix_get_value
+
+
+
+!--------------------------------------------------------------------------!
+function ellpack_matrix_get_row_degree(A, k) result(d)                     !
+!--------------------------------------------------------------------------!
+    class(ellpack_matrix), intent(in) :: A
+    integer, intent(in) :: k
+    integer :: d
+
+    d = A%row_deg_impl(A%g, k)
+
+end function ellpack_matrix_get_row_degree
+
+
+
+!--------------------------------------------------------------------------!
+function ellpack_matrix_get_column_degree(A, k) result(d)                  !
+!--------------------------------------------------------------------------!
+    class(ellpack_matrix), intent(in) :: A
+    integer, intent(in) :: k
+    integer :: d
+
+    d = A%col_deg_impl(A%g, k)
+
+end function ellpack_matrix_get_column_degree
 
 
 
