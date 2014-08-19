@@ -192,6 +192,151 @@ end subroutine sparse_matrix_sum_fill_entries
 
 
 
+!--------------------------------------------------------------------------!
+subroutine sparse_matrix_product(A, B, C)                                  !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(inout) :: A
+    class(sparse_matrix), intent(in) :: B, C
+    ! local variables
+    type(ll_graph) :: g
+    logical :: trans
+
+    if (B%ncol /= C%nrow) then
+        print *, 'Dimensions of matrices for sparse matrix product'
+        print *, 'A = B * C are not consistent.'
+        print *, 'Column dimension of B:', B%ncol
+        print *, 'Row dimension of C:   ', C%nrow
+        call exit(1)
+    endif
+
+    if (.not. A%ordering_set) call A%set_ordering("row")
+
+    ! If `A` is stored with column-major ordering, we need to transpose
+    ! the graph with the structure of `B * C`
+    trans = A%ord(1) == 2
+
+    call A%set_dimensions(B%nrow, C%ncol)
+    call sparse_matrix_product_graph(g, B, C)
+    call A%copy_graph_structure(g, trans)
+    call sparse_matrix_product_fill_entries(A, B, C)
+
+end subroutine sparse_matrix_product
+
+
+
+!-----------------------------------------------------------------------
+subroutine sparse_matrix_product_graph(g, B, C)
+!------------------------------------------------------------------------
+    ! input/output variables
+    class(graph), intent(inout) :: g
+    class(sparse_matrix), intent(in) :: B, C
+    ! local variables
+    integer :: i, j, k, l, m, d
+    ! variables for getting matrix slices
+    integer, allocatable :: nodes(:)
+    real(dp), allocatable :: slice(:)
+    ! variables for iterating through matrix entries
+    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    type(graph_edge_cursor) :: cursor
+
+    call g%init(B%nrow, C%ncol)
+
+    ! Allocate arrays for getting slices from `C`
+!    d = C%max_row_degree() ! Haha this doesn't even exist dumbass
+    d = 0
+    do i = 1, C%nrow
+        d = max(d, C%get_row_degree(i))
+    enddo
+    allocate(nodes(d), slice(d))
+
+
+    ! Iterate through all the edges of `B`
+    cursor = B%make_cursor()
+    num_batches = (cursor%final - cursor%start) / batch_size + 1
+
+    do n = 1, num_batches
+        call B%get_edges(edges, cursor, batch_size, num_returned)
+
+        do l = 1, num_returned
+            ! For each edge (i, k) in `B`
+            i = edges(1, l)
+            k = edges(2, l)
+
+            ! Find all edges (k, j) in `C` and add (i, j) to `g`
+            call C%get_row(nodes, slice, k)
+            d = C%get_row_degree(k)
+
+            do m = 1, d
+                j = nodes(m)
+                call g%add_edge(i, j)
+            enddo
+        enddo
+    enddo
+
+    deallocate(nodes, slice)
+
+end subroutine sparse_matrix_product_graph
+
+
+
+!--------------------------------------------------------------
+subroutine sparse_matrix_product_fill_entries(A, B, C)
+!-----------------------------------------------------------------
+    ! input/output variables
+    class(sparse_matrix), intent(inout) :: A
+    class(sparse_matrix), intent(in) :: B, C
+    ! local variables
+    integer :: i, j, k, l, m, d
+    real(dp) :: Bik, Ckj
+    ! variables for getting matrix slices
+    integer, allocatable :: nodes(:)
+    real(dp), allocatable :: slice(:)
+    ! variables for iterating through matrix entries
+    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    real(dp) :: vals(batch_size)
+    type(graph_edge_cursor) :: cursor
+
+    call A%zero()
+
+    ! Allocate arrays for getting slices from `C`
+    !d = C%max_row_degree()
+    d = 0
+    do i = 1, C%nrow
+        d = max(d, C%get_row_degree(i))
+    enddo
+    allocate(nodes(d), slice(d))
+
+
+    ! Iterate through all the edges of `B`
+    cursor = B%make_cursor()
+    num_batches = (cursor%final - cursor%start) / batch_size + 1
+
+    do n = 1, num_batches
+        call B%get_entries(edges, vals, cursor, batch_size, num_returned)
+
+        do l = 1, num_returned
+            ! For each edge (i, k) in `B`
+            i = edges(1, l)
+            k = edges(2, l)
+            Bik = vals(l)
+
+            ! Find all edges (k, j) in `C` and add B(i, k) * C(k, j) to A(i, j)
+            call C%get_row(nodes, slice, k)
+            d = C%get_row_degree(k)
+            do m = 1, d
+                j = nodes(m)
+                Ckj = slice(m)
+
+                call A%add_value(i, j, Bik * Ckj)
+            enddo
+        enddo
+    enddo    
+
+end subroutine sparse_matrix_product_fill_entries
+
+
 
 
 end module sparse_matrices
+
