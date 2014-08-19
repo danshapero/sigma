@@ -89,6 +89,10 @@ implicit none
     call convert_graph_type(hr, "compressed sparse")
 
 
+
+    !----------------------------------------------------------------------!
+    ! Test each matrix type                                                !
+    !----------------------------------------------------------------------!
     do frmt1 = 1, num_graph_types
     do ordering1 = 1, 2
         call choose_graph_type(g, frmt1)
@@ -151,7 +155,12 @@ implicit none
                 call A%to_dense_matrix(AD)
 
                 misfit = maxval(dabs(BD + CD - AD))
-                if (misfit > 1.0e-15) print *, misfit
+                if (misfit > 1.0e-15) then
+                    print *, 'Computing sparse matrix sum failed.'
+                    print *, '||B + C - A|| =', misfit
+                    print *, 'in the max-norm. Terminating.'
+                    call exit(1)
+                endif
 
 
                 call A%destroy()
