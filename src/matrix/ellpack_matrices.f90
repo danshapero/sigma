@@ -15,7 +15,7 @@ module ellpack_matrices                                                    !
 use types, only: dp
 use graph_interfaces
 use ellpack_graphs
-use sparse_matrix_interface
+use sparse_matrix_interfaces
 use default_sparse_matrix_kernels,  only: get_degree_kernel, &
                         & get_degree_contiguous, get_degree_discontiguous
 
@@ -25,7 +25,7 @@ implicit none
 
 
 !--------------------------------------------------------------------------!
-type, extends(sparse_matrix) :: ellpack_matrix                             !
+type, extends(sparse_matrix_interface) :: ellpack_matrix                   !
 !--------------------------------------------------------------------------!
     class(ellpack_graph), pointer :: g
     real(dp), allocatable :: val(:,:)

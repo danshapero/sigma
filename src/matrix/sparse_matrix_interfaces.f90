@@ -1,6 +1,6 @@
 !==========================================================================!
 !==========================================================================!
-module sparse_matrix_interface                                             !
+module sparse_matrix_interfaces                                            !
 !==========================================================================!
 !==========================================================================!
 !====     This module contains the interface for matrices, which are a ====!
@@ -29,7 +29,7 @@ implicit none
 
 
 !--------------------------------------------------------------------------!
-type, extends(linear_operator), abstract :: sparse_matrix                  !
+type, extends(linear_operator), abstract :: sparse_matrix_interface        !
 !--------------------------------------------------------------------------!
     ! number of non-zero entries
     integer :: nnz
@@ -148,7 +148,7 @@ contains
     ! Write out all the entries of the sparse matrix to a file
 
 
-end type sparse_matrix
+end type sparse_matrix_interface
 
 
 
@@ -156,43 +156,43 @@ end type sparse_matrix
 abstract interface                                                         !
 !--------------------------------------------------------------------------!
     subroutine sparse_mat_copy_graph_structure_ifc(A, g, trans)
-        import :: graph_interface, sparse_matrix
-        class(sparse_matrix), intent(inout) :: A
+        import :: graph_interface, sparse_matrix_interface
+        class(sparse_matrix_interface), intent(inout) :: A
         class(graph_interface), intent(in) :: g
         logical, intent(in), optional :: trans
     end subroutine sparse_mat_copy_graph_structure_ifc
 
     subroutine sparse_mat_set_graph_ifc(A, g)
-        import :: graph_interface, sparse_matrix
-        class(sparse_matrix), intent(inout) :: A
+        import :: graph_interface, sparse_matrix_interface
+        class(sparse_matrix_interface), intent(inout) :: A
         class(graph_interface), target, intent(in) :: g
     end subroutine sparse_mat_set_graph_ifc
 
     function sparse_mat_get_degree_ifc(A, k) result(d)
-        import :: sparse_matrix
-        class(sparse_matrix), intent(in) :: A
+        import :: sparse_matrix_interface
+        class(sparse_matrix_interface), intent(in) :: A
         integer, intent(in) :: k
         integer :: d
     end function sparse_mat_get_degree_ifc
 
     subroutine sparse_mat_get_slice_ifc(A, nodes, slice, k)
-        import :: sparse_matrix, dp
-        class(sparse_matrix), intent(in) :: A
+        import :: sparse_matrix_interface, dp
+        class(sparse_matrix_interface), intent(in) :: A
         integer, intent(out) :: nodes(:)
         real(dp), intent(out) :: slice(:)
         integer, intent(in) :: k
     end subroutine sparse_mat_get_slice_ifc
 
     function sparse_mat_make_cursor_ifc(A) result(cursor)
-        import :: sparse_matrix, graph_edge_cursor
-        class(sparse_matrix), intent(in) :: A
+        import :: sparse_matrix_interface, graph_edge_cursor
+        class(sparse_matrix_interface), intent(in) :: A
         type(graph_edge_cursor) :: cursor
     end function sparse_mat_make_cursor_ifc
 
     subroutine sparse_mat_get_edges_ifc(A, edges, cursor, &
                                                 & num_edges, num_returned)
-        import :: sparse_matrix, graph_edge_cursor
-        class(sparse_matrix), intent(in) :: A
+        import :: sparse_matrix_interface, graph_edge_cursor
+        class(sparse_matrix_interface), intent(in) :: A
         integer, intent(out) :: edges(2, num_edges)
         type(graph_edge_cursor), intent(inout) :: cursor
         integer, intent(in) :: num_edges
@@ -201,8 +201,8 @@ abstract interface                                                         !
 
     subroutine sparse_mat_get_entries_ifc(A, edges, entries, cursor, &
                                                 & num_edges, num_returned)
-        import :: sparse_matrix, dp, graph_edge_cursor
-        class(sparse_matrix), intent(in) :: A
+        import :: sparse_matrix_interface, dp, graph_edge_cursor
+        class(sparse_matrix_interface), intent(in) :: A
         integer, intent(out) :: edges(2, num_edges)
         real(dp), intent(out) :: entries(num_edges)
         type(graph_edge_cursor), intent(inout) :: cursor
@@ -211,26 +211,26 @@ abstract interface                                                         !
     end subroutine sparse_mat_get_entries_ifc
 
     subroutine sparse_mat_set_value_ifc(A, i, j, z)
-        import :: sparse_matrix, dp
-        class(sparse_matrix), intent(inout) :: A
+        import :: sparse_matrix_interface, dp
+        class(sparse_matrix_interface), intent(inout) :: A
         integer, intent(in) :: i, j
         real(dp), intent(in) :: z
     end subroutine sparse_mat_set_value_ifc
 
     subroutine sparse_mat_zero_ifc(A)
-        import :: sparse_matrix
-        class(sparse_matrix), intent(inout) :: A
+        import :: sparse_matrix_interface
+        class(sparse_matrix_interface), intent(inout) :: A
     end subroutine sparse_mat_zero_ifc
 
     subroutine sparse_mat_permute_ifc(A, p)
-        import :: sparse_matrix
-        class(sparse_matrix), intent(inout) :: A
+        import :: sparse_matrix_interface
+        class(sparse_matrix_interface), intent(inout) :: A
         integer, intent(in) :: p(:)
     end subroutine sparse_mat_permute_ifc
 
     subroutine sparse_mat_destroy_ifc(A)
-        import :: sparse_matrix
-        class(sparse_matrix), intent(inout) :: A
+        import :: sparse_matrix_interface
+        class(sparse_matrix_interface), intent(inout) :: A
     end subroutine sparse_mat_destroy_ifc
 
 end interface
@@ -250,7 +250,7 @@ contains
 !--------------------------------------------------------------------------!
 subroutine sparse_matrix_init(A, nrow, ncol, g, orientation)               !
 !--------------------------------------------------------------------------!
-    class(sparse_matrix), intent(inout) :: A
+    class(sparse_matrix_interface), intent(inout) :: A
     integer, intent(in) :: nrow, ncol
     class(graph_interface), intent(in) :: g
     character(len=3), intent(in) :: orientation
@@ -266,7 +266,7 @@ end subroutine sparse_matrix_init
 !--------------------------------------------------------------------------!
 subroutine sparse_matrix_set_ordering(A, orientation)                      !
 !--------------------------------------------------------------------------!
-    class(sparse_matrix), intent(inout) :: A
+    class(sparse_matrix_interface), intent(inout) :: A
     character(len=3), intent(in) :: orientation
 
     if (orientation == "col") then
@@ -284,7 +284,7 @@ end subroutine sparse_matrix_set_ordering
 !--------------------------------------------------------------------------!
 subroutine set_sparse_matrix_dimensions(A, nrow, ncol)                     !
 !--------------------------------------------------------------------------!
-    class(sparse_matrix), intent(inout) :: A
+    class(sparse_matrix_interface), intent(inout) :: A
     integer, intent(in) :: nrow, ncol
 
     A%nrow = nrow
@@ -305,7 +305,7 @@ end subroutine set_sparse_matrix_dimensions
 subroutine sparse_matrix_matvec_add(A, x, y)                               !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(sparse_matrix), intent(in) :: A
+    class(sparse_matrix_interface), intent(in) :: A
     real(dp), intent(in)    :: x(:)
     real(dp), intent(inout) :: y(:)
     ! local variables
@@ -336,7 +336,7 @@ end subroutine sparse_matrix_matvec_add
 subroutine sparse_matrix_matvec_t_add(A, x, y)                             !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(sparse_matrix), intent(in) :: A
+    class(sparse_matrix_interface), intent(in) :: A
     real(dp), intent(in)    :: x(:)
     real(dp), intent(inout) :: y(:)
     ! local variables
@@ -372,7 +372,7 @@ end subroutine sparse_matrix_matvec_t_add
 subroutine sparse_matrix_to_dense_matrix(A, B, trans)                      !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(sparse_matrix), intent(in) :: A
+    class(sparse_matrix_interface), intent(in) :: A
     real(dp), intent(out) :: B(:,:)
     logical, intent(in), optional :: trans
     ! local variables
@@ -425,7 +425,7 @@ end subroutine sparse_matrix_to_dense_matrix
 subroutine sparse_matrix_to_file(A, filename, trans)                       !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(sparse_matrix), intent(in) :: A
+    class(sparse_matrix_interface), intent(in) :: A
     character(len=*), intent(in) :: filename
     logical, intent(in), optional :: trans
     ! local variables
@@ -481,5 +481,5 @@ end subroutine sparse_matrix_to_file
 
 
 
-end module sparse_matrix_interface
+end module sparse_matrix_interfaces
 

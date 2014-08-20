@@ -30,7 +30,7 @@ subroutine lanczos(A,T,Q,n)                                                !
 ! coefficients into the 3 x n array T and the vectors into the array Q.    !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(sparse_matrix), intent(in) :: A
+    class(sparse_matrix_interface), intent(in) :: A
     real(dp), intent(out) :: T(3,n), Q(A%nrow,n)
     integer, intent(in) :: n
     ! local variables
@@ -91,7 +91,7 @@ end subroutine lanczos
 subroutine eigensolve(A,lambda,V,n)                                        !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(sparse_matrix), intent(in) :: A
+    class(sparse_matrix_interface), intent(in) :: A
     real(dp), intent(out) :: lambda(n), V(A%nrow,n)
     integer, intent(in) :: n
     ! local variables

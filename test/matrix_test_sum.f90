@@ -13,7 +13,7 @@ implicit none
     class(graph_interface), pointer :: g, h, gr, hr
 
     ! sparse and dense matrices
-    class(sparse_matrix), pointer :: A, B, C
+    class(sparse_matrix_interface), pointer :: A, B, C
     real(dp), allocatable :: AD(:,:), BD(:,:), CD(:,:)
 
     ! integer indices

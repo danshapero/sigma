@@ -16,7 +16,7 @@ use types, only: dp
 use graph_interfaces
 use ll_graphs
 use default_sparse_matrix_kernels
-use sparse_matrix_interface
+use sparse_matrix_interfaces
 
 implicit none
 
@@ -24,7 +24,7 @@ implicit none
 
 
 !--------------------------------------------------------------------------!
-type, extends(sparse_matrix) :: default_matrix                             !
+type, extends(sparse_matrix_interface) :: default_matrix                   !
 !--------------------------------------------------------------------------!
     class(graph_interface), pointer :: g
     real(dp), allocatable :: val(:)

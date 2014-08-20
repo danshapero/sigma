@@ -15,7 +15,7 @@ use linear_operator_products
 use linear_operators
 
 ! Use all the matrix modules
-use sparse_matrix_interface
+use sparse_matrix_interfaces
 use default_sparse_matrix_kernels
 use default_matrices
 use cs_matrices

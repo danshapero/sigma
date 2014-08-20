@@ -25,7 +25,7 @@ implicit none
     real(dp) :: z(512), p, entropy
 
     ! a sparse matrix
-    class(sparse_matrix), pointer :: A
+    class(sparse_matrix_interface), pointer :: A
 
     ! some integer indices
     integer :: i, j, k

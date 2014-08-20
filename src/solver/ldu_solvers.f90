@@ -110,7 +110,7 @@ subroutine sparse_ldu_setup(solver, A)                                     !
     ! Check to make sure `A` is a sparse matrix, not a general linear
     ! operator
     select type(A)
-        class is(sparse_matrix)
+        class is(sparse_matrix_interface)
             if (.not. solver%initialized) then
                 ! Build the sparsity pattern for the factorization if we
                 ! haven't already done so
@@ -289,7 +289,7 @@ subroutine sparse_static_pattern_ldu_factorization(A, L, D, U)             !
 ! of memory to store n doubles which we know to all be 1.0.                !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(sparse_matrix), intent(in) :: A
+    class(sparse_matrix_interface), intent(in) :: A
     type(cs_matrix), intent(inout) :: L, U
     real(dp), intent(inout) :: D(:)
     ! local variables
@@ -401,7 +401,7 @@ subroutine incomplete_ldu_sparsity_pattern(A, L, U, level)                 !
 ! specifies the level of fill allowed in the factorization.                !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(sparse_matrix), intent(in) :: A
+    class(sparse_matrix_interface), intent(in) :: A
     type(cs_matrix), intent(inout) :: L, U
     integer, intent(in) :: level
     ! local variables

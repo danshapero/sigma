@@ -18,7 +18,7 @@ implicit none
     real(dp), allocatable :: z(:)
 
     ! a sparse matrix
-    class(sparse_matrix), pointer :: A
+    class(sparse_matrix_interface), pointer :: A
 
     ! a solver object
     type(cg_solver) :: solver

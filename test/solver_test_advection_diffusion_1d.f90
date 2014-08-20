@@ -10,7 +10,7 @@ implicit none
     class(graph_interface), pointer :: g
 
     ! sparse matrix
-    class(sparse_matrix), pointer :: A
+    class(sparse_matrix_interface), pointer :: A
 
     ! linear_solver
     class(linear_solver), pointer :: solver

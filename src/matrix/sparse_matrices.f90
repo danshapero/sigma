@@ -5,7 +5,7 @@ module sparse_matrices                                                     !
 !==========================================================================!
 
 use graphs
-use sparse_matrix_interface
+use sparse_matrix_interfaces
 use default_sparse_matrix_kernels
 use default_matrices
 use cs_matrices
@@ -28,7 +28,7 @@ function sparse_matrix_factory(nrow, ncol, g, orientation) result(A)       !
     integer, intent(in) :: nrow, ncol
     class(graph_interface), target, intent(in) :: g
     character(len=3), intent(in) :: orientation
-    class(sparse_matrix), pointer :: A
+    class(sparse_matrix_interface), pointer :: A
 
     select type(g)
         class is(cs_graph)
@@ -60,8 +60,8 @@ subroutine sparse_matrix_sum(A, B, C)                                      !
 ! the connectivity structure of the matrix sum, then fill the entries.     !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(sparse_matrix), intent(inout) :: A
-    class(sparse_matrix), intent(in)    :: B, C
+    class(sparse_matrix_interface), intent(inout) :: A
+    class(sparse_matrix_interface), intent(in)    :: B, C
     ! local variables
     type(ll_graph) :: g
     logical :: trans
@@ -99,7 +99,7 @@ subroutine sparse_matrix_sum_graph(g, B, C)                                !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(graph_interface), intent(inout) :: g
-    class(sparse_matrix), intent(in) :: B, C
+    class(sparse_matrix_interface), intent(in) :: B, C
     ! local variables
     integer :: i, j, k
     integer :: n, num_batches, num_returned, edges(2, batch_size)
@@ -147,8 +147,8 @@ end subroutine sparse_matrix_sum_graph
 subroutine sparse_matrix_sum_fill_entries(A, B, C)                         !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(sparse_matrix), intent(inout) :: A
-    class(sparse_matrix), intent(in)    :: B, C
+    class(sparse_matrix_interface), intent(inout) :: A
+    class(sparse_matrix_interface), intent(in)    :: B, C
     ! local variables
     integer :: i, j, k
     real(dp) :: z
@@ -196,8 +196,8 @@ end subroutine sparse_matrix_sum_fill_entries
 subroutine sparse_matrix_product(A, B, C)                                  !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(sparse_matrix), intent(inout) :: A
-    class(sparse_matrix), intent(in) :: B, C
+    class(sparse_matrix_interface), intent(inout) :: A
+    class(sparse_matrix_interface), intent(in) :: B, C
     ! local variables
     type(ll_graph) :: g
     logical :: trans
@@ -230,7 +230,7 @@ subroutine sparse_matrix_product_graph(g, B, C)
 !------------------------------------------------------------------------
     ! input/output variables
     class(graph_interface), intent(inout) :: g
-    class(sparse_matrix), intent(in) :: B, C
+    class(sparse_matrix_interface), intent(in) :: B, C
     ! local variables
     integer :: i, j, k, l, m, d
     ! variables for getting matrix slices
@@ -284,8 +284,8 @@ end subroutine sparse_matrix_product_graph
 subroutine sparse_matrix_product_fill_entries(A, B, C)
 !-----------------------------------------------------------------
     ! input/output variables
-    class(sparse_matrix), intent(inout) :: A
-    class(sparse_matrix), intent(in) :: B, C
+    class(sparse_matrix_interface), intent(inout) :: A
+    class(sparse_matrix_interface), intent(in) :: B, C
     ! local variables
     integer :: i, j, k, l, m, d
     real(dp) :: Bik, Ckj

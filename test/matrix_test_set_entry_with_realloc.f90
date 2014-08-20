@@ -14,7 +14,7 @@ implicit none
     class(graph_interface), pointer :: g, h
 
     ! sparse and dense matrices
-    class(sparse_matrix), pointer :: A
+    class(sparse_matrix_interface), pointer :: A
 
     ! integer indices
     integer :: i, j, nn, frmt, ordering

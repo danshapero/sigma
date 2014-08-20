@@ -14,7 +14,7 @@ implicit none
     real(dp) :: z(2), p
 
     ! a sparse_matrix
-    class(sparse_matrix), pointer :: A
+    class(sparse_matrix_interface), pointer :: A
 
     ! some integer indices
     integer :: i, j, k, x, y, nx, ny, d, di, dj, n
