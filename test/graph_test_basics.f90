@@ -15,7 +15,7 @@ use sigma
 implicit none
 
     ! graph
-    class(graph), pointer :: g
+    class(graph_interface), pointer :: g
 
     ! dense graph
     integer, allocatable :: A(:,:), B(:,:), BP(:,:)

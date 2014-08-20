@@ -21,7 +21,7 @@ use sigma
 implicit none
 
     ! a linked-list graph and variables for generating it randomly
-    class(graph), pointer :: g
+    class(graph_interface), pointer :: g
     real(dp) :: z(512), p, entropy
 
     ! a sparse matrix

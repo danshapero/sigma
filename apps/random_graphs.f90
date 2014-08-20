@@ -13,14 +13,14 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine erdos_renyi(g,nn,p)                                             !
+subroutine erdos_renyi(g, nn, p)                                           !
 !--------------------------------------------------------------------------!
 !     Generate an Erdos-Renyi graph g on n vertices.                       !
 !     Any two edges (i,j) in g are connected independently of each other   !
 ! with probability p.                                                      !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(graph), intent(inout) :: g
+    class(graph_interface), intent(inout) :: g
     integer, intent(in) :: nn
     real(dp), intent(in) :: p
     ! local variables
@@ -53,7 +53,7 @@ subroutine watts_strogatz(g, nn, k, p)                                     !
 !     The edges are then independently re-wired with probability p.        !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(graph), intent(inout) :: g
+    class(graph_interface), intent(inout) :: g
     integer, intent(in) :: nn, k
     real(dp), intent(in) :: p
     ! local variables
@@ -131,7 +131,7 @@ subroutine barabasi_albert(g, nn, k)                                       !
 ! attachment algorithm of Barabasi-Albert; P[degree of node = k] = k^(-p). !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(graph), intent(inout) :: g
+    class(graph_interface), intent(inout) :: g
     integer, intent(in) :: nn, k
     ! local variables
     integer :: i, j, l, d, d_sum

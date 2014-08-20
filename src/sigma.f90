@@ -1,7 +1,7 @@
 module sigma
 
 ! Use all the graph modules
-use graph_interface
+use graph_interfaces
 use ll_graphs
 use coo_graphs
 use cs_graphs

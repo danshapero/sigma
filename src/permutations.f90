@@ -9,7 +9,7 @@ module permutations                                                        !
 !==========================================================================!
 !==========================================================================!
 
-use graph_interface
+use graph_interfaces
 use types, only: dynamic_array, circular_array
 
 implicit none
@@ -22,7 +22,7 @@ contains
 subroutine breadth_first_search(g, p)                                      !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(graph), intent(in) :: g
+    class(graph_interface), intent(in) :: g
     integer, intent(out) :: p(:)
     ! local variables
     integer :: i, j, k, d, num
@@ -83,7 +83,7 @@ end subroutine breadth_first_search
 subroutine greedy_coloring(g, colors)                                      !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(graph), intent(in) :: g
+    class(graph_interface), intent(in) :: g
     integer, intent(out) :: colors(:)
     ! local variables
     integer :: i, j, k, d, used_colors, color, min_occupancy
@@ -167,7 +167,7 @@ end subroutine greedy_coloring
 subroutine greedy_color_ordering(g, p, ptrs, num_colors)                   !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(graph), intent(in) :: g
+    class(graph_interface), intent(in) :: g
     integer, intent(out) :: p(:), ptrs(:), num_colors
     ! local variables
     integer :: i, k, d, color

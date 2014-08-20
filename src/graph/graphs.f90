@@ -1,6 +1,6 @@
 module graphs
 
-use graph_interface
+use graph_interfaces
 use ll_graphs
 use coo_graphs
 use cs_graphs
@@ -35,7 +35,7 @@ subroutine choose_graph_type_by_name(g, frmt)                              !
 !     Take in a polymorphic graph pointer and allocate to a graph type     !
 ! according to a string specifying the name of the desried storage format. !
 !--------------------------------------------------------------------------!
-    class(graph), pointer, intent(inout) :: g
+    class(graph_interface), pointer, intent(inout) :: g
     character(len=*), intent(in) :: frmt
 
     nullify(g)
@@ -70,7 +70,7 @@ subroutine choose_graph_type_by_int(g, t)                                  !
 ! This subroutine is mostly to facilitate testing, so that we can easily   !
 ! iterate through every graph type.                                        !
 !--------------------------------------------------------------------------!
-    class(graph), pointer, intent(inout) :: g
+    class(graph_interface), pointer, intent(inout) :: g
     integer, intent(in) :: t
 
     nullify(g)
@@ -97,10 +97,10 @@ end subroutine choose_graph_type_by_int
 subroutine convert_graph_type_by_name(g, frmt)                             !
 !--------------------------------------------------------------------------!
     ! input/output variables 
-    class(graph), pointer, intent(inout) :: g
+    class(graph_interface), pointer, intent(inout) :: g
     character(len=*), intent(in) :: frmt
     ! local variables
-    class(graph), pointer :: h
+    class(graph_interface), pointer :: h
 
     h => g
     nullify(g)
@@ -119,10 +119,10 @@ end subroutine convert_graph_type_by_name
 subroutine convert_graph_type_by_int(g, t)                                 !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(graph), pointer, intent(inout) :: g
+    class(graph_interface), pointer, intent(inout) :: g
     integer, intent(in) :: t
     ! local variables
-    class(graph), pointer :: h
+    class(graph_interface), pointer :: h
 
     h => g
     nullify(g)

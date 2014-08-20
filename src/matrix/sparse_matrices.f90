@@ -26,7 +26,7 @@ contains
 function sparse_matrix_factory(nrow, ncol, g, orientation) result(A)       !
 !--------------------------------------------------------------------------!
     integer, intent(in) :: nrow, ncol
-    class(graph), target, intent(in) :: g
+    class(graph_interface), target, intent(in) :: g
     character(len=3), intent(in) :: orientation
     class(sparse_matrix), pointer :: A
 
@@ -98,7 +98,7 @@ subroutine sparse_matrix_sum_graph(g, B, C)                                !
 ! routine for other procedures which compute the entries of the sum.       !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(graph), intent(inout) :: g
+    class(graph_interface), intent(inout) :: g
     class(sparse_matrix), intent(in) :: B, C
     ! local variables
     integer :: i, j, k
@@ -229,7 +229,7 @@ end subroutine sparse_matrix_product
 subroutine sparse_matrix_product_graph(g, B, C)
 !------------------------------------------------------------------------
     ! input/output variables
-    class(graph), intent(inout) :: g
+    class(graph_interface), intent(inout) :: g
     class(sparse_matrix), intent(in) :: B, C
     ! local variables
     integer :: i, j, k, l, m, d

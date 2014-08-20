@@ -1,5 +1,5 @@
 set(GRAPH_SRCS
-graph/graph_interface.f90
+graph/graph_interfaces.f90
 graph/coo_graphs.f90
 graph/cs_graphs.f90
 graph/ellpack_graphs.f90

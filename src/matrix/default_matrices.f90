@@ -13,7 +13,7 @@ module default_matrices                                                    !
 
 
 use types, only: dp
-use graph_interface
+use graph_interfaces
 use ll_graphs
 use default_sparse_matrix_kernels
 use sparse_matrix_interface
@@ -26,7 +26,7 @@ implicit none
 !--------------------------------------------------------------------------!
 type, extends(sparse_matrix) :: default_matrix                             !
 !--------------------------------------------------------------------------!
-    class(graph), pointer :: g
+    class(graph_interface), pointer :: g
     real(dp), allocatable :: val(:)
 
 
@@ -151,7 +151,7 @@ subroutine default_matrix_copy_graph_structure(A, g, trans)                !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(default_matrix), intent(inout) :: A
-    class(graph), intent(in) :: g
+    class(graph_interface), intent(in) :: g
     logical, intent(in), optional :: trans
     ! local variables
     integer :: ord(2), nv(2)
@@ -194,7 +194,7 @@ end subroutine default_matrix_copy_graph_structure
 subroutine default_matrix_set_graph(A, g)                                  !
 !--------------------------------------------------------------------------!
     class(default_matrix), intent(inout) :: A
-    class(graph), target, intent(in) :: g
+    class(graph_interface), target, intent(in) :: g
 
    if (A%nrow /= g%n .or. A%ncol /= g%m) then
         print *, 'Attempted to set sparse matrix connectivity structure to'

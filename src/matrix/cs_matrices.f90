@@ -12,7 +12,7 @@ module cs_matrices                                                         !
 
 
 use types, only: dp
-use graph_interface
+use graph_interfaces
 use cs_graphs
 use default_sparse_matrix_kernels
 use sparse_matrix_interface
@@ -169,7 +169,7 @@ subroutine cs_matrix_copy_graph_structure(A, g, trans)                     !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_matrix), intent(inout) :: A
-    class(graph), intent(in) :: g
+    class(graph_interface), intent(in) :: g
     logical, intent(in), optional :: trans
     ! local variables
     integer :: ord(2), nv(2)
@@ -208,7 +208,7 @@ end subroutine cs_matrix_copy_graph_structure
 subroutine cs_matrix_set_graph(A, g)                                       !
 !--------------------------------------------------------------------------!
     class(cs_matrix), intent(inout) :: A
-    class(graph), target, intent(in) :: g
+    class(graph_interface), target, intent(in) :: g
 
     if (A%nrow /= g%n .or. A%ncol /= g%m) then
         print *, 'Attempted to set CS matrix connectivity structure to'

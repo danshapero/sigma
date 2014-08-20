@@ -1,6 +1,6 @@
 module coo_graphs
 
-use graph_interface
+use graph_interfaces
 use types, only: dynamic_array
 
 implicit none
@@ -8,7 +8,7 @@ implicit none
 
 
 !--------------------------------------------------------------------------!
-type, extends(graph) :: coo_graph                                          !
+type, extends(graph_interface) :: coo_graph                                !
 !--------------------------------------------------------------------------!
     type(dynamic_array) :: edges(2)
 contains
@@ -88,8 +88,8 @@ end subroutine coo_graph_init
 subroutine coo_graph_copy(g, h, trans)                                     !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(coo_graph), intent(inout) :: g
-    class(graph), intent(in)        :: h
+    class(coo_graph), intent(inout)    :: g
+    class(graph_interface), intent(in) :: h
     logical, intent(in), optional :: trans
     ! local variables
     integer :: ind(2), ord(2), nv(2), k

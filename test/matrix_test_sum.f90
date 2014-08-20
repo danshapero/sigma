@@ -10,7 +10,7 @@ use sigma
 implicit none
 
     ! graphs used as the matrix substrates
-    class(graph), pointer :: g, h, gr, hr
+    class(graph_interface), pointer :: g, h, gr, hr
 
     ! sparse and dense matrices
     class(sparse_matrix), pointer :: A, B, C

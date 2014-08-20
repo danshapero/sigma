@@ -21,7 +21,7 @@ module sparse_matrix_interface                                             !
 
 use types, only: dp
 use linear_operator_interface
-use graph_interface
+use graph_interfaces
 
 implicit none
 
@@ -156,16 +156,16 @@ end type sparse_matrix
 abstract interface                                                         !
 !--------------------------------------------------------------------------!
     subroutine sparse_mat_copy_graph_structure_ifc(A, g, trans)
-        import :: graph, sparse_matrix
+        import :: graph_interface, sparse_matrix
         class(sparse_matrix), intent(inout) :: A
-        class(graph), intent(in) :: g
+        class(graph_interface), intent(in) :: g
         logical, intent(in), optional :: trans
     end subroutine sparse_mat_copy_graph_structure_ifc
 
     subroutine sparse_mat_set_graph_ifc(A, g)
-        import :: graph, sparse_matrix
+        import :: graph_interface, sparse_matrix
         class(sparse_matrix), intent(inout) :: A
-        class(graph), target, intent(in) :: g
+        class(graph_interface), target, intent(in) :: g
     end subroutine sparse_mat_set_graph_ifc
 
     function sparse_mat_get_degree_ifc(A, k) result(d)
@@ -252,7 +252,7 @@ subroutine sparse_matrix_init(A, nrow, ncol, g, orientation)               !
 !--------------------------------------------------------------------------!
     class(sparse_matrix), intent(inout) :: A
     integer, intent(in) :: nrow, ncol
-    class(graph), intent(in) :: g
+    class(graph_interface), intent(in) :: g
     character(len=3), intent(in) :: orientation
 
     call A%set_ordering(orientation)

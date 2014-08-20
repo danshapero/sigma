@@ -12,7 +12,7 @@ contains
 subroutine torus(g, nx, ny)                                                !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(graph), intent(inout) :: g
+    class(graph_interface), intent(inout) :: g
     integer, intent(in) :: nx, ny
     ! local variables
     integer :: i, j, x, y
@@ -41,7 +41,7 @@ end subroutine torus
 subroutine petersen(g, n, k)                                               !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(graph), intent(inout) :: g
+    class(graph_interface), intent(inout) :: g
     integer, intent(in) :: n, k
     ! local variables
     integer :: i, j
@@ -70,7 +70,7 @@ end subroutine petersen
 subroutine flower_snark(g, n)                                              !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(graph), intent(inout) :: g
+    class(graph_interface), intent(inout) :: g
     integer, intent(in) :: n
     ! local variables
     integer :: i, j, k, l
@@ -133,7 +133,7 @@ end subroutine flower_snark
 subroutine hypercube(g, n)                                                 !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(graph), intent(inout) :: g
+    class(graph_interface), intent(inout) :: g
     integer, intent(in) :: n
     ! local variables
     integer :: i, j, k, mask, nn

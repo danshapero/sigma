@@ -13,7 +13,7 @@ implicit none
 
     ! variables for generating a graph which will be the "medium" of the
     ! self-avoiding walk
-    class(graph), pointer :: g
+    class(graph_interface), pointer :: g
     integer :: n, k
     integer, allocatable :: s(:), neighbors(:), histogram(:)
     logical, allocatable :: unvisited(:)

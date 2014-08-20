@@ -10,7 +10,7 @@ use sigma
 implicit none
 
     ! graph
-    class(graph), pointer :: g
+    class(graph_interface), pointer :: g
 
     ! sparse matrix
     class(sparse_matrix), pointer :: A

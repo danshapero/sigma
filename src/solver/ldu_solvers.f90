@@ -406,7 +406,7 @@ subroutine incomplete_ldu_sparsity_pattern(A, L, U, level)                 !
     integer, intent(in) :: level
     ! local variables
     integer :: i, j, k, nn
-    class(graph), pointer :: gl, gu
+    class(graph_interface), pointer :: gl, gu
     ! graph edge iterators
     type(graph_edge_cursor) :: cursor
     integer :: n, num_batches, edges(2, batch_size), num_returned

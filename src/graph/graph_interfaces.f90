@@ -1,6 +1,6 @@
 !==========================================================================!
 !==========================================================================!
-module graph_interface                                                     !
+module graph_interfaces                                                    !
 !==========================================================================!
 !==========================================================================!
 !==== This module contains the definition of the abstract graph data   ====!
@@ -18,7 +18,7 @@ implicit none
 
 
 !--------------------------------------------------------------------------!
-type, abstract :: graph                                                    !
+type, abstract :: graph_interface                                          !
 !--------------------------------------------------------------------------!
     integer :: n, m, ne, reference_count = 0
 contains
@@ -122,7 +122,7 @@ contains
     ! Write to a file the number of left- and right-vertices of the
     ! graph, the number of edges, and then all of the edges.
 
-end type graph
+end type graph_interface
 
 
 
@@ -138,62 +138,62 @@ end type graph_edge_cursor
 abstract interface                                                         !
 !--------------------------------------------------------------------------!
     subroutine init_graph_ifc(g, n, m)
-        import :: graph
-        class(graph), intent(inout) :: g
+        import :: graph_interface
+        class(graph_interface), intent(inout) :: g
         integer, intent(in) :: n
         integer, intent(in), optional :: m
     end subroutine init_graph_ifc
 
     subroutine copy_graph_ifc(g, h, trans)
-        import :: graph
-        class(graph), intent(inout) :: g
-        class(graph), intent(in)    :: h
+        import :: graph_interface
+        class(graph_interface), intent(inout) :: g
+        class(graph_interface), intent(in)    :: h
         logical, intent(in), optional :: trans
     end subroutine copy_graph_ifc
 
     function degree_ifc(g, i) result(d)
-        import :: graph
-        class(graph), intent(in) :: g
+        import :: graph_interface
+        class(graph_interface), intent(in) :: g
         integer, intent(in) :: i
         integer :: d
     end function degree_ifc
 
     function max_degree_ifc(g) result(d)
-        import :: graph
-        class(graph), intent(in) :: g
+        import :: graph_interface
+        class(graph_interface), intent(in) :: g
         integer :: d
     end function max_degree_ifc
 
     subroutine get_neighbors_ifc(g, neighbors, i)
-        import :: graph
-        class(graph), intent(in) :: g
+        import :: graph_interface
+        class(graph_interface), intent(in) :: g
         integer, intent(in) :: i
         integer, intent(out) :: neighbors(:)
     end subroutine get_neighbors_ifc
 
     function connected_ifc(g, i, j)
-        import :: graph
-        class(graph), intent(in) :: g
+        import :: graph_interface
+        class(graph_interface), intent(in) :: g
         integer, intent(in) :: i, j
         logical :: connected_ifc
     end function connected_ifc
 
     function find_edge_ifc(g, i, j)
-        import :: graph
-        class(graph), intent(in) :: g
+        import :: graph_interface
+        class(graph_interface), intent(in) :: g
         integer, intent(in) :: i, j
         integer :: find_edge_ifc
     end function find_edge_ifc
 
     function make_cursor_ifc(g) result(cursor)
-        import :: graph, graph_edge_cursor
-        class(graph), intent(in) :: g
+        import :: graph_interface, graph_edge_cursor
+        class(graph_interface), intent(in) :: g
         type(graph_edge_cursor) :: cursor
     end function make_cursor_ifc
 
     subroutine get_edges_ifc(g, edges, cursor, num_edges, num_returned)
-        import :: graph, graph_edge_cursor
-        class(graph), intent(in) :: g
+        import :: graph_interface, graph_edge_cursor
+        class(graph_interface), intent(in) :: g
         integer, intent(out) :: edges(2, num_edges)
         type(graph_edge_cursor), intent(inout) :: cursor
         integer, intent(in) :: num_edges
@@ -201,26 +201,26 @@ abstract interface                                                         !
     end subroutine get_edges_ifc
 
     subroutine change_edge_ifc(g, i, j)
-        import :: graph
-        class(graph), intent(inout) :: g
+        import :: graph_interface
+        class(graph_interface), intent(inout) :: g
         integer, intent(in) :: i, j
     end subroutine change_edge_ifc
 
     subroutine permute_graph_ifc(g, p, edge_p)
-        import :: graph
-        class(graph), intent(inout) :: g
+        import :: graph_interface
+        class(graph_interface), intent(inout) :: g
         integer, intent(in) :: p(:)
         integer, allocatable, intent(out), optional :: edge_p(:,:)
     end subroutine permute_graph_ifc
 
     subroutine destroy_graph_ifc(g)
-        import :: graph
-        class(graph), intent(inout) :: g
+        import :: graph_interface
+        class(graph_interface), intent(inout) :: g
     end subroutine destroy_graph_ifc
 
     subroutine dump_edges_ifc(g, edges)
-        import :: graph
-        class(graph), intent(in) :: g
+        import :: graph_interface
+        class(graph_interface), intent(in) :: g
         integer, intent(out) :: edges(:,:)
     end subroutine dump_edges_ifc
 end interface
@@ -230,7 +230,7 @@ end interface
 !--------------------------------------------------------------------------!
 type :: graph_pointer                                                      !
 !--------------------------------------------------------------------------!
-    class(graph), pointer :: g
+    class(graph_interface), pointer :: g
 end type graph_pointer
 
 
@@ -270,7 +270,7 @@ end function get_neighbors_is_fast
 !--------------------------------------------------------------------------!
 subroutine add_reference(g)                                                !
 !--------------------------------------------------------------------------!
-    class(graph), intent(inout) :: g
+    class(graph_interface), intent(inout) :: g
 
     g%reference_count = g%reference_count + 1
     !TODO reimplement: if (g%reference_count > 1) g%mutable = .false.
@@ -282,7 +282,7 @@ end subroutine add_reference
 !--------------------------------------------------------------------------!
 subroutine remove_reference(g)                                             !
 !--------------------------------------------------------------------------!
-    class(graph), intent(inout) :: g
+    class(graph_interface), intent(inout) :: g
 
     g%reference_count = g%reference_count - 1
 
@@ -294,7 +294,7 @@ end subroutine remove_reference
 subroutine to_dense_graph(g,A,trans)                                       !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(graph), intent(in) :: g
+    class(graph_interface), intent(in) :: g
     integer, intent(out) :: A(:,:)
     logical, intent(in), optional :: trans
     ! local variables
@@ -333,7 +333,7 @@ end subroutine to_dense_graph
 subroutine write_graph_to_file(g,filename)                                 !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(graph), intent(in) :: g
+    class(graph_interface), intent(in) :: g
     character(len=*), intent(in) :: filename
     ! local variables
     integer :: i, j, k
@@ -365,4 +365,5 @@ end subroutine write_graph_to_file
 
 
 
-end module graph_interface
+end module graph_interfaces
+

@@ -1,13 +1,13 @@
 module ll_graphs
 
-use graph_interface
+use graph_interfaces
 use types, only: dynamic_array
 
 implicit none
 
 
 !--------------------------------------------------------------------------!
-type, extends(graph) :: ll_graph                                           !
+type, extends(graph_interface) :: ll_graph                                 !
 !--------------------------------------------------------------------------!
     ! List of `n` lists, each of which stores the neighbors of vertex `i`
     type(dynamic_array), allocatable :: lists(:)
@@ -100,8 +100,8 @@ end subroutine ll_graph_init
 subroutine ll_graph_copy(g, h, trans)                                      !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(ll_graph), intent(inout) :: g
-    class(graph), intent(in)       :: h
+    class(ll_graph), intent(inout)     :: g
+    class(graph_interface), intent(in) :: h
     logical, intent(in), optional :: trans
     ! local variables
     integer :: ind(2), order(2), nv(2), k

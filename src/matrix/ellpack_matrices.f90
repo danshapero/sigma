@@ -13,7 +13,7 @@ module ellpack_matrices                                                    !
 
 
 use types, only: dp
-use graph_interface
+use graph_interfaces
 use ellpack_graphs
 use sparse_matrix_interface
 use default_sparse_matrix_kernels,  only: get_degree_kernel, &
@@ -199,7 +199,7 @@ subroutine ellpack_matrix_copy_graph_structure(A, g, trans)                !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(ellpack_matrix), intent(inout) :: A
-    class(graph), intent(in) :: g
+    class(graph_interface), intent(in) :: g
     logical, intent(in), optional :: trans
     ! local variables
     integer :: ord(2), nv(2)
@@ -238,7 +238,7 @@ end subroutine ellpack_matrix_copy_graph_structure
 subroutine ellpack_matrix_set_graph(A, g)                                  !
 !--------------------------------------------------------------------------!
     class(ellpack_matrix), intent(inout) :: A
-    class(graph), target, intent(in) :: g
+    class(graph_interface), target, intent(in) :: g
 
     if (A%nrow /= g%n .or. A%ncol /= g%m) then
         print *, 'Attempted to set ellpack matrix connectivity structure to'

@@ -15,7 +15,7 @@ module default_sparse_matrix_kernels                                       !
 
 
 use types, only: dp
-use graph_interface
+use graph_interfaces
 
 implicit none
 
@@ -25,15 +25,15 @@ implicit none
 abstract interface                                                         !
 !--------------------------------------------------------------------------!
     function get_degree_kernel(g, k) result(d)
-        import :: graph
-        class(graph), intent(in) :: g
+        import :: graph_interface
+        class(graph_interface), intent(in) :: g
         integer, intent(in) :: k
         integer :: d
     end function get_degree_kernel
 
     subroutine get_slice_kernel(g, val, nodes, slice, k)
-        import :: graph, dp
-        class(graph), intent(in) :: g
+        import :: graph_interface, dp
+        class(graph_interface), intent(in) :: g
         real(dp), intent(in) :: val(:)
         integer, intent(out) :: nodes(:)
         real(dp), intent(out) :: slice(:)
@@ -41,8 +41,8 @@ abstract interface                                                         !
     end subroutine get_slice_kernel
 
     subroutine permute_kernel(g, val, p)
-        import :: graph, dp
-        class(graph), intent(inout) :: g
+        import :: graph_interface, dp
+        class(graph_interface), intent(inout) :: g
         real(dp), intent(inout) :: val(:)
         integer, intent(in) :: p(:)
     end subroutine permute_kernel
@@ -62,7 +62,7 @@ contains
 !--------------------------------------------------------------------------!
 function get_degree_contiguous(g, k) result(d)                             !
 !--------------------------------------------------------------------------!
-    class(graph), intent(in) :: g
+    class(graph_interface), intent(in) :: g
     integer, intent(in) :: k
     integer :: d
 
@@ -76,7 +76,7 @@ end function get_degree_contiguous
 function get_degree_discontiguous(g, k) result(d)                          !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(graph), intent(in) :: g
+    class(graph_interface), intent(in) :: g
     integer, intent(in) :: k
     integer :: d
     ! local variables
@@ -96,7 +96,7 @@ end function get_degree_discontiguous
 subroutine get_slice_contiguous(g, val, nodes, slice, k)                   !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(graph), intent(in) :: g
+    class(graph_interface), intent(in) :: g
     real(dp), intent(in) :: val(:)
     integer, intent(out) :: nodes(:)
     real(dp), intent(out) :: slice(:)
@@ -129,7 +129,7 @@ end subroutine get_slice_contiguous
 subroutine get_slice_discontiguous(g, val, nodes, slice, k)                !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(graph), intent(in) :: g
+    class(graph_interface), intent(in) :: g
     real(dp), intent(in) :: val(:)
     integer, intent(out) :: nodes(:)
     real(dp), intent(out) :: slice(:)
@@ -176,7 +176,7 @@ end subroutine get_slice_discontiguous
 subroutine set_matrix_value_with_reallocation(g, val, i, j, z)             !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(graph), intent(inout) :: g
+    class(graph_interface), intent(inout) :: g
     real(dp), allocatable :: val(:)
     integer, intent(in) :: i, j
     real(dp), intent(in) :: z
@@ -185,7 +185,7 @@ subroutine set_matrix_value_with_reallocation(g, val, i, j, z)             !
     integer :: k, l, m, indx
     integer :: n, num_batches, num_returned, edges(2, batch_size)
     type(graph_edge_cursor) :: cursor
-    class(graph), pointer :: h
+    class(graph_interface), pointer :: h
 
     allocate(h, mold = g)
     call h%copy(g)
@@ -223,7 +223,7 @@ end subroutine set_matrix_value_with_reallocation
 subroutine graph_leftperm(g, val, p)                                       !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(graph), intent(inout) :: g
+    class(graph_interface), intent(inout) :: g
     real(dp), intent(inout) :: val(:)
     integer, intent(in) :: p(:)
     ! local variables
@@ -247,7 +247,7 @@ end subroutine graph_leftperm
 subroutine graph_rightperm(g, val, p)                                      !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(graph), intent(inout) :: g
+    class(graph_interface), intent(inout) :: g
     real(dp), intent(inout) :: val(:)
     integer, intent(in) :: p(:)
     ! local variables

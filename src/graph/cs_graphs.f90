@@ -1,6 +1,6 @@
 module cs_graphs
 
-use graph_interface
+use graph_interfaces
 use util
 
 implicit none
@@ -8,7 +8,7 @@ implicit none
 
 
 !--------------------------------------------------------------------------!
-type, extends(graph) :: cs_graph                                           !
+type, extends(graph_interface) :: cs_graph                                 !
 !--------------------------------------------------------------------------!
     ! The array `node` stores the ending vertices of every edge in the
     ! graph, while the array `ptr` stores the starting index in `node` of
@@ -106,8 +106,8 @@ end subroutine cs_graph_init
 subroutine cs_graph_copy(g, h, trans)                                      !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(cs_graph), intent(inout) :: g
-    class(graph), intent(in)       :: h
+    class(cs_graph), intent(inout)     :: g
+    class(graph_interface), intent(in) :: h
     logical, intent(in), optional :: trans
     ! local variables
     integer :: i, j, k, l, ord(2), nv(2)

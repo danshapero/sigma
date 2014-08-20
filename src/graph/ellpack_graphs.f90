@@ -1,13 +1,13 @@
 module ellpack_graphs
 
-use graph_interface
+use graph_interfaces
 use util
 
 implicit none
 
 
 !--------------------------------------------------------------------------!
-type, extends(graph) :: ellpack_graph                                      !
+type, extends(graph_interface) :: ellpack_graph                            !
 !--------------------------------------------------------------------------!
     ! Column `i` of the array `node` stores the neighbors of vertex `i`,
     ! with duplicates to fill out the remaining entries
@@ -100,7 +100,7 @@ subroutine ellpack_graph_copy(g, h, trans)                                 !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(ellpack_graph), intent(inout) :: g
-    class(graph), intent(in)            :: h
+    class(graph_interface), intent(in)  :: h
     logical, intent(in), optional :: trans
     ! local variables
     integer :: i, j, k, d, ord(2), nv(2)
