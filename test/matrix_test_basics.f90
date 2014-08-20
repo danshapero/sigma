@@ -97,32 +97,38 @@ implicit none
     row_degree = 0
     do i = 1, nn
         k = count(B(i, :) /= 0)
-        row_degree = max(k, row_degree)
 
         ! Make sure that every row has at least one entry; ellpack_matrix
         ! fails otherwise
-        if (row_degree == 0) then
+        if (k == 0) then
             call random_number(z)
             j = int(z * nn) + 1
+
+            call random_number(w)
+            B(i, j) = w
+
+            k = 1
         endif
 
-        call random_number(w)
-        B(i, j) = w
+        row_degree = max(k, row_degree)
     enddo
 
     ! Compute the column degree of the graph
     col_degree = 0
     do j = 1, nn
         k = count(B(:, j) /= 0)
-        col_degree = max(k, col_degree)
 
-        if (col_degree == 0) then
+        if (k == 0) then
             call random_number(z)
             i = int(z * nn) + 1
+
+            call random_number(w)
+            B(i, j) = w
+
+            k = 1
         endif
 
-        call random_number(w)
-        B(i, j) = w
+        col_degree = max(k, col_degree)
     enddo
 
     d = max(row_degree, col_degree)
