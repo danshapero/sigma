@@ -3,1384 +3,340 @@
 module sparse_matrices                                                     !
 !==========================================================================!
 !==========================================================================!
-!==== This module contains the definition of the basic real sparse     ====!
-!==== matrix class. For more optimized formats, consider using block   ====!
-!==== sparse matrices or variable-block sparse matrices.               ====!
-!==========================================================================!
-!==========================================================================!
 
-
-use types, only: dp
-use linear_operator_interface
 use graphs
+use sparse_matrix_interface
+use default_sparse_matrix_kernels
+use default_matrices
+use cs_matrices
+use ellpack_matrices
 
 implicit none
 
-
-
-
-!--------------------------------------------------------------------------!
-type, extends(linear_operator) :: sparse_matrix                            !
-!--------------------------------------------------------------------------!
-    real(dp), allocatable :: val(:)
-    class(graph), pointer :: g
-    integer :: nnz, max_degree, order(2)
-    character(len=3) :: orientation
-    logical :: pos_def
-    logical :: assembled
-    procedure(sparse_mat_perm_ifc), pointer, private :: left_perm_impl
-    procedure(sparse_mat_perm_ifc), pointer, private :: right_perm_impl
-    procedure(sparse_matvec_add_ifc), pointer, private :: matvec_add_impl
-    procedure(sparse_mat_get_slice_ifc), pointer, private :: get_row_impl
-    procedure(sparse_mat_get_slice_ifc), pointer, private :: get_col_impl
-contains
-    !--------------
-    ! Constructors
-    !--------------
-    procedure :: init => sparse_mat_init
-    ! Initialize a sparse matrix given the number of rows and columns,
-    ! and the desired ordering, e.g. row- or column-major ordering.
-
-    procedure :: copy => sparse_mat_copy
-    ! Initialize a sparse matrix as a copy of another matrix, or optionally
-    ! as a copy of its transpose matrix.
-
-
-    !-----------
-    ! Accessors
-    !-----------
-    procedure :: get_value => sparse_mat_get_value
-    ! Return a matrix entry
-
-    procedure :: get_row => sparse_mat_get_row
-    ! Return a row of the matrix
-
-    procedure :: get_column => sparse_mat_get_column
-    ! Return a column of the matrix
-
-
-    !----------
-    ! Mutators
-    !----------
-    procedure :: set_value => sparse_mat_set_value
-    ! Set the value of a matrix entry
-
-    procedure :: add_value => sparse_mat_add_value
-    ! Add a number to a matrix entry
-
-    procedure :: add_mat_to_self => sparse_mat_add_mat_to_self
-    ! Compute the sum A <- A+B
-
-    procedure :: zero => sparse_mat_zero
-    ! Set all entries of a sparse matrix to zero
-
-    procedure :: left_permute => sparse_mat_leftperm
-    ! Permute the rows of a sparse matrix
-
-    procedure :: right_permute => sparse_mat_rightperm
-    ! Permute the columns of a sparse matrix
-
-    procedure :: compress => sparse_mat_compress
-    ! Compress the storage of a sparse matrix. This makes the underlying
-    ! connectivity graph immutable
-
-
-    !------------------------------
-    ! Matrix-vector multiplication
-    !------------------------------
-    procedure :: matvec => sparse_mat_matvec
-    ! Compute the product y = A*x of a matrix and a vector
-
-    procedure :: matvec_add => sparse_mat_matvec_add
-    ! Add the product A*x to the vector y
-
-
-    !-------------
-    ! Destructors
-    !-------------
-    procedure :: destroy => sparse_mat_destroy
-
-
-    !--------------------------
-    ! Testing, debugging & I/O
-    !--------------------------
-    procedure :: to_dense_matrix => sparse_matrix_to_dense_matrix
-    procedure :: write_to_file => write_sparse_matrix_to_file
-
-
-    !--------------------
-    ! Auxiliary routines
-    !--------------------
-    procedure, private :: set_value_with_reallocation
-
-
-    !----------
-    ! Generics
-    !----------
-    generic :: add => add_mat_to_self
-
-end type sparse_matrix
-
-
-
-!--------------------------------------------------------------------------!
-abstract interface                                                         !
-!--------------------------------------------------------------------------!
-    subroutine sparse_mat_get_slice_ifc(A,nodes,vals,k)
-        import :: sparse_matrix, dp
-        class(sparse_matrix), intent(in) :: A
-        integer, intent(out) :: nodes(:)
-        real(dp), intent(out) :: vals(:)
-        integer, intent(in) :: k
-    end subroutine sparse_mat_get_slice_ifc
-
-    subroutine sparse_mat_perm_ifc(A,p)
-        import :: sparse_matrix
-        class(sparse_matrix), intent(inout) :: A
-        integer, intent(in) :: p(:)
-    end subroutine sparse_mat_perm_ifc
-
-    subroutine sparse_matvec_add_ifc(A,x,y,trans)
-        import :: sparse_matrix, dp
-        class(sparse_matrix), intent(in) :: A
-        real(dp), intent(in)    :: x(:)
-        real(dp), intent(inout) :: y(:)
-        logical, intent(in), optional :: trans
-    end subroutine sparse_matvec_add_ifc
+interface sparse_matrix
+    module procedure sparse_matrix_factory
 end interface
 
 
-
-!--------------------------------------------------------------------------!
-type :: sparse_matrix_pointer                                              !
-!--------------------------------------------------------------------------!
-    class(sparse_matrix), pointer :: A
-end type sparse_matrix_pointer
-
-
-private :: multiply_sparse_mats_fast_row_access, &
-            & multiply_sparse_mats_fast_col_access
-
-
 contains
 
 
 
-!     //////////////////////////////////////////////////////////////////
-!    //////////////////////////////////////////////////////////////////
-!   //// Object methods for sparse matrices                       //// 
-!  //////////////////////////////////////////////////////////////////
-! //////////////////////////////////////////////////////////////////
-
-
-!==========================================================================!
-!==== Constructors                                                     ====!
-!==========================================================================!
-
 !--------------------------------------------------------------------------!
-subroutine sparse_mat_init(A,nrow,ncol,orientation,g)
+function sparse_matrix_factory(nrow, ncol, g, orientation) result(A)       !
 !--------------------------------------------------------------------------!
-    class(sparse_matrix), intent(inout) :: A
     integer, intent(in) :: nrow, ncol
+    class(graph), target, intent(in) :: g
     character(len=3), intent(in) :: orientation
-    class(graph), pointer, intent(inout), optional :: g
+    class(sparse_matrix), pointer :: A
 
-    ! Check if the user has provided a connectivity graph
-    if (present(g)) then
-        ! If so, make the matrix point to it
-        A%g => g
-
-        ! Check whether the matrix is stored in row- or column-major
-        ! ordering
-        select case(orientation)
-            case('row')
-                A%nrow = g%n
-                A%ncol = g%m
-            case('col')
-                A%ncol = g%n
-                A%nrow = g%m
-        end select
-    else
-        ! If the user has not provided a connectivity graph, initialize the
-        ! graph to a default type
-        allocate(ll_graph::A%g)
-
-        ! Set the number of left- and right-nodes for the graph to be the
-        ! number of rows or columns of the matrix according to whether the
-        ! matrix is row- or column-oriented
-        select case(orientation)
-            case('row')
-                call A%g%init(nrow,ncol)
-            case('col')
-                call A%g%init(ncol,nrow)
-        end select
-    endif
-
-    ! Increment g's reference counter
-    call A%g%add_reference()
-
-    A%nnz = A%g%ne
-    allocate(A%val(A%g%capacity))
-    A%val = 0.0_dp
-    A%max_degree = A%g%max_degree
-
-    ! Set the order attribute for the matrix, so that the indices are
-    ! reversed if we use column-major ordering
-    ! I borrowed this approach from Numpy
-    select case(orientation)
-        case('row')
-            A%order = [1, 2]
-
-            A%get_row_impl => sparse_mat_get_slice_contiguous
-            A%get_col_impl => sparse_mat_get_slice_discontiguous
-
-            A%left_perm_impl => sparse_mat_graph_leftperm
-            A%right_perm_impl => sparse_mat_graph_rightperm
-        case('col')
-            A%order = [2, 1]
-
-            A%get_row_impl => sparse_mat_get_slice_discontiguous
-            A%get_col_impl => sparse_mat_get_slice_contiguous
-
-            A%left_perm_impl => sparse_mat_graph_rightperm
-            A%right_perm_impl => sparse_mat_graph_leftperm
+    select type(g)
+        class is(cs_graph)
+            allocate(cs_matrix :: A)
+        class is(ellpack_graph)
+            allocate(ellpack_matrix :: A)
+        class default
+            allocate(default_matrix :: A)
     end select
-    A%orientation = orientation
 
-    ! Make the matrix's implementation of matvec refer to the decompressed
-    ! version of the method
-    A%matvec_add_impl => sparse_matvec_add_decompressed
+    call A%set_ordering(orientation)
+    call A%set_dimensions(nrow, ncol)
+    call A%set_graph(g)
 
-end subroutine sparse_mat_init
+end function sparse_matrix_factory
 
 
+
+
+!==========================================================================!
+!==== Algebraic operations on sparse matrices                          ====!
+!==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine sparse_mat_copy(A,B,orientation,frmt)                           !
+subroutine sparse_matrix_sum(A, B, C)                                      !
+!--------------------------------------------------------------------------!
+!     This routine computes the sum `A` of the sparse matrices `B`, `C`.   !
+! The actual work is passed off to two procedures (see below) that compute !
+! the connectivity structure of the matrix sum, then fill the entries.     !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(sparse_matrix), intent(inout) :: A
-    class(sparse_matrix), intent(in) :: B
-    character(len=3), intent(in), optional :: orientation
-    character(len=*), intent(in), optional :: frmt
+    class(sparse_matrix), intent(in)    :: B, C
     ! local variables
-    integer :: k, ind(2), order(2)
-    character(len=3) :: ori
+    type(ll_graph) :: g
     logical :: trans
-    class(graph), pointer :: g
-    ! graph edge iterator
-    integer :: n, num_batches, num_returned, edges(2,batch_size)
-    type(graph_edge_cursor) :: cursor
 
-    ! Check the optional orientation argument to see if the user has
-    ! specified whether the copied matrix is to be in row- or column-
-    ! major order
-    ori = B%orientation
-    if (present(orientation)) ori = orientation
-
-    ! We're effectively copying the transpose of a matrix if its desired
-    ! orientation is different from that of the matrix we're copying
-    trans = (ori /= B%orientation)
-
-    ! Allocate the graph poiner g, either to a specific format if the user
-    ! has requested one, or to whatever format B%g is in otherwise
-    if (present(frmt)) then
-        call choose_graph_type(g, frmt)
-    else
-        allocate(g, mold=B%g)
-    endif
-
-    ! Copy the structure of B into g
-    call g%copy(B%g, trans)
-
-    ! Initialize the matrix A
-    call A%init(B%nrow,B%ncol,ori,g)
-    call A%zero()
-
-    ! Copy the entries of B into A
-    cursor = g%make_cursor()
-    num_batches = (cursor%final-cursor%start)/batch_size+1
-
-    do n=1,num_batches
-        call g%get_edges(edges,cursor,batch_size,num_returned)
-
-        do k=1,num_returned
-            ind = edges(A%order,k)
-
-            if (ind(1)/=0 .and. ind(2)/=0) then
-                A%val(batch_size*(n-1)+k) = B%get_value(ind(1),ind(2))
-            endif
-        enddo
-    enddo
-
-end subroutine sparse_mat_copy
-
-
-
-
-!==========================================================================!
-!==== Accessors                                                        ====!
-!==========================================================================!
-
-!--------------------------------------------------------------------------!
-function sparse_mat_get_value(A,i,j) result(val)                           !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(sparse_matrix), intent(in) :: A
-    integer, intent(in) :: i,j
-    real(dp) :: val
-    ! local variables
-    integer :: k, ind(2)
-
-    ! (i,j) => (j,i) if the matrix is in column format
-    ind = [i, j]
-    ind = ind(A%order)
-
-    ! Set the value to return to 0
-    val = 0_dp
-
-    ! Find the index k corresponding to the edge twixt (i,j) in A%g
-    k = A%g%find_edge(ind(1),ind(2))
-
-    ! If that edge exists, return the corresponding entry in the array
-    ! of values of A
-    if (k/=-1) val = A%val(k)
-
-end function sparse_mat_get_value
-
-
-
-!--------------------------------------------------------------------------!
-subroutine sparse_mat_get_row(A,nodes,vals,k)                              !
-!--------------------------------------------------------------------------!
-!     This subroutine is a facade for one of either                        !
-!          o sparse_mat_get_slice_contiguous                               !
-!          o sparse_mat_get_slice_discontiguous.                           !
-! If the matrix is stored in row-major order, then the get_row method uses !
-! the implementation which assumes that row accesses are contiguous,       !
-! whereas the get_column method uses the implementation assuming that      !
-! column accesses require looking at every row of that column. The         !
-! situation is reversed for accessing rows/columns of a matrix stored in   !
-! column major order.                                                      !
-!     The assignment of the function pointer get_row_impl (resp.           !
-! get_col_impl) is done when initializing the matrix.                      !
-!--------------------------------------------------------------------------!
-    class(sparse_matrix), intent(in) :: A
-    integer, intent(out) :: nodes(:)
-    real(dp), intent(out) :: vals(:)
-    integer, intent(in) :: k
-
-    call A%get_row_impl(nodes,vals,k)
-
-end subroutine sparse_mat_get_row
-
-
-
-!--------------------------------------------------------------------------!
-subroutine sparse_mat_get_column(A,nodes,vals,k)                           !
-!--------------------------------------------------------------------------!
-!     See the comment in the previous subroutine.                          !
-!--------------------------------------------------------------------------!
-    class(sparse_matrix), intent(in) :: A
-    integer, intent(out) :: nodes(:)
-    real(dp), intent(out) :: vals(:)
-    integer, intent(in) :: k
-
-    call A%get_col_impl(nodes,vals,k)
-
-end subroutine sparse_mat_get_column
-
-
-
-!--------------------------------------------------------------------------!
-subroutine sparse_mat_get_slice_contiguous(A,nodes,vals,k)                 !
-!--------------------------------------------------------------------------!
-!     This subroutine and the one that follows it implement row/column     !
-! access. This version of the algorithm assumes that the orientation of    !
-! the matrix is the same as the slice being accessed, e.g. the matrix is   !
-! in row-major order and we are finding all elements of a row. In that     !
-! case, we can make a call to A%g%get_neighbors to find all relevant       !
-! entries.                                                                 !
-!     The matrix A has a function pointer which will point to either       !
-! this subroutine or its discontiguous counterpart below; the function     !
-! pointer is assigned at initialization of the matrix according to whether !
-! the matrix is in row- or column-major order.                             !
-!--------------------------------------------------------------------------!
-    class(sparse_matrix), intent(in) :: A
-    integer, intent(out) :: nodes(:)
-    real(dp), intent(out) :: vals(:)
-    integer, intent(in) :: k
-    ! local variables
-    integer :: l, d, ind
-
-    ! Set the return values to 0
-    vals = 0.0_dp
-
-    ! Get the degree of the node k
-    d = A%g%degree(k)
-
-    ! Get all the neighbors of node k and put them in to the array `nodes`
-    call A%g%get_neighbors(nodes,k)
-
-    ! For each neighbor l of node k,
-    do ind=1,d
-        l = nodes(ind)
-
-        ! get the matrix entry A(k,l)
-        vals(ind) = A%val( A%g%find_edge(k,l) )
-    enddo
-
-end subroutine sparse_mat_get_slice_contiguous
-
-
-
-!--------------------------------------------------------------------------!
-subroutine sparse_mat_get_slice_discontiguous(A,nodes,vals,k)              !
-!--------------------------------------------------------------------------!
-!     This subroutine is the discontiguous counterpart to the subroutine   !
-! above. If this subroutine is being used, it is assumed that we are       !
-! accessing say an entire row of a matrix in column-major format. In that  !
-! case, we cannot simply call A%g%get_neighbors in order to know which     !
-! matrix entries to find -- we have to go through all entries in the row.  !
-!     As you may have guessed, that is very bad and should be avoided: if  !
-! the matrix you're using is in column-major ordering, you should try to   !
-! only do column accesses if possible.                                     !
-!     That situation can be avoided if the matrix is symmetric.            !
-!     Note that for favorable access, we know that the array size needed   !
-! will be at most the maximum degree of the graph. For the unfavorable     !
-! access contained in this subroutine, SiGMA doesn't keep track of the     !
-! maximum degree in the opposite orientation. You can easily have a graph  !
-! where the maximum column degree greatly exceeds that maximum row degree  !
-! or vice versa, and you could unwittingly provide arrays `nodes`, `vals`  !
-! to this subroutine which have insufficient space for the operation that  !
-! you're trying to do. That would result in a buffer overflow error.       !
-!     TL;DR: for the love of God, try to avoid needing this subroutine.    !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(sparse_matrix), intent(in) :: A
-    integer, intent(out) :: nodes(:)
-    real(dp), intent(out) :: vals(:)
-    integer, intent(in) :: k
-    ! local variables
-    integer :: l, ind, next
-
-    ! Set the index in `nodes` and `vals` of the next entry to 0
-    next = 0
-
-    ! Set the return values to 0
-    vals = 0.0_dp
-
-    ! For each node l,
-    do l=1,A%g%n
-        ind = A%g%find_edge(l,k)
-
-        ! Check whether (l,k) are connected
-        if (ind/=-1) then
-            ! If they are,
-            next = next+1
-            ! put l as the next node of the slice
-            nodes(next) = l
-            ! and find the corresponding matrix entry.
-            vals(next) = A%val(ind)
-        endif
-    enddo
-
-end subroutine sparse_mat_get_slice_discontiguous
-
-
-
-! TODO: make a version of the contiguous access subroutine which is 
-! optimized for the case where A is in say CSR format, and we know that
-! the entries of each row are contiguous in A%val
-
-
-
-
-!==========================================================================!
-!==== Mutators                                                         ====!
-!==========================================================================!
-
-!--------------------------------------------------------------------------!
-subroutine sparse_mat_set_value(A,i,j,val)                                 !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(sparse_matrix), intent(inout) :: A
-    integer, intent(in) :: i,j
-    real(dp), intent(in) :: val
-    ! local variables
-    integer :: k, ind(2)
-
-    ! (i,j) => (j,i) if the matrix is in column format
-    ind = [i, j]
-    ind = ind(A%order)
-
-    ! Find the index k corresponding to the edge twixt (i,j) in A%g
-    k = A%g%find_edge(ind(1),ind(2))
-
-    ! If that edge exists, set the corresponding entry in the array
-    ! of values of A
-    if (k/=-1) then
-        A%val(k) = val
-    else
-        call A%set_value_with_reallocation(i,j,val)
-    endif
-
-end subroutine sparse_mat_set_value
-
-
-
-!--------------------------------------------------------------------------!
-subroutine sparse_mat_add_value(A,i,j,val)                                 !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(sparse_matrix), intent(inout) :: A
-    integer, intent(in) :: i,j
-    real(dp), intent(in) :: val
-    ! local variables
-    integer :: k, ind(2)
-
-    ! (i,j) => (j,i) if the matrix is in column format
-    ind = [i, j]
-    ind = ind(A%order)
-
-    ! Find the index k corresponding to the edge twixt (i,j) in A%g
-    k = A%g%find_edge(ind(1),ind(2))
-
-    ! If that edge exists, set the corresponding entry in the array
-    ! of values of A
-    if (k/=-1) then
-        A%val(k) = A%val(k)+val
-    else
-        call A%set_value_with_reallocation(i,j,val)
-    endif
-
-end subroutine sparse_mat_add_value
-
-
-
-!--------------------------------------------------------------------------!
-subroutine sparse_mat_add_mat_to_self(A,B)                                 !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(sparse_matrix), intent(inout) :: A
-    class(sparse_matrix), intent(in)    :: B
-    ! local variables
-    integer :: i,j,k,l,n,ind(2)
-    integer :: edges(2,batch_size), num_batches, num_returned
-    type(graph_edge_cursor) :: cursor
-    type(dynamic_array) :: stack
-
-    ! Initialize an empty stack which will store entries of B that are zero
-    ! in A. For these entries, we may need to allocate additional storage
-    ! space in the structure of A.
-    call stack%init()
-
-    ! Make a cursor for iterating through graph edges.
-    cursor = B%g%make_cursor()
-    num_batches = (cursor%final-cursor%start)/batch_size+1
-
-    ! Iterate through all the non-zero entries of B.
-    do n=1,num_batches
-        ! Get a chunk of edges.
-        call B%g%get_edges(edges,cursor,batch_size,num_returned)
-
-        ! For each edge,
-        do k=1,num_returned
-            i = edges(B%order(1),k)
-            j = edges(B%order(2),k)
-
-            ind = [i,j]
-            ind = ind(A%order)
-
-            ! if that edge is non-null,
-            if (ind(1)/=0 .and. ind(2)/=0) then
-                ! find the corresponding edge in A.
-                l = A%g%find_edge(ind(1),ind(2))
-
-                ! If that edge exists in A,
-                if (l/=-1) then
-                    ! add the value from B to A.
-                    A%val(l) = A%val(l)+B%val(batch_size*(n-1)+k)
-                else
-                    ! Otherwise, B has a non-zero entry where A does not.
-                    ! Push those entries onto the stack so we can expand the
-                    ! storage of A later.
-                    call stack%push(batch_size*(n-1)+k)
-                endif
-            endif
-        enddo
-    enddo
-
-    ! For now, if B is not structurally a sub-matrix of A, we throw an error
-    ! because I don't feel like writing this yet.
-    if (stack%length>0) then
-        print *, 'Attempted to add a matrix B into a matrix A which would'
-        print *, 'require expanding the storage of A. Not implemented yet.'
-        call exit(1)
-    endif
-
-end subroutine sparse_mat_add_mat_to_self
-
-
-
-!--------------------------------------------------------------------------!
-subroutine sparse_mat_zero(A)                                              !
-!--------------------------------------------------------------------------!
-    class(sparse_matrix), intent(inout) :: A
-
-    A%val = 0_dp
-
-end subroutine sparse_mat_zero
-
-
-
-!--------------------------------------------------------------------------!
-subroutine sparse_mat_leftperm(A,p)                                        !
-!--------------------------------------------------------------------------!
-    class(sparse_matrix), intent(inout) :: A
-    integer, intent(in) :: p(:)
-
-    call A%left_perm_impl(p)
-
-end subroutine sparse_mat_leftperm
-
-
-
-!--------------------------------------------------------------------------!
-subroutine sparse_mat_rightperm(A,p)                                       !
-!--------------------------------------------------------------------------!
-    class(sparse_matrix), intent(inout) :: A
-    integer, intent(in) :: p(:)
-
-    call A%right_perm_impl(p)
-
-end subroutine sparse_mat_rightperm
-
-
-
-!--------------------------------------------------------------------------!
-subroutine sparse_mat_graph_leftperm(A,p)                                  !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(sparse_matrix), intent(inout) :: A
-    integer, intent(in) :: p(:)
-    ! local variables
-    integer :: i, source, dest, num_nodes
-    integer, allocatable :: edge_p(:,:)
-    real(dp), allocatable :: val(:)
-
-    ! Permute the graph and get an array edge_p describing the permutation
-    ! of the edges
-    call A%g%left_permute(p,edge_p)
-
-    ! If the edges require permutation,
-    if (size(edge_p,2)>0) then
-        ! Make a temporary array for the matrix values
-        allocate(val(A%g%capacity))
-        val = 0.0_dp
-
-        ! Make an array of the re-arranged matrix values
-        do i=1,size(edge_p,2)
-            source = edge_p(1,i)
-            dest = edge_p(2,i)
-            num_nodes = edge_p(3,i)
-
-            val(dest:dest+num_nodes-1) = A%val(source:source+num_nodes-1)
-        enddo
-
-        ! Transfer the allocation of the temporary array to the array
-        ! of A's matrix entries
-        call move_alloc(from=val, to=A%val)
-    endif
-
-    ! Deallocate the array describing the edge permutation
-    deallocate(edge_p)
-
-end subroutine sparse_mat_graph_leftperm
-
-
-
-!--------------------------------------------------------------------------!
-subroutine sparse_mat_graph_rightperm(A,p)                                 !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(sparse_matrix), intent(inout) :: A
-    integer, intent(in) :: p(:)
-    ! local variables
-    integer :: i, source, dest, num_nodes
-    integer, allocatable :: edge_p(:,:)
-    real(dp), allocatable :: val(:)
-
-    call A%g%right_permute(p,edge_p)
-
-    if (size(edge_p,2)>0) then
-        allocate(val(A%g%capacity))
-        val = 0.0_dp
-
-        do i=1,size(edge_p,2)
-            source = edge_p(1,i)
-            dest = edge_p(2,i)
-            num_nodes = edge_p(3,i)
-
-            val(dest:dest+num_nodes-1) = A%val(source:source+num_nodes-1)
-        enddo
-
-        call move_alloc(from=val, to=A%val)
-    endif
-
-    deallocate(edge_p)
-
-
-end subroutine sparse_mat_graph_rightperm
-
-
-
-!--------------------------------------------------------------------------!
-subroutine sparse_mat_compress(A)                                          !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(sparse_matrix), intent(inout) :: A
-    ! local variables
-    integer :: i,source,dest,num
-    integer, allocatable :: edge_p(:,:)
-    real(dp), allocatable :: val(:)
-
-    call A%g%compress(edge_p)
-
-    if (size(edge_p,1)/=0) then
-        ! Make a new array for the compressed matrix entries
-        allocate(val(A%g%capacity))
-
-        ! Move the uncompressed matrix entries into the compressed array
-        do i=1,size(edge_p,1)
-            source = edge_p(1,i)
-            dest = edge_p(2,i)
-            num = edge_p(3,i)
-
-            val(dest:dest+num-1) = A%val(source:source+dest-1)
-        enddo
-
-        ! Transfer the allocation from the new array to the array that
-        ! A points to
-        call move_alloc(from=val, to=A%val)
-    endif
-
-    ! Change the strategy for the matrix's matvec to the implementation for
-    ! compressed matrices, for which one needn't check
-    A%matvec_add_impl => sparse_matvec_add_compressed
-
-end subroutine sparse_mat_compress
-
-
-
-
-!==========================================================================!
-!==== Matrix-vector multiplication                                     ====!
-!==========================================================================!
-
-!--------------------------------------------------------------------------!
-subroutine sparse_mat_matvec(A,x,y,trans)                                  !
-!--------------------------------------------------------------------------!
-    class(sparse_matrix), intent(in) :: A
-    real(dp), intent(in)  :: x(:)
-    real(dp), intent(out) :: y(:)
-    logical, intent(in), optional :: trans
-
-    y = 0_dp
-    call A%matvec_add_impl(x,y,trans)
-
-end subroutine sparse_mat_matvec
-
-
-
-!--------------------------------------------------------------------------!
-subroutine sparse_mat_matvec_add(A,x,y,trans)                              !
-!--------------------------------------------------------------------------!
-    class(sparse_matrix), intent(in) :: A
-    real(dp), intent(in)    :: x(:)
-    real(dp), intent(inout) :: y(:)
-    logical, intent(in), optional :: trans
-
-    call A%matvec_add_impl(x,y,trans)
-
-end subroutine sparse_mat_matvec_add
-
-
-
-!--------------------------------------------------------------------------!
-subroutine sparse_matvec_add_compressed(A,x,y,trans)                       !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(sparse_matrix), intent(in) :: A
-    real(dp), intent(in)    :: x(:)
-    real(dp), intent(inout) :: y(:)
-    logical, intent(in), optional :: trans
-    ! local variables
-    integer :: i,j,k,order(2)
-    integer :: n, num_batches, num_returned, edges(2,batch_size)
-    type(graph_edge_cursor) :: cursor
-
-    ! Reverse the matrix orientation if we're computing A'*x instead of A*x
-    order = A%order
-    if (present(trans)) then
-        if (trans) order = [A%order(2),A%order(1)]
-    endif
-
-    ! set the parameters for the cursor
-    cursor = A%g%make_cursor()
-
-    ! Set the number of blocks in which we will be performing the matrix
-    ! multiplication
-    num_batches = (cursor%final-cursor%start)/batch_size+1
-
-    do n=1,num_batches
-        ! Get the next batch of edges from the graph
-        call A%g%get_edges(edges,cursor,batch_size,num_returned)
-
-        ! Go through all the edges (i,j) that we just plucked from A%g
-        do k=1,num_returned
-            i = edges(order(1),k)
-            j = edges(order(2),k)
-
-            ! Add A(i,j)*x(j) to y(i). Since the underlying graph is
-            ! compressed, we know that i,j are not zero.
-            y(i) = y(i)+A%val(batch_size*(n-1)+k)*x(j)
-        enddo
-    enddo
-
-end subroutine sparse_matvec_add_compressed
-
-
-
-!--------------------------------------------------------------------------!
-subroutine sparse_matvec_add_decompressed(A,x,y,trans)                     !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(sparse_matrix), intent(in) :: A
-    real(dp), intent(in)    :: x(:)
-    real(dp), intent(inout) :: y(:)
-    logical, intent(in), optional :: trans
-    ! local variables
-    integer :: i,j,k,order(2)
-    integer :: n, num_batches, num_returned, edges(2,batch_size)
-    type(graph_edge_cursor) :: cursor
-
-    ! Reverse the matrix orientation if we're computing A'*x instead of A*x
-    order = A%order
-    if (present(trans)) then
-        if (trans) order = [A%order(2),A%order(1)]
-    endif
-
-    ! set the parameters for the cursor
-    cursor = A%g%make_cursor()
-
-    ! Set the number of blocks in which we will be performing the matrix
-    ! multiplication
-    num_batches = (cursor%final-cursor%start)/batch_size+1
-
-    do n=1,num_batches
-        ! Get the next batch of edges from the graph
-        call A%g%get_edges(edges,cursor,batch_size,num_returned)
-
-        ! Go through all the edges (i,j) that we just plucked from A%g
-        do k=1,num_returned
-            i = edges(order(1),k)
-            j = edges(order(2),k)
-
-            ! Check to make sure that i,j are not zero, then add 
-            ! A(i,j)*x(j) to y(i); a graph which has not yet been 
-            ! compressed might have null edges
-            if (i/=0 .and. j/=0) then
-                y(i) = y(i)+A%val(batch_size*(n-1)+k)*x(j)
-            endif
-        enddo
-    enddo
-
-end subroutine sparse_matvec_add_decompressed
-
-
-
-
-!==========================================================================!
-!==== Destructors                                                      ====!
-!==========================================================================!
-
-!--------------------------------------------------------------------------!
-subroutine sparse_mat_destroy(A)                                           !
-!--------------------------------------------------------------------------!
-    class(sparse_matrix), intent(inout) :: A
-
-    ! Deallocate the array of A's matrix entries
-    deallocate(A%val)
-
-    ! Decrement the reference counter for A%g
-    call A%g%remove_reference()
-
-    ! Nullify A's pointer to its graph. Don't de-allocate it -- there might
-    ! still be other references to it someplace else.
-    nullify(A%g)
-
-end subroutine sparse_mat_destroy
-
-
-
-
-!==========================================================================!
-!==== Testing, debugging and I/O                                       ====!
-!==========================================================================!
-
-!--------------------------------------------------------------------------!
-subroutine sparse_matrix_to_dense_matrix(A,B,trans)                        !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(sparse_matrix), intent(in) :: A
-    real(dp), intent(out) :: B(A%nrow,A%ncol)
-    logical, intent(in), optional :: trans
-    ! local variables
-    integer :: k, ind(2), ord(2)
-    integer :: n, num_batches, num_returned, edges(2,batch_size)
-    type(graph_edge_cursor) :: cursor
-
-    ord = A%order
-    if (present(trans)) then
-        if (trans) ord = ord([2, 1])
-    endif
-
-    ! Set the dense matrix to 0
-    B = 0.0_dp
-
-    cursor = A%g%make_cursor()
-    num_batches = (cursor%final-cursor%start)/batch_size+1
-
-    ! Iterate through all the entries of A
-    do n=1,num_batches
-        call A%g%get_edges(edges,cursor,batch_size,num_returned)
-
-        do k=1,num_returned
-            ind = edges(A%order,k)
-
-            if (ind(1)/=0 .and. ind(2)/=0) then
-                B(ind(1),ind(2)) = A%val(batch_size*(n-1)+k)
-            endif
-        enddo
-    enddo
-
-end subroutine sparse_matrix_to_dense_matrix
-
-
-
-!--------------------------------------------------------------------------!
-subroutine write_sparse_matrix_to_file(A,filename)                         !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(sparse_matrix), intent(in) :: A
-    character(len=*), intent(in) :: filename
-    ! local variables
-    integer :: i,j,k,n
-    real(dp) :: val
-    type(graph_edge_cursor) :: cursor
-    integer :: num_batches, num_returned, edges(2,batch_size)
-
-    open(unit=10, file=trim(filename))
-
-    write(10,*) A%g%n, A%g%m, A%g%capacity
-
-    cursor = A%g%make_cursor()
-    num_batches = (cursor%final-cursor%start)/batch_size+1
-    do n=1,num_batches
-        call A%g%get_edges(edges,cursor,batch_size,num_returned)
-
-        do k=1,num_returned
-            i = edges(A%order(1),k)
-            j = edges(A%order(2),k)
-
-            val = A%val(batch_size*(n-1)+k)
-
-            write(10,*) i,j,val
-        enddo
-    enddo
-
-    close(10)
-
-end subroutine write_sparse_matrix_to_file
-
-
-
-
-!==========================================================================!
-!==== Auxiliary routines                                               ====!
-!==========================================================================!
-
-!--------------------------------------------------------------------------!
-subroutine set_value_with_reallocation(A,i,j,val)                          !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(sparse_matrix), intent(inout) :: A
-    integer, intent(in) :: i,j
-    real(dp), intent(in) :: val
-    ! local variables
-    class(graph), pointer :: g
-    real(dp), allocatable :: vals(:)
-    integer :: k, indx, ind(2)
-    integer :: n, edges(2,batch_size), num_batches, num_returned
-    type(graph_edge_cursor) :: cursor
-
-    allocate(g, mold=A%g)
-    call g%copy(A%g)
-
-    ind = [i,j]
-    ind = ind(A%order)
-
-    call g%add_edge(ind(1),ind(2))
-
-    allocate(vals(g%capacity))
-    indx = g%find_edge(ind(1),ind(2))
-    vals(indx) = val
-
-    cursor = A%g%make_cursor()
-    num_batches = (cursor%final-cursor%start)/batch_size+1
-
-    do n=1,num_batches
-        call A%g%get_edges(edges,cursor,batch_size,num_returned)
-
-        do k=1,num_returned
-            ind(1) = edges(A%order(1),k)
-            ind(2) = edges(A%order(2),k)
-
-            if (ind(1)/=0 .and. ind(2)/=0) then
-                indx = g%find_edge(ind(1),ind(2))
-                vals(indx) = A%val(batch_size*(n-1)+k)
-            endif
-        enddo
-    enddo
-
-    call A%g%remove_reference()
-    nullify(A%g)
-
-    A%g => g
-    call A%g%add_reference()
-    A%nnz = A%g%ne
-
-    call move_alloc(from=vals, to=A%val)
-
-end subroutine set_value_with_reallocation
-
-
-
-
-
-!     //////////////////////////////////////////////////////////////////
-!    //////////////////////////////////////////////////////////////////
-!   //// Algebraic operations on sparse matrices                  //// 
-!  //////////////////////////////////////////////////////////////////
-! //////////////////////////////////////////////////////////////////
-
-
-!--------------------------------------------------------------------------!
-subroutine add_sparse_matrices(A,B,C,g,orientation)                        !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(sparse_matrix), intent(inout) :: A
-    class(sparse_matrix), intent(in) :: B, C
-    class(graph), pointer, intent(inout), optional :: g
-    character(len=3), intent(in), optional :: orientation
-    ! local variables
-    integer :: i,j,k,n,nv(2)
-    logical :: trans1, trans2
-    integer :: num_batches, num_returned, edges(2,batch_size)
-    type(graph_edge_cursor) :: cursor
-    class(graph), pointer :: ga
-    character(len=3) :: ori
-
-    !------------------------
-    ! Do some error checking
-
-    if (B%nrow/=C%nrow .or. B%ncol/=C%ncol) then
-        print *, 'Dimensions for sparse matrix sum are inconsistent.'
+    if (B%nrow /= C%nrow .or. B%ncol /= C%ncol) then
+        print *, 'Dimensions of matrices for sparse matrix sum'
+        print *, 'A = B+C are not consistent.'
+        print *, 'Dimensions of B:', B%nrow, B%ncol
+        print *, 'Dimensions of C:', C%nrow, C%ncol
         print *, 'Terminating.'
         call exit(1)
     endif
 
+    if (.not. A%ordering_set) call A%set_ordering("row")
 
-    !---------------------
-    ! Check optional args
+    ! If `A` is stored with column-major ordering, we need to transpose
+    ! the graph with the structure of `B + C`
+    trans = A%ord(1) == 2
 
-    ! First, check if the user has supplied a graph to use for the
-    ! connectivity structure of A
-    if (present(g)) then
-        ! If the graph pointer isn't associated, allocate it to a CS graph
-        if (.not.associated(g)) allocate(cs_graph::g)
+    call A%set_dimensions(B%nrow, B%ncol)
+    call sparse_matrix_sum_graph(g, B, C)
+    call A%copy_graph_structure(g, trans)
+    call sparse_matrix_sum_fill_entries(A, B, C)
 
-        ! Make our local graph pointer ga point to g
-        ga => g
-    else
-        ! If the user hasn't supplied a graph, make the local graph pointer
-        ! ga a CS graph.
-        allocate(cs_graph::ga)
-    endif
-
-    ! Next, check if the user has supplied an orientation for the output
-    ! matrix A; if not, default to row orientation
-    ori = "row"
-    if (present(orientation)) ori = orientation
-
-
-    !---------------------------------
-    ! Build the connectivity graph ga
-
-    ! Decide what dimension to make ga depending on the matrix orientation
-    select case(ori)
-        case("row")
-            nv = [B%nrow, B%ncol]
-            A%order = [1,2]
-        case("col")
-            nv = [B%ncol, B%nrow]
-            A%order = [2,1]
-    end select
-
-    ! The orientation of ga is flipped relative to B%g, C%g if A has a
-    ! different orientation to each matrix
-    trans1 = .not.(A%order(1)==B%order(1) .and. A%order(2)==B%order(2))
-    trans2 = .not.(A%order(1)==C%order(1) .and. A%order(2)==C%order(2))
-
-    ! Compute the union of the graphs B%g, C%g and put it into ga
-    call graph_union(ga,B%g,C%g,trans1,trans2)
-
-    ! Initialize A with the connectivity structure ga
-    call A%init(B%nrow,B%ncol,ori,ga)
-
-
-    !-----------------------
-    ! Fill the entries of A
-
-    cursor = A%g%make_cursor()
-    num_batches = (cursor%final-cursor%start)/batch_size+1
-    do n=1,num_batches
-        call A%g%get_edges(edges,cursor,batch_size,num_returned)
-
-        do k=1,num_returned
-            i = edges(A%order(1),k)
-            j = edges(A%order(2),k)
-
-            if (i/=0 .and. j/=0) then
-                A%val(batch_size*(n-1)+k) = B%get_value(i,j)+C%get_value(i,j)
-            endif
-        enddo
-    enddo
-
-end subroutine add_sparse_matrices
+end subroutine sparse_matrix_sum
 
 
 
 !--------------------------------------------------------------------------!
-subroutine multiply_sparse_matrices(A,B,C,g,orientation)                   !
+subroutine sparse_matrix_sum_graph(g, B, C)                                !
+!--------------------------------------------------------------------------!
+!     This routine computes the graph `g` describing the underlying        !
+! connectivity structure of the sparse matrix sum `B + C`. It is a helper  !
+! routine for other procedures which compute the entries of the sum.       !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(graph), intent(inout) :: g
+    class(sparse_matrix), intent(in) :: B, C
+    ! local variables
+    integer :: i, j, k
+    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    type(graph_edge_cursor) :: cursor
+
+    call g%init(B%nrow, B%ncol)
+
+
+    ! Add all the edges from `B` into `g`
+    cursor = B%make_cursor()
+    num_batches = (cursor%final - cursor%start) / batch_size + 1
+
+    do n = 1, num_batches
+        call B%get_edges(edges, cursor, batch_size, num_returned)
+
+        do k = 1, num_returned
+            i = edges(1, k)
+            j = edges(2, k)
+
+            call g%add_edge(i, j)
+        enddo
+    enddo
+
+
+    ! Now add all the edges from `C` into `g`
+    cursor = C%make_cursor()
+    num_batches = (cursor%final - cursor%start) / batch_size + 1
+
+    do n = 1, num_batches
+        call C%get_edges(edges, cursor, batch_size, num_returned)
+
+        do k = 1, num_returned
+            i = edges(1, k)
+            j = edges(2, k)
+
+            call g%add_edge(i, j)
+        enddo
+    enddo
+
+end subroutine sparse_matrix_sum_graph
+
+
+
+!--------------------------------------------------------------------------!
+subroutine sparse_matrix_sum_fill_entries(A, B, C)                         !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(inout) :: A
+    class(sparse_matrix), intent(in)    :: B, C
+    ! local variables
+    integer :: i, j, k
+    real(dp) :: z
+    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    real(dp) :: entries(batch_size)
+    type(graph_edge_cursor) :: cursor
+
+    ! Add up the contributions to `A` from `B`
+    cursor = B%make_cursor()
+    num_batches = (cursor%final - cursor%start) / batch_size + 1
+
+    do n = 1, num_batches
+        call B%get_entries(edges, entries, cursor, batch_size, num_returned)
+
+        do k = 1, num_returned
+            i = edges(1, k)
+            j = edges(2, k)
+            z = entries(k)
+
+            call A%add_value(i, j, z)
+        enddo
+    enddo
+
+    ! Add up the contributions to `A` from `C`
+    cursor = C%make_cursor()
+    num_batches = (cursor%final - cursor%start) / batch_size + 1
+
+    do n = 1, num_batches
+        call C%get_entries(edges, entries, cursor, batch_size, num_returned)
+
+        do k = 1, num_returned
+            i = edges(1, k)
+            j = edges(2, k)
+            z = entries(k)
+
+            call A%add_value(i, j, z)
+        enddo
+    enddo
+
+end subroutine sparse_matrix_sum_fill_entries
+
+
+
+!--------------------------------------------------------------------------!
+subroutine sparse_matrix_product(A, B, C)                                  !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(sparse_matrix), intent(inout) :: A
     class(sparse_matrix), intent(in) :: B, C
-    class(graph), pointer, intent(inout), optional :: g
-    character(len=3), intent(in), optional :: orientation
     ! local variables
-    integer :: i, j, k, l, m, ind(2)
-    real(dp) :: z
-    class(graph), pointer :: ga, h1, h2
-    character(len=3) :: ori
-    logical :: tr1, tr2
-    type(sparse_matrix) :: CR
-
-
-    !------------------------
-    ! Do some error checking
+    type(ll_graph) :: g
+    logical :: trans
 
     if (B%ncol /= C%nrow) then
-        print *, 'Dimensions for sparse matrix product are inconsistent.'
-        print *, 'Terminating.'
+        print *, 'Dimensions of matrices for sparse matrix product'
+        print *, 'A = B * C are not consistent.'
+        print *, 'Column dimension of B:', B%ncol
+        print *, 'Row dimension of C:   ', C%nrow
         call exit(1)
     endif
 
+    if (.not. A%ordering_set) call A%set_ordering("row")
 
-    !---------------------
-    ! Check optional args
+    ! If `A` is stored with column-major ordering, we need to transpose
+    ! the graph with the structure of `B * C`
+    trans = A%ord(1) == 2
 
-    ! First, check if the user has supplied a graph to use for the
-    ! connectivity structure of A
-    if (present(g)) then
-        ! If the graph pointer isn't associated, allocate it to a CS graph
-        if (.not.associated(g)) allocate(cs_graph::g)
+    call A%set_dimensions(B%nrow, C%ncol)
+    call sparse_matrix_product_graph(g, B, C)
+    call A%copy_graph_structure(g, trans)
+    call sparse_matrix_product_fill_entries(A, B, C)
 
-        ! Make our local graph pointer ga point to g
-        ga => g
-    else
-        ! If the user hasn't supplied a graph, make the local graph pointer
-        ! ga a CS graph.
-        allocate(cs_graph::ga)
-    endif
-
-    ! Next, check if the user has supplied an orientation for the output
-    ! matrix A; if not, default to row orientation
-    ori = "row"
-    if (present(orientation)) ori = orientation
+end subroutine sparse_matrix_product
 
 
-    !---------------------------------
-    ! Build the connectivity graph ga
 
-    ! Decide what dimension to make ga depending on the matrix orientation
-    select case(ori)
-        case("row")
-            A%order = [1,2]
-        case("col")
-            A%order = [2,1]
-    end select
+!-----------------------------------------------------------------------
+subroutine sparse_matrix_product_graph(g, B, C)
+!------------------------------------------------------------------------
+    ! input/output variables
+    class(graph), intent(inout) :: g
+    class(sparse_matrix), intent(in) :: B, C
+    ! local variables
+    integer :: i, j, k, l, m, d
+    ! variables for getting matrix slices
+    integer, allocatable :: nodes(:)
+    real(dp), allocatable :: slice(:)
+    ! variables for iterating through matrix entries
+    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    type(graph_edge_cursor) :: cursor
 
-    ! Determine whether we're transposing matrices in the product graph
-    h1 => B%g
-    h2 => C%g
-    tr1 = (B%orientation == "col")
-    tr2 = (C%orientation == "col")
+    call g%init(B%nrow, C%ncol)
 
-    if (ori == "col") then
-        h1 => C%g
-        h2 => B%g
+    ! Allocate arrays for getting slices from `C`
+!    d = C%max_row_degree() ! Haha this doesn't even exist dumbass
+    d = 0
+    do i = 1, C%nrow
+        d = max(d, C%get_row_degree(i))
+    enddo
+    allocate(nodes(d), slice(d))
 
-        tr1 = xor(tr1,ori=="col")
-        tr2 = xor(tr2,ori=="col")
-    endif
 
-    ! Form the graph product and put it into ga
-    call graph_product(ga,h1,h2,tr1,tr2)
+    ! Iterate through all the edges of `B`
+    cursor = B%make_cursor()
+    num_batches = (cursor%final - cursor%start) / batch_size + 1
 
-    ! Initialize A with the structure of ga
-    call A%init(B%nrow,C%ncol,ori,ga)
+    do n = 1, num_batches
+        call B%get_edges(edges, cursor, batch_size, num_returned)
+
+        do l = 1, num_returned
+            ! For each edge (i, k) in `B`
+            i = edges(1, l)
+            k = edges(2, l)
+
+            ! Find all edges (k, j) in `C` and add (i, j) to `g`
+            call C%get_row(nodes, slice, k)
+            d = C%get_row_degree(k)
+
+            do m = 1, d
+                j = nodes(m)
+                call g%add_edge(i, j)
+            enddo
+        enddo
+    enddo
+
+    deallocate(nodes, slice)
+
+end subroutine sparse_matrix_product_graph
+
+
+
+!--------------------------------------------------------------
+subroutine sparse_matrix_product_fill_entries(A, B, C)
+!-----------------------------------------------------------------
+    ! input/output variables
+    class(sparse_matrix), intent(inout) :: A
+    class(sparse_matrix), intent(in) :: B, C
+    ! local variables
+    integer :: i, j, k, l, m, d
+    real(dp) :: Bik, Ckj
+    ! variables for getting matrix slices
+    integer, allocatable :: nodes(:)
+    real(dp), allocatable :: slice(:)
+    ! variables for iterating through matrix entries
+    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    real(dp) :: vals(batch_size)
+    type(graph_edge_cursor) :: cursor
+
     call A%zero()
 
-
-    !-----------------------
-    ! Fill the entries of A
-
-    ! If C is in row-major order, call the routine assuming that getting
-    ! matrix rows is fast
-    if (C%orientation=="row") then
-        call multiply_sparse_mats_fast_row_access(A,B,C)
-
-    ! Likewise, if B is in column-major order, call the appropriate routine
-    elseif (B%orientation=="col") then
-        call multiply_sparse_mats_fast_col_access(A,B,C)
-
-    ! If C is not in row-major order and B is not in column-major order,
-    ! copy C into a new matrix CR which is in CSR format. This case is
-    ! wasteful of memory and should be avoided at all costs.
-    else
-        call CR%copy(C, orientation="row", frmt="cs")
-        call multiply_sparse_mats_fast_row_access(A,B,CR)
-    endif
-
-
-end subroutine multiply_sparse_matrices
-
-
-
-!--------------------------------------------------------------------------!
-subroutine multiply_sparse_mats_fast_row_access(A,B,C)                     !
-!--------------------------------------------------------------------------!
-!     This is a helper subroutine for sparse matrix multiplication which   !
-! assumes that the second factor matrix C is in row-major order and        !
-! preferably the underlying graph is in a format for which accessing all   !
-! the neighbors of a vertex can be done in O(degree).                      !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(sparse_matrix), intent(inout) :: A
-    class(sparse_matrix), intent(in) :: B, C
-    ! local variables
-    integer :: i, j, k, l, m, ind(2)
-    integer :: nodes(C%g%max_degree)
-    real(dp) :: z, vals(C%g%max_degree)
-    integer :: n, num_batches, num_returned, edges(2,batch_size)
-    type(graph_edge_cursor) :: cursor
-
-    cursor = B%g%make_cursor()
-    num_batches = (cursor%final-cursor%start)/batch_size+1
-
-    ! Iterate through all the entries (i,k) of B
-    do n=1,num_batches
-        call B%g%get_edges(edges,cursor,batch_size,num_returned)
-
-        do l=1,num_returned
-            ind = edges(B%order,l)
-            i = ind(1)
-            k = ind(2)
-
-            if (i/=0 .and. k/=0) then
-                ! For each entry (i,k) of B, get the entire row
-                ! of entries (k,j) of C and compute z = B(i,k)*C(k,j)
-                z = 0.0_dp
-                call C%get_row(nodes,vals,k)
-
-                do m=1,C%g%max_degree
-                    j = nodes(m)
-
-                    if (j/=0) then
-                        z = B%val(batch_size*(n-1)+l) * vals(m)
-                        call A%add_value(i,j,z)
-                    endif
-                enddo
-            endif
-        enddo
+    ! Allocate arrays for getting slices from `C`
+    !d = C%max_row_degree()
+    d = 0
+    do i = 1, C%nrow
+        d = max(d, C%get_row_degree(i))
     enddo
+    allocate(nodes(d), slice(d))
 
 
-end subroutine multiply_sparse_mats_fast_row_access
+    ! Iterate through all the edges of `B`
+    cursor = B%make_cursor()
+    num_batches = (cursor%final - cursor%start) / batch_size + 1
 
+    do n = 1, num_batches
+        call B%get_entries(edges, vals, cursor, batch_size, num_returned)
 
+        do l = 1, num_returned
+            ! For each edge (i, k) in `B`
+            i = edges(1, l)
+            k = edges(2, l)
+            Bik = vals(l)
 
-!--------------------------------------------------------------------------!
-subroutine multiply_sparse_mats_fast_col_access(A,B,C)                     !
-!--------------------------------------------------------------------------!
-!     This is a helper subroutine for multiplying sparse matrices in the   !
-! case where the first factor B is in column-major order.                  !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(sparse_matrix), intent(inout) :: A
-    class(sparse_matrix), intent(in) :: B, C
-    ! local variables
-    integer :: i, j, k, l, m, ind(2)
-    integer :: nodes(B%g%max_degree)
-    real(dp) :: z, vals(B%g%max_degree)
-    integer :: n, num_batches, num_returned, edges(2,batch_size)
-    type(graph_edge_cursor) :: cursor
+            ! Find all edges (k, j) in `C` and add B(i, k) * C(k, j) to A(i, j)
+            call C%get_row(nodes, slice, k)
+            d = C%get_row_degree(k)
+            do m = 1, d
+                j = nodes(m)
+                Ckj = slice(m)
 
-    cursor = C%g%make_cursor()
-    num_batches = (cursor%final-cursor%start)/batch_size+1
-
-    ! Iterate through all the entries (k,j) of C
-    do n=1,num_batches
-        call C%g%get_edges(edges,cursor,batch_size,num_returned)
-
-        do l=1,num_returned
-            ind = edges(C%order,l)
-            k = ind(1)
-            j = ind(2)
-
-            if (k/=0 .and. j/=0) then
-                ! For each entry (k,j) of C, get the entire column
-                ! of entries (i,k) of B and compute z = B(i,k)*C(k,j)
-                call B%get_column(nodes,vals,k)
-
-                do m=1,B%g%max_degree
-                    i = nodes(m)
-
-                    if (i/=0) then
-                        z = vals(m) * C%val(batch_size*(n-1)+l)
-                        call A%add_value(i,j,z)
-                    endif
-                enddo
-            endif
+                call A%add_value(i, j, Bik * Ckj)
+            enddo
         enddo
-    enddo
+    enddo    
 
-end subroutine multiply_sparse_mats_fast_col_access
+end subroutine sparse_matrix_product_fill_entries
 
 
 
 
 end module sparse_matrices
+

@@ -1,10 +1,29 @@
-module ldu_solvers
+!==========================================================================!
+!==========================================================================!
+module ldu_solvers                                                         !
+!==========================================================================!
+!==========================================================================!
+!====     This module contains the definition of LDU solvers. This     ====!
+!==== object can be used in more than one way:                         ====!
+!====     o A full matrix factorization in which `A = L*D*U`. The      ====!
+!====       resulting solver object can then directly solve a linear   ====!
+!====       system, to within machine precision and the condition      ====!
+!====       number of the underlying matrix.                           ====!
+!====     o An incomplete factorization `A ~= L*D*U`. The solver       ====!
+!====       is used as a preconditioner for an iterative solver.       ====!
+!==== Either way, the representation of the underlying object is the   ====!
+!==== same, so we have kept both in the same class.                    ====!
+!====     We have implemented a factorization as `A ~= L*D*U`, where   ====!
+!==== `L` and `U` are respectively unit lower- and unit upper-         ====!
+!==== triangular, and `D` is diagonal. This factorization is most      ====!
+!==== convenient, because `U = transpose(L)` when `A` is symmetric.    ====!
+!==========================================================================!
+!==========================================================================!
 
 use types, only: dp
 use linear_operator_interface
 use sparse_matrices
-use graph_interface
-use cs_graphs
+use graphs
 
 implicit none
 
@@ -14,27 +33,21 @@ implicit none
 !--------------------------------------------------------------------------!
 type, extends(linear_solver) :: sparse_ldu_solver                          !
 !--------------------------------------------------------------------------!
-    ! Triangular factors L and U, stored in one matrix
-    !TODO: make these attributes private once testing is complete
-    !type(sparse_matrix), private :: L, U
-    type(sparse_matrix) :: L, U
+    ! Unit triangular factors
+    type(cs_matrix) :: L, U
 
-    ! Diagonal entries D
-    !TODO: make these attributes private once testing is complete
-    !real(dp), allocatable, private :: D(:)
+    ! Diagonal entries
     real(dp), allocatable :: D(:)
 
-    ! Scratch vector for intermediate computations
-    real(dp), allocatable :: z(:)
-
-    ! Permutation of matrix entries in case of pivoting
+    ! Permutation of matrix entries
     integer, allocatable :: p(:)
 
-    ! Parameters determining behavior of the solver
+    ! Parameters for solver behavior
     logical :: incomplete = .false.
     logical :: cholesky = .false.
-    logical :: params_set = .false.
     integer :: level
+
+    logical :: params_set = .false.
 contains
     ! Methods required by the linear solver interface
     procedure :: setup => sparse_ldu_setup
@@ -44,15 +57,6 @@ contains
     ! Methods specific to LDU solvers
     procedure :: set_params => ldu_set_params
 end type sparse_ldu_solver
-
-
-
-!TODO: make these methods private once testing is complete
-!--------------------------------------------------------------------------!
-!private :: lower_triangular_solve, upper_triangular_solve                  !
-!private :: sparse_static_pattern_ldu_factorization                         !
-!private :: incomplete_ldu_sparsity_pattern                                 !
-!--------------------------------------------------------------------------!
 
 
 
@@ -75,7 +79,7 @@ function ldu(incomplete,level)                                             !
     allocate(sparse_ldu_solver::ldu)
     select type(ldu)
         type is(sparse_ldu_solver)
-            call ldu%set_params(incomplete,level)
+            call ldu%set_params(incomplete, level)
     end select
 
 end function ldu
@@ -88,52 +92,47 @@ end function ldu
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine sparse_ldu_setup(solver,A)                                      !
+subroutine sparse_ldu_setup(solver, A)                                     !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(sparse_ldu_solver), intent(inout) :: solver
     class(linear_operator), intent(in) :: A
     ! local variables
-    class(graph), pointer :: g, gL, gU
 
     solver%nn = A%nrow
 
-    if (A%ncol/=A%nrow) then
+    if (A%ncol /= A%nrow) then
         print *, 'Cannot make an LDU solver for a non-square matrix.'
         print *, 'Terminating.'
         call exit(1)
     endif
 
-    ! First, check to make sure A is a sparse matrix, and not block-sparse
-    ! or a general linear operator
+    ! Check to make sure `A` is a sparse matrix, not a general linear
+    ! operator
     select type(A)
-        type is(sparse_matrix)
-            if (.not.solver%initialized) then
-                g => A%g
-
-                ! Build the sparsity pattern for the factorization
-                call incomplete_ldu_sparsity_pattern( gL, gU, g, 0)
-
-                ! Initialize the L, U factors and allocate space for the
-                ! diagonal elements D
-                call solver%L%init(solver%nn,solver%nn,'row',gL)
-                call solver%U%init(solver%nn,solver%nn,'row',gU)
+        class is(sparse_matrix)
+            if (.not. solver%initialized) then
+                ! Build the sparsity pattern for the factorization if we
+                ! haven't already done so
+                call incomplete_ldu_sparsity_pattern(A, &
+                                            & solver%L, solver%U, 0)
                 allocate(solver%D(solver%nn))
 
                 solver%initialized = .true.
             endif
 
-            ! Fill the L, D, U factors
+            ! Fill the matrix factors
             call sparse_static_pattern_ldu_factorization(A, &
-                & solver%L, solver%D, solver%U)
+                                            & solver%L, solver%D, solver%U)
     end select
+
 
 end subroutine sparse_ldu_setup
 
 
 
 !--------------------------------------------------------------------------!
-subroutine ldu_set_params(solver,incomplete,level)                         !
+subroutine ldu_set_params(solver, incomplete, level)                       !
 !--------------------------------------------------------------------------!
     class(sparse_ldu_solver), intent(inout) :: solver
     logical, intent(in), optional :: incomplete
@@ -141,30 +140,24 @@ subroutine ldu_set_params(solver,incomplete,level)                         !
 
     ! Check if we're performing a full or incomplete factorization;
     ! default to a complete factorization
-    if (present(incomplete)) then
-        solver%incomplete = incomplete
-    else
-        solver%incomplete = .false.
-    endif
+    !TODO I don't have a direct solver yet, so no matter what make it an
+    ! incomplete factorization
+    solver%incomplete = .true.
 
     ! If we're performing an incomplete factorization, find the level of
     ! fill-in allowed
-    if (solver%incomplete) then
-        if (present(level)) then
-            solver%level = level
-        else
-            solver%level = 0
-        endif
-    endif
+    !TODO I haven't even implemented higher levels of fill, so no matter
+    ! what make the level 0
+    solver%level = 0
 
     solver%params_set = .true.
 
-end subroutine
+end subroutine ldu_set_params
 
 
 
 !--------------------------------------------------------------------------!
-subroutine ldu_solve(solver,A,x,b)                                         !
+subroutine ldu_solve(solver, A, x, b)                                      !
 !--------------------------------------------------------------------------!
     class(sparse_ldu_solver), intent(inout) :: solver
     class(linear_operator), intent(in) :: A
@@ -174,9 +167,9 @@ subroutine ldu_solve(solver,A,x,b)                                         !
     associate(L => solver%L, U => solver%U, D => solver%D)
 
     x = b
-    call lower_triangular_solve(L,x)
-    x = x/D
-    call upper_triangular_solve(U,x)
+    call lower_triangular_solve(L, x)
+    x = x / D
+    call upper_triangular_solve(U, x)
 
     end associate
 
@@ -200,7 +193,6 @@ end subroutine ldu_destroy
 
 
 
-
 !==========================================================================!
 !==========================================================================!
 !==== Auxiliary procedures                                             ====!
@@ -213,33 +205,34 @@ end subroutine ldu_destroy
 !===================================================
 
 !--------------------------------------------------------------------------!
-subroutine lower_triangular_solve(M,x)                                     !
+subroutine lower_triangular_solve(M, x)                                    !
 !--------------------------------------------------------------------------!
-!     Given a strictly lower-triangular matrix M, this subroutine solves   !
-! the linear system (I+M)x = b. It is assumed that the right-hand side     !
-! vector b is stored in the vector x to start with.                        !
+!     Given a strictly lower-triangular matrix `M`, this subroutine solves !
+! the linear system `(I+M)x = b`. It is assumed that the right-hand side   !
+! vector `b` is stored in the vector `x` to start with.                    !
 !     No error-checking is performed in order to make absolutely sure that !
-! M is strictly lower triangular. If this routine is called on a matrix    !
+! `M` is strictly lower triangular. If this routine is called on a matrix  !
 ! which is not strictly lower triangular, it will produce garbage results. !
 ! However, it is a private routine of this module, to be used only for the !
 ! matrices constructed herein. If you fall afoul by using this routine     !
 ! then you must have been very determined to break something.              !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    type(sparse_matrix), intent(in) :: M
+    type(cs_matrix), intent(in) :: M
     real(dp), intent(inout) :: x(:)
     ! local variables
-    integer :: i, j, k, d, neighbors(M%g%max_degree)
-    real(dp) :: vals(M%g%max_degree)
+    integer :: i, j, k
+    real(dp) :: z
 
-    do i=1,M%nrow
-        call M%get_row(neighbors,vals,i)
+    do i = 1, M%nrow
+        z = x(i)
 
-        d = M%g%degree(i)
-        do k=1,d
-            j = neighbors(k)
-            x(i) = x(i)-vals(k)*x(j)
+        do k = M%g%ptr(i), M%g%ptr(i + 1) - 1
+            j = M%g%node(k)
+            z = z - M%val(k) * x(j)
         enddo
+
+        x(i) = z
     enddo
 
 end subroutine lower_triangular_solve
@@ -247,23 +240,26 @@ end subroutine lower_triangular_solve
 
 
 !--------------------------------------------------------------------------!
-subroutine upper_triangular_solve(M,x)                                     !
+subroutine upper_triangular_solve(M, x)                                    !
+!--------------------------------------------------------------------------!
+!     See comment for previous subroutine.                                 !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    type(sparse_matrix), intent(in) :: M
+    type(cs_matrix), intent(in) :: M
     real(dp), intent(inout) :: x(:)
     ! local variables
-    integer :: i, j, k, d, neighbors(M%g%max_degree)
-    real(dp) :: vals(M%g%max_degree)
+    integer :: i, j, k
+    real(dp) :: z
 
-    do i=M%nrow,1,-1
-        call M%get_row(neighbors,vals,i)
+    do i = M%nrow, 1, -1
+        z = x(i)
 
-        d = M%g%degree(i)
-        do k=1,d
-            j = neighbors(k)
-            x(i) = x(i)-vals(k)*x(j)
+        do k = M%g%ptr(i), M%g%ptr(i + 1) - 1
+            j = M%g%node(k)
+            z = z - M%val(k) * x(j)
         enddo
+
+        x(i) = z
     enddo
 
 end subroutine upper_triangular_solve
@@ -276,9 +272,9 @@ end subroutine upper_triangular_solve
 !============================
 
 !--------------------------------------------------------------------------!
-subroutine sparse_static_pattern_ldu_factorization(A,L,D,U)                !
+subroutine sparse_static_pattern_ldu_factorization(A, L, D, U)             !
 !--------------------------------------------------------------------------!
-!     This routine takes in a sparse matrix A and computes a factorization !
+!     This routine takes in a sparse matrix and computes a factorization   !
 ! into L, D, U, where L is lower triangular, U is upper triangular, and D  !
 ! is diagonal.                                                             !
 !     It is assumed that the sparsity patterns of L and U, namely the      !
@@ -287,27 +283,23 @@ subroutine sparse_static_pattern_ldu_factorization(A,L,D,U)                !
 ! factorization of the matrix: this subroutine is used the same way in     !
 ! either case!                                                             !
 !     Other subroutines in this module can be used to compute the graphs   !
-! for complete or incomplete LDU factorizations. For the purposes of this  !
-! algorithm, it is assumed that both L and U use an underlying graph data  !
-! structure for which finding all the neighbors of a given vertex is fast, !
-! and that they are both stored in row-major order, not column-major. This !
-! algorithm uses the IKJ variant of Gaussian elimination, which is best    !
-! employed when row operations are fast.                                   !
+! for complete or incomplete LDU factorizations.                           !
 !     Most algorithms for LDU compute L and U as unit lower triangular     !
 ! matrices. This algorithm actually computes L-I and U-I, as it is a waste !
 ! of memory to store n doubles which we know to all be 1.0.                !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    type(sparse_matrix), intent(in) :: A
-    type(sparse_matrix), intent(inout) :: L, U
+    class(sparse_matrix), intent(in) :: A
+    type(cs_matrix), intent(inout) :: L, U
     real(dp), intent(inout) :: D(:)
     ! local variables
-    integer :: i,j,k,n,nn,dl,du,ind1,ind2
-    integer, allocatable :: lneighbors(:),uneighbors(:)
+    integer :: i, j, k, n, nn, dl, du, ind1, ind2
+    integer, allocatable :: lneighbors(:), uneighbors(:)
     real(dp) :: Lik, Uki, Uik, Ukj
     ! graph edge iterators
     type(graph_edge_cursor) :: cursor
-    integer :: num_batches, num_returned, edges(2,batch_size), order(2)
+    integer :: num_batches, num_returned, edges(2, batch_size), ord(2)
+    real(dp) :: entries(batch_size)
 
     nn = A%nrow
 
@@ -315,88 +307,82 @@ subroutine sparse_static_pattern_ldu_factorization(A,L,D,U)                !
     call U%zero()
     D = 0.0_dp
 
-    ! Copy A into L, D and U
-    order = A%order
-    cursor = A%g%make_cursor()
-    num_batches = (cursor%final-cursor%start)/batch_size+1
-    do n=1,num_batches
-        call A%g%get_edges(edges,cursor,batch_size,num_returned)
+    ! Copy A into L, D, U
+    cursor = A%make_cursor()
+    num_batches = (cursor%final - cursor%start) / batch_size + 1
 
-        do k=1,num_returned
-            i = edges(order(1),k)
-            j = edges(order(2),k)
+    do n = 1, num_batches
+        call A%get_entries(edges, entries, cursor, batch_size, num_returned)
 
-            if (i/=0 .and. j/=0) then
-                if (i>j) then
-                    call L%set_value(i,j,A%val(batch_size*(n-1)+k))
-                elseif(j>i) then
-                    call U%set_value(i,j,A%val(batch_size*(n-1)+k))
-                else
-                    D(i) = A%val(batch_size*(n-1)+k)
-                endif
+        do k = 1, num_returned
+            i = edges(1, k)
+            j = edges(2, k)
+
+            if (i > j) then
+                call L%set_value(i, j, entries(k))
+            elseif (j > i) then
+                call U%set_value(i, j, entries(k))
+            else
+                D(i) = entries(k)
             endif
         enddo
     enddo
 
-    ! Allocate a neighbors array
-    allocate(lneighbors(L%g%max_degree), uneighbors(U%g%max_degree))
+    dl = L%g%max_degree()
+    du = U%g%max_degree()
 
-    ! Compute the factorization using the IKJ-variant of Gaussian
-    ! elimination
-    do i=1,nn
-        ! Get the degree and neighbors of node i in L
-        call L%g%get_neighbors(lneighbors,i)
+    allocate(lneighbors(dl), uneighbors(du))
+
+    do i = 1, nn
+        ! Get the degree and neighbors of node `i` in `L` and `U`
+        call L%g%get_neighbors(lneighbors, i)
         dl = L%g%degree(i)
 
-        ! Get the degree and neighbors of node i in U
-        call U%g%get_neighbors(uneighbors,i)
+        call U%g%get_neighbors(uneighbors, i)
         du = U%g%degree(i)
 
-        ! Loop through all the neighbors k of vertex i in the matrix L
-        do ind1=1,dl
+        do ind1 = 1, dl
             k = lneighbors(ind1)
 
-            ! Get the (i,k) entry of L
-            Lik = L%get_value(i,k)
-            Uki = U%get_value(k,i)
+            Lik = L%get_value(i, k)
+            Uki = U%get_value(k, i)
 
-            ! Divide the L(i,k) by D(k)
-            call L%set_value(i,k,Lik/D(k))
-            Lik = Lik/D(k)
+            call L%set_value(i, k, Lik / D(k))
+            Lik = Lik / D(k)
 
-            ! Now loop through all neighbors j of vertex i in the matrix L
-            ! such that j > k
-            do ind2=1,dl
+            ! Loop through all neighbors `j` of vertex `i` in `L` with
+            ! `j > k`...
+            do ind2 = 1, dl
                 j = lneighbors(ind2)
 
-                ! If j > k,
-                if (j>k) then
-                    ! Set the value of LU(k,j)
-                    Ukj = U%get_value(k,j)
-                    call L%add_value(i,j,-Lik*D(k)*Ukj)
+                if (j > k) then
+                    !... and add up their contribution to `L`.
+                    Ukj = U%get_value(k, j)
+                    call L%add_value(i, j, -Lik * D(k) * Ukj)
                 endif
             enddo
 
-            ! Adjust the diagonal
-            D(i) = D(i)-Lik*D(k)*Uki
+            ! Modify the diagonal entry
+            D(i) = D(i) - Lik * D(k) * Uki
 
-            ! And finally loop through all the neighbors j of vertex i in
-            ! the matrix U
-            do ind2=1,du
+            ! Now loop through all neighbors `j` of vertex `i` in `U`
+            do ind2 = 1, du
                 j = uneighbors(ind2)
-                Ukj = U%get_value(k,j)
-                call U%add_value(i,j,-Lik*D(k)*Ukj)
+                Ukj = U%get_value(k, j)
+                call U%add_value(i, j, -Lik * D(k) * Ukj)
             enddo
+        enddo   ! End of loop over neighbors `k` of `i`
+
+        ! Finally, loop through row `i` in `U` and scale all the entries by
+        ! the diagonal
+        do ind2 = 1, du
+            k = uneighbors(ind2)
+            Uik = U%get_value(i, k)
+            call U%set_value(i, k, Uik / D(i))
         enddo
 
-        ! Loop through all the neighbors k of vertex i in the matrix U
-        do ind2=1,du
-            ! Scale them by the diagonal
-            k = uneighbors(ind2)
-            Uik = U%get_value(i,k)
-            call U%set_value(i,k,Uik/D(i))
-        enddo
-    enddo
+    enddo   ! End of loop over all rows `i`
+    
 
 end subroutine sparse_static_pattern_ldu_factorization
 
@@ -408,81 +394,68 @@ end subroutine sparse_static_pattern_ldu_factorization
 !==================================
 
 !--------------------------------------------------------------------------!
-subroutine incomplete_ldu_sparsity_pattern(gL,gU,g,level,trans)            !
+subroutine incomplete_ldu_sparsity_pattern(A, L, U, level)                 !
 !--------------------------------------------------------------------------!
-!     This subroutine builds the graphs gL, gU for the factors L, U of an  !
-! incomplete LDU factorization of the matrix A whose connectivity is       !
-! represented by the graph g.                                              !
+!     This subroutine builds the sparse matrix factors `L`, `U` for an     !
+! incomplete LDU factorization of the matrix `A`. The argument `level`     !
+! specifies the level of fill allowed in the factorization.                !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(graph), pointer, intent(out) :: gl, gu
-    class(graph), intent(in) :: g
+    class(sparse_matrix), intent(in) :: A
+    type(cs_matrix), intent(inout) :: L, U
     integer, intent(in) :: level
-    logical, intent(in), optional :: trans
     ! local variables
-    integer :: i,j,k,n,order(2)
-    integer :: Ldegrees(g%n), Udegrees(g%n)
+    integer :: i, j, k, nn
+    class(graph), pointer :: gl, gu
     ! graph edge iterators
     type(graph_edge_cursor) :: cursor
-    integer :: num_batches, num_returned, edges(2,batch_size)
+    integer :: n, num_batches, edges(2, batch_size), num_returned
 
-    if (level>0) then
-        print *, 'ILU(k) for k>0 not implemented yet! Sorry pal.'
+    if (level > 0) then
+        print *, 'ILDU(k) for k > 0 not implemented yet! Sorry pal.'
         call exit(1)
     endif
 
-    order = [1, 2]
-    if (present(trans)) then
-        if (trans) order = [2, 1]
-    endif
+    nn = A%nrow
 
-    allocate(cs_graph::gL)
-    allocate(cs_Graph::gU)
+    allocate(ll_graph :: gl)
+    allocate(ll_graph :: gu)
+    call gl%init(nn)
+    call gu%init(nn)
 
-    Ldegrees = 0
-    Udegrees = 0
+    cursor = A%make_cursor()
+    num_batches = (cursor%final - cursor%start) / batch_size + 1
 
-    ! First, determine the degrees of all the the nodes in gL, gU
-    cursor = g%make_cursor()
-    num_batches = (cursor%final-cursor%start)/batch_size+1
+    do n = 1, num_batches
+        call A%get_edges(edges, cursor, batch_size, num_returned)
 
-    do n=1,num_batches
-        call g%get_edges(edges,cursor,batch_size,num_returned)
+        do k = 1, num_returned
+            i = edges(1, k)
+            j = edges(2, k)
 
-        do k=1,num_returned
-            i = edges(order(1),k)
-            j = edges(order(2),k)
-
-            if (j > i) Udegrees(i) = Udegrees(i)+1
-            if (i > j) Ldegrees(i) = Ldegrees(i)+1
+            if (i > j) call gl%add_edge(i, j)
+            if (j > i) call gu%add_edge(i, j)
         enddo
     enddo
 
-    ! Initialize gL, gU to have enough storage space for the requisite
-    ! number of edges
-    call gL%init(g%n,g%n,degrees=Ldegrees)
-    call gU%init(g%n,g%n,degrees=Udegrees)
+    call convert_graph_type(gl, "compressed sparse")
+    call convert_graph_type(gu, "compressed sparse")
 
-    ! Next, add the edges to gL, gU
-    cursor = g%make_cursor()
-    do n=1,num_batches
-        call g%get_edges(edges,cursor,batch_size,num_returned)
+    select type(gl)
+        class is(cs_graph)
+            call L%init(nn, nn, gl, "row")
+    end select
 
-        do k=1,num_returned
-            i = edges(order(1),k)
-            j = edges(order(2),k)
+    select type(gu)
+        class is(cs_graph)
+            call U%init(nn, nn, gu, "row")
+    end select
 
-            if (j>i) call gU%add_edge(i,j)
-            if (i>j) call gL%add_edge(i,j)
-        enddo
-    enddo
-
-    ! Finally, compress the graphs gL, gU to save on storage space and to
-    ! make the immutable.
-    call gL%compress()
-    call gU%compress()
 
 end subroutine incomplete_ldu_sparsity_pattern
+
+
+
 
 
 

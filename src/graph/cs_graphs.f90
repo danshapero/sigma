@@ -10,20 +10,27 @@ implicit none
 !--------------------------------------------------------------------------!
 type, extends(graph) :: cs_graph                                           !
 !--------------------------------------------------------------------------!
+    ! The array `node` stores the ending vertices of every edge in the
+    ! graph, while the array `ptr` stores the starting index in `node` of
+    ! neighbors of each vertex
     integer, allocatable :: ptr(:), node(:)
+
+    ! Maximum degree of all vertices in the graph
+    integer, private :: max_d
 contains
     !--------------
     ! Constructors
-    procedure :: init_const_degree => cs_init_const_degree
-    procedure :: init_variable_degree => cs_init_variable_degree
+    procedure :: init => cs_graph_init
     procedure :: copy => cs_graph_copy
 
     !-----------
     ! Accessors
     procedure :: degree => cs_degree
+    procedure :: max_degree => cs_max_degree
     procedure :: get_neighbors => cs_get_neighbors
     procedure :: connected => cs_connected
     procedure :: find_edge => cs_find_edge
+    procedure, nopass :: is_get_neighbors_fast => get_neighbors_is_fast
 
     !---------------
     ! Edge iterator
@@ -36,7 +43,6 @@ contains
     procedure :: delete_edge => cs_delete_edge
     procedure :: left_permute => cs_graph_left_permute
     procedure :: right_permute => cs_graph_right_permute
-    procedure :: compress => cs_graph_compress
 
     !-------------
     ! Destructors
@@ -48,9 +54,8 @@ contains
 
     !--------------------
     ! Auxiliary routines
-    procedure, private :: add_edge_with_reallocation
-    procedure :: sort_node
-    procedure, private :: max_degree_update
+    procedure, private :: prune_null_edges
+
 end type cs_graph
 
 
@@ -66,76 +71,17 @@ contains
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine cs_init_const_degree(g,n,m,degree)                              !
+subroutine cs_graph_init(g, n, m)                                          !
 !--------------------------------------------------------------------------!
-    ! input/output variables
     class(cs_graph), intent(inout) :: g
     integer, intent(in) :: n
-    integer, intent(in), optional :: m, degree
-    ! local variables
-    integer :: k, ne
-
-    ! Set the number of (left-)nodes in the graph and allocate the node
-    ! pointer array ptr
-    g%n = n
-    allocate( g%ptr(n+1) )
-
-    ! If the graph is not square, set the number of right-nodes
-    if (present(m)) then
-        g%m = m
-    else
-        g%m = n
-    endif
-
-    ! If the degree argument is present, we have an upper bound on the
-    ! number of edges to allocate in the graph
-    if (present(degree)) then
-        ne = degree*g%n
-    else
-        ne = g%n
-    endif
-
-    ! Allocate the node array to be the number of edges, whether we actually
-    ! have an upper bound on what that is or we've set it to some default
-    allocate( g%node(ne) )
-    g%node = 0
-    g%capacity = ne
-
-    ! If we know how many neighbors each vertex has, fill in the ptr
-    ! array accordingly
-    if (present(degree)) then
-        do k=1,g%n+1
-            g%ptr(k) = (k-1)*degree+1
-        enddo
-    else
-        g%ptr = 1
-    endif
-
-    ! The total number of edges and max degree at initialization is zero
-    g%ne = 0
-    g%max_degree = 0
-
-    ! Mark the graph as mutable
-    g%mutable = .true.
-
-end subroutine cs_init_const_degree
-
-
-
-!--------------------------------------------------------------------------!
-subroutine cs_init_variable_degree(g,n,m,degrees)                          !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(cs_graph), intent(inout) :: g
-    integer, intent(in) :: n, degrees(:)
     integer, intent(in), optional :: m
-    ! local variables
-    integer :: k,ne
 
     ! Set the number of (left-)nodes in the graph and allocate the node
     ! pointer array ptr
     g%n = n
     allocate( g%ptr(n+1) )
+    g%ptr = 1
 
     ! If the graph is not square, set the number of right-nodes
     if (present(m)) then
@@ -144,95 +90,74 @@ subroutine cs_init_variable_degree(g,n,m,degrees)                          !
         g%m = n
     endif
 
-    ! Set the number of edges to allocate in the node array
-    ne = sum(degrees)
+    ! Allocate the node array. If we're making an empty CS graph, that
+    ! array has size 0.
+    allocate( g%node(0) )
 
-    ! Allocate the node array to be the number of edges
-    allocate( g%node(ne) )
-    g%node = 0
-    g%capacity = ne
-
-    ! If we know how many neighbors each vertex has, fill in the ptr
-    ! array accordingly
-    g%ptr(1) = 1
-    do k=1,g%n
-        g%ptr(k+1) = g%ptr(k)+degrees(k)
-    enddo
-
-    ! The total number of edges and max degree at initialization is zero
+    ! Set the number of edges and max degree
     g%ne = 0
-    g%max_degree = 0
+    g%max_d = 0
 
-    ! Mark the graph as mutable
-    g%mutable = .true.
-
-end subroutine cs_init_variable_degree
+end subroutine cs_graph_init
 
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_graph_copy(g,h,trans)                                        !
+subroutine cs_graph_copy(g, h, trans)                                      !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_graph), intent(inout) :: g
     class(graph), intent(in)       :: h
     logical, intent(in), optional :: trans
     ! local variables
-    integer :: ind(2),order(2),nv(2),k
+    integer :: i, j, k, l, ord(2), nv(2)
     integer :: n, num_batches, num_returned, edges(2,batch_size)
     type(graph_edge_cursor) :: cursor
 
     nv = [h%n, h%m]
-    order = [1, 2]
+    ord = [1, 2]
 
     ! Check whether we're copying h or h with all directed edes reversed
     if (present(trans)) then
         if (trans) then
             nv = [h%m, h%n]
-            order = [2, 1]
+            ord = [2, 1]
         endif
     endif
-
-    ! Mark the graph as mutable
-    g%mutable = .true.
 
     ! Copy all of h's attributes to g
     g%n = nv(1)
     g%m = nv(2)
-    g%ne = 0
-    g%capacity = h%ne
-    g%max_degree = h%max_degree
+    g%ne = h%ne
+    g%max_d = h%max_degree()
 
     ! Allocate g's ptr and node arrays
-    allocate(g%ptr(g%n+1),g%node(g%capacity))
+    allocate(g%ptr(g%n+1), g%node(h%ne))
 
     ! Get a cursor from h with which to iterate through its edges
     cursor = h%make_cursor()
-    num_batches = (cursor%final-cursor%start)/batch_size+1
+    num_batches = (cursor%final - cursor%start) / batch_size + 1
 
     ! Fill out the ptr array
     g%ptr = 0
 
     ! Iterate through the edges of h first to fill out the ptr array of g
-    do n=1,num_batches
+    do n = 1, num_batches
         ! Get a chunk of edges from h
-        call h%get_edges(edges,cursor,batch_size,num_returned)
+        call h%get_edges(edges, cursor, batch_size, num_returned)
 
         ! For each edge,
         do k=1,num_returned
-            ind = edges(order,k)
+            i = edges(ord(1), k)
+            j = edges(ord(2), k)
 
-            ! If that edge isn't null
-            if (ind(1)/=0 .and. ind(2)/=0) then
-                ! Increment a counter
-                g%ptr(ind(1)+1) = g%ptr(ind(1)+1)+1
-            endif
+            g%ptr(i + 1) = g%ptr(i + 1) + 1
         enddo
     enddo
 
     g%ptr(1) = 1
-    do k=1,g%n
-        g%ptr(k+1) = g%ptr(k)+g%ptr(k+1)
+    do i = 1, g%n
+        g%ptr(i + 1) = g%ptr(i) + g%ptr(i + 1)
     enddo
 
     ! Iterate through the edges of h again to fill the node array of g
@@ -240,17 +165,34 @@ subroutine cs_graph_copy(g,h,trans)                                        !
 
     g%node = 0
 
-    do n=1,num_batches
-        call h%get_edges(edges,cursor,batch_size,num_returned)
+    do n = 1, num_batches
+        call h%get_edges(edges, cursor, batch_size, num_returned)
 
-        do k=1,num_returned
-            ind = edges(order,k)
+        do k = 1,num_returned
+            i = edges(ord(1), k)
+            j = edges(ord(2), k)
 
-            if (ind(1)/=0 .and. ind(2)/=0) then
-                call g%add_edge(ind(1),ind(2))
-            endif
+            !TODO check that this works, try to make it more efficient
+            do l = g%ptr(i), g%ptr(i + 1) - 1
+                ! We need this provision for copying graphs whose iterators
+                ! might return the same edge more than once
+                if (g%node(l) == j) exit
+
+                ! Otherwise, find a free spot to insert the next edge
+                if (g%node(l) == 0) then
+                    g%node(l) = j
+                    exit
+                endif
+            enddo
         enddo
     enddo
+
+    ! If we didn't fill up all the storage space of the graph, possibly
+    ! because the graph we were copying had null edges, then rebuild the
+    ! structure of `g` so it's at capacity.
+    if (minval(g%node) == 0) then
+        call g%prune_null_edges()
+    endif
 
 end subroutine cs_graph_copy
 
@@ -262,48 +204,53 @@ end subroutine cs_graph_copy
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-function cs_degree(g,i) result(d)                                          !
+function cs_degree(g, i) result(d)                                         !
 !--------------------------------------------------------------------------!
-    ! input/output variables
     class(cs_graph), intent(in) :: g
     integer, intent(in) :: i
     integer :: d
-    ! local variables
-    integer :: j,k
 
-    d = 0
-    do k=g%ptr(i),g%ptr(i+1)-1
-        j = g%node(k)
-        if (j/=0) d = k-g%ptr(i)+1
-    enddo
+    d = g%ptr(i + 1) - g%ptr(i)
 
 end function cs_degree
 
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_get_neighbors(g,neighbors,i)                                 !
+function cs_max_degree(g) result(d)                                        !
+!--------------------------------------------------------------------------!
+    class(cs_graph), intent(in) :: g
+    integer :: d
+
+    d = g%max_d
+
+end function cs_max_degree
+
+
+
+!--------------------------------------------------------------------------!
+subroutine cs_get_neighbors(g, neighbors, i)                               !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_graph), intent(in) :: g
     integer, intent(out) :: neighbors(:)
     integer, intent(in) :: i
     ! local variables
-    integer :: start,finish,degree
+    integer :: start, finish, degree
 
-    degree = g%ptr(i+1)-g%ptr(i)
+    degree = g%ptr(i+1) - g%ptr(i)
     start = g%ptr(i)
-    finish = g%ptr(i+1)-1
+    finish = g%ptr(i + 1) - 1
 
     neighbors = 0
-    neighbors(1:degree) = g%node(start:finish)
+    neighbors(1 : degree) = g%node(start : finish)
 
 end subroutine cs_get_neighbors
 
 
 
 !--------------------------------------------------------------------------!
-function cs_connected(g,i,j)                                               !
+function cs_connected(g, i, j)                                             !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_graph), intent(in) :: g
@@ -314,8 +261,8 @@ function cs_connected(g,i,j)                                               !
 
     cs_connected = .false.
 
-    do k=g%ptr(i),g%ptr(i+1)-1
-        if (g%node(k)==j) cs_connected = .true.
+    do k = g%ptr(i), g%ptr(i + 1) - 1
+        if (g%node(k) == j) cs_connected = .true.
     enddo
 
 end function cs_connected
@@ -323,19 +270,19 @@ end function cs_connected
 
 
 !--------------------------------------------------------------------------!
-function cs_find_edge(g,i,j)                                               !
+function cs_find_edge(g, i, j)                                             !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_graph), intent(in) :: g
-    integer, intent(in) :: i,j
+    integer, intent(in) :: i, j
     integer :: cs_find_edge
     ! local variables
     integer :: k
 
     cs_find_edge = -1
 
-    do k=g%ptr(i),g%ptr(i+1)-1
-        if (g%node(k)==j) cs_find_edge = k
+    do k = g%ptr(i), g%ptr(i + 1) - 1
+        if (g%node(k) == j) cs_find_edge = k
     enddo
 
 end function cs_find_edge
@@ -357,12 +304,12 @@ function cs_make_cursor(g) result(cursor)                                  !
     integer :: k
 
     cursor%start = 1
-    cursor%final = g%capacity
+    cursor%final = g%ne
     cursor%current = 0
 
     k = 1
-    do while(g%ptr(k+1)-g%ptr(k)==0)
-        k = k+1
+    do while(g%ptr(k + 1) - g%ptr(k) == 0)
+        k = k + 1
     enddo
 
     cursor%edge = [k, g%node(1)]
@@ -372,7 +319,7 @@ end function cs_make_cursor
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_get_edges(g,edges,cursor,num_edges,num_returned)             !
+subroutine cs_get_edges(g, edges, cursor, num_edges, num_returned)         !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_graph), intent(in) :: g
@@ -383,6 +330,8 @@ subroutine cs_get_edges(g,edges,cursor,num_edges,num_returned)             !
     ! local variables
     integer :: i, k
 
+    associate(current => cursor%current)
+
     ! Set up the returned edges to be 0
     edges = 0
 
@@ -390,28 +339,30 @@ subroutine cs_get_edges(g,edges,cursor,num_edges,num_returned)             !
     ! return how many edges the user asked for, or, if that amount would
     ! go beyond the final edge that the cursor is allowed to access, all
     ! of the remaining edges
-    num_returned = min(num_edges,cursor%final-cursor%current)
+    num_returned = min(num_edges, cursor%final - current)
 
     ! Fill the edges array's second row with the edge endpoints
-    edges(2,1:num_returned) = &
-        & g%node(cursor%current+1:cursor%current+num_returned)
+    edges(2, 1 : num_returned) = g%node(current + 1 : current + num_returned)
 
     ! Fill in the edges array's first row with the edge start points
     i = cursor%edge(1)
 
-    do k=1,num_returned
+    do k = 1, num_returned
         !! This is going to produce code that cannot be analyzed and
         !! optimized well by the compiler. Would be good to find something
         !! more slick with a predictable access pattern.
-        do while(cursor%current >= g%ptr(i+1)-1)
-            i = i+1
+        ! TODO replace with bit-shifting magic
+        do while(current >= g%ptr(i + 1) - 1)
+            i = i + 1
         enddo
 
-        edges(1,k) = i
-        cursor%current = cursor%current+1
+        edges(1, k) = i
+        current = current + 1
     enddo
 
-    cursor%edge = edges(:,num_returned)
+    cursor%edge = edges(:, num_returned)
+
+    end associate
 
 end subroutine cs_get_edges
 
@@ -423,46 +374,46 @@ end subroutine cs_get_edges
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine cs_add_edge(g,i,j)                                              !
+subroutine cs_add_edge(g, i, j)                                            !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_graph), intent(inout) :: g
-    integer, intent(in) :: i,j
+    integer, intent(in) :: i, j
     ! local variables
-    integer :: k
-    logical :: added
+    integer :: k, indx, d
+    integer, allocatable :: node(:)
 
-    if (.not.g%mutable) then
-        print *, 'Attempted to add an edge to an immutable CS graph'
-        print *, 'Terminating.'
-        call exit(1)
-    endif
+    if (.not. g%connected(i, j)) then
+        ! Make a temporary array
+        allocate(node(g%ne + 1))
+        node = 0
 
-    if (.not.g%connected(i,j)) then
-        ! Try to see if the new neighbor can be added without
-        ! reallocating memory
-        added = .false.
-        do k=g%ptr(i),g%ptr(i+1)-1
-            if (g%node(k)==0) then
-                g%node(k) = j
-                added = .true.
-                exit
-            endif
+        ! Store the location within the temporary array where the new edge
+        ! will go
+        indx = g%ptr(i + 1)
+
+        ! Copy all the old data into the temporary array
+        node(1 : indx - 1) = g%node(1 : indx - 1)
+        node(indx + 1 : g%ne + 1) = g%node(indx : g%ne)
+
+        ! Put the new edge into the temporary array
+        node(indx) = j
+
+        ! Transfer the allocation status from the temporary array to `g`
+        call move_alloc(from = node, to = g%node)
+
+        ! Update the `ptr` array to reflect the new connectivity structure
+        ! of `g`
+        do k = i + 1, g%n + 1
+            g%ptr(k) = g%ptr(k) + 1
         enddo
 
-        ! If we successfully added the new edge,
-        if (added) then
-            ! increment the graph's number of edges
-            g%ne = g%ne+1
+        ! Increment the number of edges of `g`
+        g%ne = g%ne + 1
 
-            ! and update the graphs' maximum degree.
-            g%max_degree = max(g%max_degree,k-g%ptr(i)+1)
-        else
-            ! Otherwise, we need to reallocate the internal structure
-            ! of the graph, done in a separate subroutine at the end of
-            ! this module.
-            call g%add_edge_with_reallocation(i,j)
-        endif
+        ! Increment the max degree of `g` if need be
+        d = g%ptr(i + 1) - g%ptr(i)
+        g%max_d = max(g%max_d, d)
     endif
 
 end subroutine cs_add_edge
@@ -470,48 +421,51 @@ end subroutine cs_add_edge
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_delete_edge(g,i,j)                                           !
+subroutine cs_delete_edge(g, i, j)                                         !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_graph), intent(inout) :: g
-    integer, intent(in) :: i,j
+    integer, intent(in) :: i, j
     ! local variables
-    integer :: jt,k,indx,degree
-
-    if (.not.g%mutable) then
-        print *, 'Attempted to delete an edge from an immutable CS graph'
-        print *, 'Terminating.'
-        call exit(1)
-    endif
+    integer :: k, indx, d
+    integer, allocatable :: node(:)
 
     ! Find the index in the list of edges of the edge to be removed
-    indx = g%find_edge(i,j)
+    indx = g%find_edge(i, j)
 
-    if (indx/=-1) then
-        ! Record the degree of the node from which an edge is to be
-        ! removed, and find the last node that i is connected to
-        do k=g%ptr(i),g%ptr(i+1)-1
-            if (g%node(k)/=0) then
-                degree = k-g%ptr(i)+1
-                jt = g%node(k)
-            endif
+    ! If there was no such edge in the first place, do nothing
+    if (indx /= -1) then
+        ! Record the degree of the starting vertex of the edge that is to
+        ! be deleted
+        d = g%ptr(i + 1) - g%ptr(i)
+
+        ! Make a temporary array
+        allocate(node(g%ne - 1))
+
+        ! Copy all the old data into the temporary array
+        node(1    : indx - 1) = g%node(1        : indx - 1)
+        node(indx : g%ne - 1) = g%node(indx + 1 : g%ne    )
+
+        ! Transfer the allocation status from the temporary array to `g`
+        call move_alloc(from = node, to = g%node)
+
+        ! Update the `ptr` array
+        do k = i + 1, g%n + 1
+            g%ptr(k) = g%ptr(k) - 1
         enddo
 
-        ! If there were more than two edges connected to node i, then
-        ! replace the edge (i,j) with the removed edge (i,jt)
-        if (degree>1) then
-            g%node(indx) = jt
+        ! Decrement the number of edges of `g`
+        g%ne = g%ne - 1
+
+        ! If the vertex `i` was of maximal degree, it's possible that the
+        ! max degree of all the graph's vertices has decreased.
+        if (d == g%max_d) then
+            do k = 1, g%n
+                d = g%ptr(k + 1) - g%ptr(k)
+                g%max_d = max(g%max_d, d)
+            enddo
         endif
 
-        ! Remove the last edge (i,jt) connected to i
-        g%node( g%ptr(i)+degree-1 ) = 0
-
-        if (degree==g%max_degree) then
-            call g%max_degree_update()
-        endif
-
-        ! Decrement the number of edges in g
-        g%ne = g%ne-1
     endif
 
 end subroutine cs_delete_edge
@@ -519,41 +473,42 @@ end subroutine cs_delete_edge
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_graph_left_permute(g,p,edge_p)                               !
+subroutine cs_graph_left_permute(g, p, edge_p)                             !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_graph), intent(inout) :: g
     integer, intent(in) :: p(:)
     integer, allocatable, intent(out), optional :: edge_p(:,:)
     ! local variables
-    integer :: i,k,ptr(g%n+1),node(g%capacity)
+    integer :: i, k, d, ptr(g%n + 1), node(g%ne)
 
     ! If the user has asked to see the edge permutation, fill the
     ! first and last constituent arrays
     if (present(edge_p)) then
-        allocate(edge_p(3,g%n))
-        do i=1,g%n
-            edge_p(1,i) = g%ptr(i)
-            edge_p(3,i) = g%ptr(i+1)-g%ptr(i)
+        allocate(edge_p(3, g%n))
+        do i = 1, g%n
+            edge_p(1, i) = g%ptr(i)
+            edge_p(3, i) = g%ptr(i + 1) - g%ptr(i)
         enddo
     endif
 
     ! Find the number of edges for each node under the new ordering
-    do i=1,g%n
-        ptr(p(i)+1) = g%ptr(i+1)-g%ptr(i)
+    do i = 1, g%n
+        ptr(p(i) + 1) = g%ptr(i + 1) - g%ptr(i)
     enddo
 
     ! Knowing how many edges each node has in the new ordering, we can
     ! prepare the ptr array
     ptr(1) = 1
-    do i=1,g%n
-        ptr(i+1) = ptr(i+1)+ptr(i)
+    do i = 1, g%n
+        ptr(i + 1) = ptr(i + 1) + ptr(i)
     enddo
 
     ! Shuffle the node array
-    do i=1,g%n
-        do k=0,g%ptr(i+1)-g%ptr(i)-1
-            node( ptr(p(i))+k ) = g%node( g%ptr(i)+k )
+    do i = 1, g%n
+        d = g%ptr(i + 1) - g%ptr(i)
+        do k = 0, d - 1
+            node( ptr(p(i)) + k ) = g%node( g%ptr(i) + k )
         enddo
     enddo
 
@@ -564,8 +519,8 @@ subroutine cs_graph_left_permute(g,p,edge_p)                               !
     ! If the user has asked to see the edge permutation, fill the second
     ! constituent array
     if (present(edge_p)) then
-        do i=1,g%n
-            edge_p(2,i) = g%ptr(p(i))
+        do i = 1, g%n
+            edge_p(2, i) = g%ptr(p(i))
         enddo
     endif
 
@@ -574,88 +529,23 @@ end subroutine cs_graph_left_permute
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_graph_right_permute(g,p,edge_p)                              !
+subroutine cs_graph_right_permute(g, p, edge_p)                            !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_graph), intent(inout) :: g
     integer, intent(in) :: p(:)
     integer, allocatable, intent(out), optional :: edge_p(:,:)
     ! local variables
-    integer :: j,k
+    integer :: j, k
 
-    do k=1,g%capacity
+    do k=1, g%ne
         j = g%node(k)
-        if (j/=0) g%node(k) = p(j)
+        g%node(k) = p(j)
     enddo
 
     if (present(edge_p)) allocate(edge_p(0,0))
 
 end subroutine cs_graph_right_permute
-
-
-
-!--------------------------------------------------------------------------!
-subroutine cs_graph_compress(g,edge_p)                                     !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(cs_graph), intent(inout) :: g
-    integer, allocatable, intent(inout), optional :: edge_p(:,:)
-    ! local variables
-    integer :: i,j,k,n
-    integer, allocatable :: ptr(:), node(:)
-
-    ! If there are no null nodes stored in g, we don't need to compress
-    ! the graph at all
-    if (minval(g%node)/=0) then
-        if (present(edge_p)) allocate(edge_p(0,0))
-    else
-        ! Allocate the ptr array
-        allocate(ptr(g%n+1),node(g%ne))
-        ptr = 0
-        ptr(1) = 1
-        n = 0
-
-        ! Fill out the ptr array to reflect the number of non-null edges
-        ! and copy endpoints of the non-null edges into the node array
-        do i=1,g%n
-            do k=g%ptr(i),g%ptr(i+1)-1
-                j = g%node(k)
-
-                if (j/=0) then
-                    ptr(i+1) = ptr(i+1)+1
-                    n = n+1
-                    node(n) = j
-                endif
-            enddo
-
-            ptr(i+1) = ptr(i)+ptr(i+1)
-        enddo
-
-        if (present(edge_p)) then
-            allocate(edge_p(3,g%n))
-
-            ! Fill the edge permutation array
-            do i=1,g%n
-                edge_p(1,i) = g%ptr(i)
-                edge_p(2,i) = ptr(i)
-                edge_p(3,i) = ptr(i+1)-ptr(i)
-            enddo
-        endif
-
-        ! Move the allocation status from the ptr and node arrays to those
-        ! owned by the graph
-        call move_alloc(from=ptr, to=g%ptr)
-        call move_alloc(from=node, to=g%node)
-
-        ! Change the graph's capacity to reflect that there is no
-        ! extra storage
-        g%capacity = g%ne
-    endif
-
-    ! Mark the graph as immutable
-    g%mutable = .false.
-
-end subroutine cs_graph_compress
 
 
 
@@ -669,14 +559,11 @@ subroutine cs_destroy(g)                                                   !
 !--------------------------------------------------------------------------!
     class(cs_graph), intent(inout) :: g
 
-    deallocate(g%ptr,g%node)
+    deallocate(g%ptr, g%node)
     g%n = 0
     g%m = 0
     g%ne = 0
-    g%max_degree = 0
-    g%capacity = 0
-
-    g%mutable = .true.
+    g%max_d = 0
 
 end subroutine cs_destroy
 
@@ -688,18 +575,18 @@ end subroutine cs_destroy
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine cs_dump_edges(g,edges)                                          !
+subroutine cs_dump_edges(g, edges)                                         !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_graph), intent(in) :: g
     integer, intent(out) :: edges(:,:)
     ! local variables
-    integer :: i,k
+    integer :: i, k
 
-    do i=1,g%n
-        do k=g%ptr(i),g%ptr(i+1)-1
-            edges(1,k) = i
-            edges(2,k) = g%node(k)
+    do i = 1, g%n
+        do k = g%ptr(i), g%ptr(i + 1) - 1
+            edges(1, k) = i
+            edges(2, k) = g%node(k)
         enddo
     enddo
 
@@ -709,104 +596,50 @@ end subroutine cs_dump_edges
 
 
 !==========================================================================!
-!==== Auxiliary procedures                                             ====!
+!==== Auxiliary routines                                               ====!
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine add_edge_with_reallocation(g,i,j)                               !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(cs_graph), intent(inout) :: g
-    integer, intent(in) :: i,j
-    ! local variables
-    integer :: k
-    integer, allocatable :: node(:)
-
-    ! Allocate a temporary array `node` which will store the new list of
-    ! destination edges of g
-    allocate(node(g%capacity+1))
-
-    ! The index `k` in the new array of the edge to be added is 1 after
-    ! the last index for all the edges of row i
-    k = g%ptr(i+1)
-
-    ! Copy over the old edges of g into the new array
-    node(1:k-1) = g%node(1:k-1)
-    node(k+1:g%capacity+1) = g%node(k:g%capacity)
-
-    ! Add in the new edge
-    node(k) = j
-
-    ! Transfer the allocation status from the temporary edge array to
-    ! g's edge array
-    call move_alloc(from=node, to=g%node)
-
-    ! Update all the pointers to the starting index in the array `node`
-    ! for the edges of each vertex k
-    do k=i+1,g%n+1
-        g%ptr(k) = g%ptr(k)+1
-    enddo
-
-    ! Increment the number of edges and the capacity of g
-    g%ne = g%ne+1
-    g%capacity = g%capacity+1
-
-    ! Update the max degree of g if need be
-    g%max_degree = max(g%max_degree,g%ptr(i+1)-g%ptr(i))
-
-end subroutine add_edge_with_reallocation
-
-
-
-!--------------------------------------------------------------------------!
-subroutine sort_node(g)                                                    !
+subroutine prune_null_edges(g)                                             !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_graph), intent(inout) :: g
     ! local variables
-    integer :: k,start,finish,num,p(g%max_degree),node(g%max_degree)
+    integer :: i, j, k, next, ne
+    integer, allocatable :: ptr(:), node(:)
 
-    do k=1,g%n
-        start  = g%ptr(k)
-        finish = g%ptr(k+1)-1
-        num = finish-start+1
-        node(1:num) = g%node(start:finish)
-        p(1:num) = order(node(1:num))
-        g%node(start:finish) = node(p(1:num))
-    enddo
+    ne = count(g%node /= 0)
 
-end subroutine sort_node
+    if (ne < size(g%node)) then
+        g%ne = ne
 
+        allocate(node(ne), ptr(g%n + 1))
+        ptr = 0
+        node = 0
+        ptr(1) = 1
 
+        g%max_d = 0
+        next = 1
 
-!--------------------------------------------------------------------------!
-subroutine max_degree_update(g)                                            !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(cs_graph), intent(inout) :: g
-    ! local variables
-    integer :: i,k,degree,max_d
+        do i = 1, g%n
+            do k = g%ptr(i), g%ptr(i + 1) - 1
+                j = g%node(k)
+                if (j /= 0) then
+                    node(next) = j
+                    next = next + 1
+                endif
+            enddo
 
-    max_d = 0
+            ptr(i + 1) = next
 
-    ! loop through all the nodes
-    do i=1,g%n
-        ! set the degree of i to be 0
-        degree = 0
-
-        ! check how many neighbors i has
-        do k=g%ptr(i),g%ptr(i+1)-1
-            if (g%node(k)/=0) degree = k-g%ptr(i)+1
+            g%max_d = max(g%max_d, g%ptr(i + 1) - g%ptr(i))
         enddo
 
-        ! update the max degree of g if node i has a greater degree
-        max_d = max(max_d,degree)
-    enddo
+        call move_alloc(from = node, to = g%node)
+        call move_alloc(from = ptr,  to = g%ptr )
+    endif
 
-    g%max_degree = max_d
-
-end subroutine max_degree_update
-
+end subroutine prune_null_edges
 
 
 end module cs_graphs

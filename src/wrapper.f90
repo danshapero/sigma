@@ -4,7 +4,6 @@ use iso_c_binding
 
 use graphs
 use sparse_matrices
-use conversions
 
 implicit none
 
@@ -30,16 +29,7 @@ subroutine get_graph(cgp,storage_format) bind(c)                           !
     allocate(gp)
     cgp = c_loc(gp)
 
-    select case(storage_format)
-        case(0)
-            allocate(ll_graph::gp%g)
-        case(1)
-            allocate(coo_graph::gp%g)
-        case(2)
-            allocate(cs_graph::gp%g)
-        case(3)
-            allocate(ellpack_graph::gp%g)
-    end select
+    call choose_graph_type(gp%g, storage_format + 1)
 
 end subroutine get_graph
 
@@ -245,28 +235,19 @@ end subroutine graph_right_permute_c
 
 
 !--------------------------------------------------------------------------!
-subroutine convert_c(cgp,storage_format) bind(c,name='convert')            !
+subroutine convert_graph_type_c(cgp, storage_format) &                     !
+                                    & bind(c, name='convert_graph_type')   !
 !--------------------------------------------------------------------------!
     ! input/output variables
     type(c_ptr), intent(in) :: cgp
     integer(c_int), intent(in), value :: storage_format
     ! local variables
     type(graph_pointer), pointer :: gp
-    character(len=3) :: str_fmt
-
-    select case(storage_format)
-        case(0)
-            str_fmt = 'll '
-        case(1)
-            str_fmt = 'coo'
-        case(2)
-            str_fmt = 'cs '
-    end select
 
     call c_f_pointer(cgp,gp)
-    call convert(gp%g,str_fmt)
+    call convert_graph_type(gp%g, storage_format + 1)
 
-end subroutine convert_c
+end subroutine convert_graph_type_c
 
 
 

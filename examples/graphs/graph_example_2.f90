@@ -18,7 +18,7 @@ implicit none
     real(dp) :: z(512), p
 
     ! integer indices
-    integer :: i,j,k
+    integer :: i, j, k
 
     ! variables for doing a depth-first search through the graph
     integer, allocatable :: neighbors(:)
@@ -31,7 +31,7 @@ implicit none
     ! initialize a random seed and choose the probability of two vertices
     ! being connected
     call init_seed()
-    p = 6.25/512
+    p = 6.25 / 512
 
 
 
@@ -43,16 +43,16 @@ implicit none
     call g%init(512)
 
     ! For each edge, pick some neighbors at random.
-    do i=1,512
+    do i = 1, 512
         ! Generate a whole mess of U[0,1] random numbers
         call random_number(z)
 
-        do j=i+1,512
+        do j = i + 1, 512
             ! For each j, if the random number z(j) drawn is less than p,
             ! make (i,j) connected in g.
-            if ( z(j)<p ) then
-                call g%add_edge(i,j)
-                call g%add_edge(j,i)
+            if (z(j) < p) then
+                call g%add_edge(i, j)
+                call g%add_edge(j, i)
             endif
         enddo
     enddo
@@ -62,8 +62,8 @@ implicit none
     !----------------------------------------------------------------------!
     ! Depth-first search the graph to see if it's connected                !
     !----------------------------------------------------------------------!
-
-    allocate(neighbors(g%max_degree))
+    d = g%max_degree()
+    allocate(neighbors(d))
     found = .false.
 
     ! initialize a stack to store the edges that need visiting
@@ -74,7 +74,7 @@ implicit none
     found(1) = .true.
 
     ! continue until the queue is empty
-    do while( stack%length>0 )
+    do while(stack%length > 0)
         ! pop a vertex i off the front of the queue
         i = stack%pop()
 
@@ -82,13 +82,13 @@ implicit none
         d = g%degree(i)
 
         ! find all the neighbors of vertex i
-        call g%get_neighbors(neighbors,i)
+        call g%get_neighbors(neighbors, i)
 
         ! for each of those neighbors j,
-        do k=1,d
+        do k = 1, d
             j = neighbors(k)
             ! check if vertex j has been visited yet.
-            if (.not.found(j)) then
+            if (.not. found(j)) then
                 ! if not, mark it as having been visited and enter it
                 ! into the queue
                 found(j) = .true.
@@ -104,16 +104,16 @@ implicit none
     !----------------------------------------------------------------------!
 
     component_size = 0
-    do i=1,512
-        if (found(i)) component_size = component_size+1
+    do i = 1, 512
+        if (found(i)) component_size = component_size + 1
     enddo
 
     print *, 'Depth-first search of graph complete.'
-    if (component_size==512) then
+    if (component_size == 512) then
         print *, 'Graph is connected! Hooray!'
     else
         print *, 'Graph is not connected! Oh bother!'
-        print *, 'Size of connected component of vertex #1:',component_size
+        print *, 'Size of connected component of vertex #1:', component_size
     endif
 
 

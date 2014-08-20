@@ -11,17 +11,16 @@ implicit none
 type, extends(graph) :: coo_graph                                          !
 !--------------------------------------------------------------------------!
     type(dynamic_array) :: edges(2)
-    integer, allocatable, private :: degrees(:)
 contains
     !--------------
     ! Constructors
-    procedure :: init_const_degree => coo_init_const_degree
-    procedure :: init_variable_degree => coo_init_variable_degree
+    procedure :: init => coo_graph_init
     procedure :: copy => coo_graph_copy
 
     !-----------
     ! Accessors
     procedure :: degree => coo_degree
+    procedure :: max_degree => coo_max_degree
     procedure :: get_neighbors => coo_get_neighbors
     procedure :: connected => coo_connected
     procedure :: find_edge => coo_find_edge
@@ -37,7 +36,6 @@ contains
     procedure :: delete_edge => coo_delete_edge
     procedure :: left_permute => coo_graph_left_permute
     procedure :: right_permute => coo_graph_right_permute
-    procedure :: compress => coo_graph_compress
 
     !-------------
     ! Destructors
@@ -62,59 +60,13 @@ contains
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine coo_init_const_degree(g,n,m,degree)                             !
+subroutine coo_graph_init(g, n, m)                                         !
 !--------------------------------------------------------------------------!
-    ! input/output variables
     class(coo_graph), intent(inout) :: g
     integer, intent(in) :: n
-    integer, intent(in), optional :: m, degree
-    ! local variables
-    integer :: ne
-
-    g%n = n
-    allocate(g%degrees(n))
-    g%degrees = 0
-
-    if (present(m)) then
-        g%m = m
-    else
-        g%m = n
-    endif
-
-    if (present(degree)) then
-        ne = degree*g%n
-    else
-        ne = max(g%m,g%n)
-    endif
-
-    call g%edges(1)%init(capacity=ne)
-    call g%edges(2)%init(capacity=ne)
-
-    ! At initialization, the number of edges and max degree is zero
-    g%ne = 0
-    g%max_degree = 0
-    g%capacity = ne
-
-    ! Mark the graph as mutable
-    g%mutable = .true.
-
-end subroutine coo_init_const_degree
-
-
-
-!--------------------------------------------------------------------------!
-subroutine coo_init_variable_degree(g,n,m,degrees)                         !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(coo_graph), intent(inout) :: g
-    integer, intent(in) :: n, degrees(:)
     integer, intent(in), optional :: m
-    ! local variables
-    integer :: ne
 
     g%n = n
-    allocate(g%degrees(n))
-    g%degrees = 0
 
     if (present(m)) then
         g%m = m
@@ -122,84 +74,63 @@ subroutine coo_init_variable_degree(g,n,m,degrees)                         !
         g%m = n
     endif
 
-    ! The sum of the degree list gives a bound on how much space to allocate
-    ne = sum(degrees)
-
-    call g%edges(1)%init(capacity=ne)
-    call g%edges(2)%init(capacity=ne)
+    call g%edges(1)%init(capacity = 4)
+    call g%edges(2)%init(capacity = 4)
 
     ! At initialization, the number of edges and max degree is zero
     g%ne = 0
-    g%max_degree = 0
-    g%capacity = ne
 
-    ! Mark the graph as mutable
-    g%mutable = .true.
-
-end subroutine coo_init_variable_degree
+end subroutine coo_graph_init
 
 
 
 !--------------------------------------------------------------------------!
-subroutine coo_graph_copy(g,h,trans)                                       !
+subroutine coo_graph_copy(g, h, trans)                                     !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(coo_graph), intent(inout) :: g
     class(graph), intent(in)        :: h
     logical, intent(in), optional :: trans
     ! local variables
-    integer :: ind(2), order(2), nv(2), k
-    integer :: n, num_batches, num_returned, edges(2,batch_size)
+    integer :: ind(2), ord(2), nv(2), k
+    integer :: n, num_batches, num_returned, edges(2, batch_size)
     type(graph_edge_cursor) :: cursor
 
     nv = [h%n, h%m]
-    order = [1, 2]
+    ord = [1, 2]
 
     ! Check if we're copying h, or h with all edges reversed
     if (present(trans)) then
         if (trans) then
             nv = [h%m, h%n]
-            order = [2, 1]
+            ord = [2, 1]
         endif
     endif
-
-    ! Mark the graph as mutable
-    g%mutable = .true.
 
     ! Copy all the attributes of h to g
     g%n = nv(1)
     g%m = nv(2)
     g%ne = h%ne
-    g%max_degree = h%max_degree
-
-    g%capacity = g%ne
-
-    allocate(g%degrees(g%capacity))
-    g%degrees = 0
 
     ! Allocate space in the two dynamic arrays for the edges of g
-    call g%edges(1)%init(capacity=g%capacity)
-    call g%edges(2)%init(capacity=g%capacity)
+    call g%edges(1)%init(capacity = g%ne + 16)
+    call g%edges(2)%init(capacity = g%ne + 16)
 
     ! Make an edge iterator for the copied graph h
     cursor = h%make_cursor()
-    num_batches = (cursor%final-cursor%start)/batch_size+1
+    num_batches = (cursor%final - cursor%start) / batch_size + 1
 
     ! Iterate through all the edges of h
-    do n=1,num_batches
+    do n = 1, num_batches
         ! Get a chunk of edges of h
-        call h%get_edges(edges,cursor,batch_size,num_returned)
+        call h%get_edges(edges, cursor, batch_size, num_returned)
 
         ! Add each edge from the chunk into g
-        do k=1,num_returned
-            ind = edges(order,k)
+        do k = 1, num_returned
+            ind = edges(ord, k)
 
-            if (ind(1)/=0 .and. ind(2)/=0) then
-                call g%edges(1)%push(ind(1))
-                call g%edges(2)%push(ind(2))
-
-                g%degrees(ind(1)) = g%degrees(ind(1))+1
-            endif
+            call g%edges(1)%push(ind(1))
+            call g%edges(2)%push(ind(2))
         enddo
     enddo
 
@@ -213,35 +144,106 @@ end subroutine coo_graph_copy
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-function coo_degree(g,i) result(d)                                         !
+function coo_degree(g, i) result(d)                                        !
 !--------------------------------------------------------------------------!
+!    NOTE: This is an extremely inefficient procedure. In order to be able !
+! have a COO graph require only O(ne) storage, and be able to add new      !
+! edges in O(1) time, we have to allow for duplicate edges. That makes     !
+! checking the degree of a vertex require O(ne) time.                      !
+!--------------------------------------------------------------------------!
+    ! input/output variables
     class(coo_graph), intent(in) :: g
     integer, intent(in) :: i
     integer :: d
+    ! local variables
+    integer :: j, k, l
+    logical :: found
+    type(dynamic_array) :: neighbors
 
-    d = g%degrees(i)
+    call neighbors%init(capacity = 4, min_capacity = 2)
+
+    ! Loop through all the edges of `g`
+    do k = 1, g%ne
+        ! If the current edge starts at `i`,
+        if (g%edges(1)%get_entry(k) == i) then
+            ! store the ending vertex `j` of that edge.
+            j = g%edges(2)%get_entry(k)
+
+            ! Check to make sure that vertex `j` has not already been
+            ! entered into the list of neighbors.
+            found = .false.
+
+            do l = 1, neighbors%length
+                if (neighbors%get_entry(l) == j) found = .true.
+            enddo
+
+            if (.not. found) call neighbors%push(j)
+        endif
+    enddo
+
+    ! Return the length of the neighbors array
+    d = neighbors%length
 
 end function coo_degree
 
 
 
 !--------------------------------------------------------------------------!
-subroutine coo_get_neighbors(g,neighbors,i)                                !
+function coo_max_degree(g) result(d)                                       !
+!--------------------------------------------------------------------------!
+!     NOTE: This procedure is very inefficient, being an n-fold repetition !
+! of the already very inefficient `degree` method.                         !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(coo_graph), intent(in) :: g
+    integer :: d
+    ! local variables
+    integer :: i
+
+    d = 0
+
+    do i = 1, g%n
+        d = max(d, g%degree(i))
+    enddo
+
+end function coo_max_degree
+
+
+
+!--------------------------------------------------------------------------!
+subroutine coo_get_neighbors(g, neighbors, i)                              !
+!--------------------------------------------------------------------------!
+!    See comment for `coo_degree` procedure; this procedure is very, very  !
+! inefficient.                                                             !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(coo_graph), intent(in) :: g
     integer, intent(out) :: neighbors(:)
     integer, intent(in) :: i
     ! local variables
-    integer :: k,next
+    integer :: j, k, l
+    logical :: found
+    type(dynamic_array) :: nbrs
+
+    call nbrs%init(capacity = 4, min_capacity = 2)
+
+    do k = 1, g%ne
+        if (g%edges(1)%get_entry(k) == i) then
+            j = g%edges(2)%get_entry(k)
+
+            found = .false.
+            do l = 1, nbrs%length
+                if (nbrs%get_entry(l) == j) found = .true.
+            enddo
+
+            if (.not. found) call nbrs%push(j)
+        endif
+    enddo
 
     neighbors = 0
-    next = 0
-    do k=1,g%ne
-        if (g%edges(1)%get_entry(k)==i) then
-            next = next+1
-            neighbors(next) = g%edges(2)%get_entry(k)
-        endif
+
+    do k = 1, nbrs%length
+        neighbors(k) = nbrs%get_entry(k)
     enddo
 
 end subroutine coo_get_neighbors
@@ -249,19 +251,20 @@ end subroutine coo_get_neighbors
 
 
 !--------------------------------------------------------------------------!
-function coo_connected(g,i,j)                                              !
+function coo_connected(g, i, j)                                            !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(coo_graph), intent(in) :: g
-    integer, intent(in) :: i,j
+    integer, intent(in) :: i, j
     logical :: coo_connected
     ! local variables
     integer :: k
 
     coo_connected = .false.
 
-    do k=1,g%ne
-        if (g%edges(1)%get_entry(k)==i.and.g%edges(2)%get_entry(k)==j) then
+    do k = 1,g%ne
+        if (g%edges(1)%get_entry(k) == i &        
+                                & .and. g%edges(2)%get_entry(k) == j) then
             coo_connected = .true.
         endif
     enddo
@@ -271,19 +274,20 @@ end function coo_connected
 
 
 !--------------------------------------------------------------------------!
-function coo_find_edge(g,i,j)                                              !
+function coo_find_edge(g, i, j)                                            !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(coo_graph), intent(in) :: g
-    integer, intent(in) :: i,j
+    integer, intent(in) :: i, j
     integer :: coo_find_edge
     ! local variables
     integer :: k
 
     coo_find_edge = -1
 
-    do k=1,g%ne
-        if (g%edges(1)%get_entry(k)==i.and.g%edges(2)%get_entry(k)==j) then
+    do k = 1, g%ne
+        if (g%edges(1)%get_entry(k) == i &
+                                & .and. g%edges(2)%get_entry(k) == j) then
             coo_find_edge = k
         endif
     enddo
@@ -313,13 +317,15 @@ end function coo_make_cursor
 
 
 !--------------------------------------------------------------------------!
-subroutine coo_get_edges(g,edges,cursor,num_edges,num_returned)            !
+subroutine coo_get_edges(g, edges, cursor, num_edges, num_returned)        !
 !--------------------------------------------------------------------------!
     class(coo_graph), intent(in) :: g
-    integer, intent(out) :: edges(2,num_edges)
+    integer, intent(out) :: edges(2, num_edges)
     type(graph_edge_cursor), intent(inout) :: cursor
     integer, intent(in) :: num_edges
     integer, intent(out) :: num_returned
+
+    associate(current => cursor%current)
 
     ! Set up the returned edges to be 0
     edges = 0
@@ -328,16 +334,18 @@ subroutine coo_get_edges(g,edges,cursor,num_edges,num_returned)            !
     ! return how many edges the user asked for, or, if that amount would
     ! go beyond the final edge that the cursor is allowed to access, the
     ! all of the remaining edges
-    num_returned = min(num_edges,cursor%final-cursor%current)
+    num_returned = min(num_edges, cursor%final - cursor%current)
 
     ! Fill the edges array with the right slice from the graph's edges
-    edges(1,1:num_returned) = &
-        & g%edges(1)%array(cursor%current+1:cursor%current+num_returned)
-    edges(2,1:num_returned) = &
-        & g%edges(2)%array(cursor%current+1:cursor%current+num_returned)
+    edges(1, 1 : num_returned) = &
+                & g%edges(1)%array(current + 1 : current + num_returned)
+    edges(2, 1 : num_returned) = &
+                & g%edges(2)%array(current + 1 : current + num_returned)
 
     ! Move the cursor's current edge ahead to the last one we returned
-    cursor%current = cursor%current+num_returned
+    current = current + num_returned
+
+    end associate
 
 end subroutine coo_get_edges
 
@@ -349,99 +357,68 @@ end subroutine coo_get_edges
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine coo_add_edge(g,i,j)                                             !
+subroutine coo_add_edge(g, i, j)                                           !
+!--------------------------------------------------------------------------!
+!     NOTE: This procedure does no checking to guarantee that `i` and `j`  !
+! are not already connected. This unsafe behavior is necessary in order to !
+! have O(1) edge insert time for a COO graph and O(ne) storage space.      !
 !--------------------------------------------------------------------------!
     class(coo_graph), intent(inout) :: g
     integer, intent(in) :: i,j
 
-    if (.not.g%mutable) then
-        print *, 'Attempted to add an edge to an immutable COO graph'
-        print *, 'Terminating.'
-        call exit(1)
-    endif
+    call g%edges(1)%push(i)
+    call g%edges(2)%push(j)
 
-    if (.not.g%connected(i,j)) then
-        ! Add in the new edge
-        call g%edges(1)%push(i)
-        call g%edges(2)%push(j)
-
-        ! Increase the number of edges and the graph capacity
-        g%ne = g%ne+1
-        g%capacity = g%edges(1)%capacity
-
-        ! If the degree of node i is now the greatest of all nodes in
-        ! the graph, update the degree accordingly
-        g%degrees(i) = g%degrees(i)+1
-        g%max_degree = max(g%max_degree,g%degrees(i))
-    endif
+    ! Increase the number of edges and the graph capacity
+    g%ne = g%ne+1
 
 end subroutine coo_add_edge
 
 
 
 !--------------------------------------------------------------------------!
-subroutine coo_delete_edge(g,i,j)                                          !
+subroutine coo_delete_edge(g, i, j)                                        !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(coo_graph), intent(inout) :: g
-    integer, intent(in) :: i,j
+    integer, intent(in) :: i, j
     ! local variables
-    integer :: k,it,jt
+    integer :: k, it, jt
+    type(dynamic_array) :: edges(2)
 
-    if (.not.g%mutable) then
-        print *, 'Attempted to delete an edge from an immutable COO graph'
-        print *, 'Terminating.'
-        call exit(1)
-    endif
+    call edges(1)%init(capacity = 4)
+    call edges(2)%init(capacity = 4)
 
-    k = g%find_edge(i,j)
+    do k = 1, g%ne
+        it = g%edges(1)%get_entry(k)
+        jt = g%edges(2)%get_entry(k)
 
-    if (k/=-1) then
-        it = g%edges(1)%pop()
-        jt = g%edges(2)%pop()
-
-        if (k<g%ne .and. g%ne>1) then
-            call g%edges(1)%set_entry(k,it)
-            call g%edges(2)%set_entry(k,jt)
+        if (it /= i .or. jt /= j) then
+            call edges(1)%push(it)
+            call edges(2)%push(jt)
         endif
+    enddo
 
-        ! Decrement the number of edges and the graph capacity
-        g%ne = g%ne-1
-        g%capacity = g%edges(1)%capacity
-
-        ! Change the degree of vertex i
-        g%degrees(i) = g%degrees(i)-1
-
-        ! If vertex i had the greatest degree in the graph, check to
-        ! make sure the max degree hasn't decreased
-        if (g%degrees(i)+1==g%max_degree) then
-            g%max_degree = maxval(g%degrees)
-        endif
-    endif
+    g%edges = edges
+    g%ne = g%edges(1)%length
 
 end subroutine coo_delete_edge
 
 
 
 !--------------------------------------------------------------------------!
-subroutine coo_graph_left_permute(g,p,edge_p)                              !
+subroutine coo_graph_left_permute(g, p, edge_p)                            !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(coo_graph), intent(inout) :: g
     integer, intent(in) :: p(:)
     integer, allocatable, intent(out), optional :: edge_p(:,:)
     ! local variables
-    integer :: i,k
+    integer :: i, k
 
-    do k=1,g%ne
+    do k = 1, g%ne
         i = g%edges(1)%get_entry(k)
-        if (i/=0) call g%edges(1)%set_entry(k,p(i))
-    enddo
-
-    g%degrees = 0
-    do k=1,g%ne
-        i = g%edges(1)%get_entry(k)
-        g%degrees(i) = g%degrees(i)+1
+        if (i /= 0) call g%edges(1)%set_entry(k, p(i))
     enddo
 
     if (present(edge_p)) allocate(edge_p(0,0))
@@ -451,18 +428,18 @@ end subroutine coo_graph_left_permute
 
 
 !--------------------------------------------------------------------------!
-subroutine coo_graph_right_permute(g,p,edge_p)                             !
+subroutine coo_graph_right_permute(g, p, edge_p)                           !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(coo_graph), intent(inout) :: g
     integer, intent(in) :: p(:)
     integer, allocatable, intent(out), optional :: edge_p(:,:)
     ! local variables
-    integer :: i,k
+    integer :: i, k
 
-    do k=1,g%ne
+    do k = 1, g%ne
         i = g%edges(2)%get_entry(k)
-        if (i/=0) call g%edges(2)%set_entry(k,p(i))
+        if (i /= 0) call g%edges(2)%set_entry(k, p(i))
     enddo
 
     if (present(edge_p)) allocate(edge_p(0,0))
@@ -472,43 +449,22 @@ end subroutine coo_graph_right_permute
 
 
 !--------------------------------------------------------------------------!
-subroutine coo_graph_compress(g,edge_p)                                    !
-!--------------------------------------------------------------------------!
-    class(coo_graph), intent(inout) :: g
-    integer, allocatable, intent(inout), optional :: edge_p(:,:)
-
-    if (present(edge_p)) allocate(edge_p(0,0))
-
-    ! COO graphs cannot have their storage compressed.
-
-    ! Mark the graph as immutable.
-    g%mutable = .false.
-
-end subroutine coo_graph_compress
-
-
-
-!--------------------------------------------------------------------------!
 subroutine coo_destroy(g)                                                  !
 !--------------------------------------------------------------------------!
     class(coo_graph), intent(inout) :: g
 
-    deallocate(g%edges(1)%array,g%edges(2)%array,g%degrees)
+    deallocate(g%edges(1)%array, g%edges(2)%array)
 
     g%n = 0
     g%m = 0
     g%ne = 0
-    g%capacity = 0
-    g%max_degree = 0
-
-    g%mutable = .true.
 
 end subroutine coo_destroy
 
 
 
 !--------------------------------------------------------------------------!
-subroutine coo_dump_edges(g,edges)                                         !
+subroutine coo_dump_edges(g, edges)                                        !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(coo_graph), intent(in) :: g

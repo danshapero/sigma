@@ -22,7 +22,7 @@ implicit none
     !integer, allocatable :: color(:)
 
     ! other variables
-    integer :: i,j,d,nn,iter
+    integer :: i, j, d, nn, iter
     real(dp) :: z, flip_probability
     real(dp), allocatable :: mag(:)
     real(dp) :: magnetization
@@ -40,17 +40,17 @@ implicit none
     do i=1,iargc()
         call getarg(i,arg)
         select case(trim(arg))
-            case("--graph","-g")
-                call getarg(i+1,graph_name)
-            case("--n","-n")
-                call getarg(i+1,int_param1)
-            case("--k","-k")
-                call getarg(i+1,int_param2)
-            case("--p","-p")
-                call getarg(i+1,real_param)
-            case("--beta","-b","inverseTemp","inversetemp")
-                call getarg(i+1,beta_name)
-            case("-v","--verbose","-V")
+            case("--graph", "-g")
+                call getarg(i + 1, graph_name)
+            case("--n", "-n")
+                call getarg(i + 1, int_param1)
+            case("--k", "-k")
+                call getarg(i + 1, int_param2)
+            case("--p", "-p")
+                call getarg(i + 1, real_param)
+            case("--beta", "-b", "inverseTemp", "inversetemp")
+                call getarg(i + 1, beta_name)
+            case("-v", "--verbose", "-V")
                 verbose = .true.
         end select
     enddo
@@ -64,60 +64,58 @@ implicit none
     !----------------------------------------------------------------------!
     ! Create the "medium", a graph                                         !
     !----------------------------------------------------------------------!
+    allocate(ll_graph::g)
     select case(trim(graph_name))
         case("torus")
-            allocate(cs_graph::g)
             if (verbose) then
-                write(*,10) n,k
+                write(*,10) n, k
 10              format('Constructing a 2-torus of dimensions ',i4,' x ',i4)
             endif
-            call torus(g,n,k)
+            call torus(g, n, k)
 
 
         case("petersen")
-            allocate(cs_graph::g)
             if (verbose) then
-                write(*,20) n,k
+                write(*,20) n, k
 20              format('Constructing a Petersen graph with ',i4,',',i4)
             endif
-            call petersen(g,n,k)
+            call petersen(g, n, k)
 
 
         case("snark","flower-snark","flower_snark","flowersnark")
-            allocate(cs_graph::g)
             if (verbose) then
-                write(*,30) 4*n
+                write(*,30) 4 * n
 30              format('Constructing a flower snark on ',i4,' vertices.')
             endif
-            call flower_snark(g,n)
+            call flower_snark(g, n)
 
 
         case("hypercube")
-            allocate(cs_graph::g)
-            k = min(n,10)
+            k = min(n, 10)
             if (verbose) then
                 write(*,40) 2**k
 40              format('Constructing hypercube graph on ',i4,' vertices.')
             endif
-            call hypercube(g,k)
+            call hypercube(g, k)
 
 
         case("erdos-renyi","erdos_renyi","erdosrenyi","er")
-            allocate(ll_graph::g)
-            call erdos_renyi(g,n,(1.0_dp*k)/n)
+            call erdos_renyi(g, n, (1.0_dp*k) / n)
+
         case("watts-strogatz","watts_strogatz","wattsstrogatz","ws", &
                 & "small-world","small_world","smallworld")
-            allocate(ll_graph::g)
-            call watts_strogatz(g,n,k,p)
+            call watts_strogatz(g, n, k, p)
+
         case("barabasi-albert","barabasi_albert","barabasialbert","ba", &
                 & "scale-free","scale_free","scalefree")
-            allocate(ll_graph::g)
-            call barabasi_albert(g,n,k)
+            call barabasi_albert(g, n, k)
     end select
 
-    call g%compress()
     nn = g%n
-    allocate(neighbors(g%max_degree))
+    call convert_graph_type(g, 'compressed sparse')
+
+    d = g%max_degree()
+    allocate(neighbors(d))
 
 
     !----------------------------------------------------------------------!
@@ -143,27 +141,27 @@ implicit none
     ! Execute several steps of the Metropolis algorithm                    !
     !----------------------------------------------------------------------!
     allocate(mag(nn))
-    do iter=1,100*nn
-        do i=1,nn
-            call g%get_neighbors(neighbors,i)
+    do iter = 1, 100 * nn
+        do i = 1, nn
+            call g%get_neighbors(neighbors, i)
             d = g%degree(i)
-            do k=1,d
+            do k = 1, d
                 j = neighbors(k)
 
-                dE = dE+s(j)
+                dE = dE + s(j)
             enddo
-            dE = dE*s(i)
+            dE = dE * s(i)
 
-            flip_probability = min(1.0_dp, exp(-beta*dE))
+            flip_probability = min(1.0_dp, exp(-beta * dE))
             call random_number(z)
-            if (z<=flip_probability) s(i) = -s(i)
+            if (z <= flip_probability) s(i) = -s(i)
         enddo
 
-        mag( mod(iter-1,nn)+1 ) = (1.0_dp*sum(s))/nn
+        mag( mod(iter - 1, nn) + 1 ) = (1.0_dp*sum(s)) / nn
 
-        if (mod(iter,nn)==0) then
-            magnetization = (1.0_dp*sum(mag))/nn
-            print *, iter,magnetization
+        if (mod(iter, nn)==0) then
+            magnetization = (1.0_dp*sum(mag)) / nn
+            print *, iter, magnetization
         endif
     enddo
 

@@ -13,19 +13,19 @@ use sigma
 implicit none
 
     ! a linked-list graph and variables for generating it randomly
-    class(graph), pointer :: g, h
+    class(graph), pointer :: g
     real(dp) :: p
     real(dp), allocatable :: z(:)
 
     ! a sparse matrix
-    type(sparse_matrix) :: A
+    class(sparse_matrix), pointer :: A
 
     ! a solver object
     type(cg_solver) :: solver
     type(jacobi_solver) :: pc
 
     ! some integer indices
-    integer :: i,j,k,nn
+    integer :: i, j, k, nn
 
     ! variables for making the graph Laplacian of g
     integer :: d
@@ -40,9 +40,9 @@ implicit none
 
     ! initialize a random seed
     call init_seed()
-    p = 5.0/nn
+    p = 5.0 / nn
 
-    allocate(x(nn),b(nn),z(nn))
+    allocate(x(nn), b(nn), z(nn))
 
 
 
@@ -50,60 +50,52 @@ implicit none
     ! Set up a random graph g                                              !
     !----------------------------------------------------------------------!
     ! Make h a linked-list graph, since it's cheap to modify this type
-    allocate(ll_graph::h)
-    call h%init(nn)
+    allocate(ll_graph::g)
+    call g%init(nn)
 
-    do i=1,nn
-        call h%add_edge(i,i)
+    do i = 1, nn
+        call g%add_edge(i, i)
 
         call random_number(z)
 
-        do j=i+1,nn
-            if (z(j)<p) then
-                call h%add_edge(i,j)
-                call h%add_edge(j,i)
+        do j = i + 1, nn
+            if (z(j) < p) then
+                call g%add_edge(i, j)
+                call g%add_edge(j, i)
             endif
         enddo
     enddo
 
-    ! Make g a compressed sparse graph, since these have faster accesses
-    allocate(cs_graph::g)
-
-    ! Copy the connectivity structure of h to g
-    call g%copy(h)
-
-    ! Compress g
-    call g%compress()
-
-    ! Delete h
-    deallocate(h)
+    ! Convert `g` to a nicer format
+    call convert_graph_type(g, 'compressed sparse')
 
 
 
     !----------------------------------------------------------------------!
     ! Make A the graph Laplacian of g + the identity matrix                !
     !----------------------------------------------------------------------!
-    call A%init(nn,nn,'row',g)
+    A => sparse_matrix(nn, nn, g, 'row')
     call A%zero()
 
-    allocate(neighbors(g%max_degree))
+    d = g%max_degree()
+    allocate(neighbors(d))
 
     ! For each vertex of the graph,
-    do i=1,nn
+    do i = 1, nn
         ! set A[i,i] = 1.0.
-        call A%set_value(i,i,1.0_dp)
+        call A%set_value(i, i, 1.0_dp)
 
         d = g%degree(i)
-        call g%get_neighbors(neighbors,i)
+        call g%get_neighbors(neighbors, i)
 
         ! For each neighbor j of i,
-        do k=1,d
+        do k = 1, d
             j = neighbors(k)
 
-            if (j/=0 .and. j/=i) then
+            if (j /= i) then
                 ! Set A[i,j] = -1.0, and A[i,i] = A[i,i]+1.0.
-                call A%set_value(i,j,-1.0_dp)
-                call A%add_value(i,i,1.0_dp)
+                call A%set_value(i, j, -1.0_dp)
+                call A%add_value(i, i, 1.0_dp)
             endif
         enddo
     enddo
@@ -123,13 +115,13 @@ implicit none
 
     ! Call the solver on A, with x as the approximate solution and b as 
     ! the right-hand side.
-    call solver%solve(A,x,b,pc)
+    call solver%solve(A, x, b, pc)
 
     ! Report some results.
     write(*,100) solver%iterations
-100 format('Conjugate gradient solver completed in ',i4,' steps.')
-    write(*,120) minval(x),maxval(x)
-120 format('Range of solution: (',e12.6,', ',e12.6,').')
+100 format('Conjugate gradient solver completed in ', i4, ' steps.')
+    write(*,120) minval(x), maxval(x)
+120 format('Range of solution: (', e12.6, ', ', e12.6, ').')
 
 
 

@@ -8,6 +8,11 @@ graph/graphs.f90
 )
 
 set(MATRIX_SRCS
+matrix/sparse_matrix_interface.f90
+matrix/default_sparse_matrix_kernels.f90
+matrix/default_matrices.f90
+matrix/cs_matrices.f90
+matrix/ellpack_matrices.f90
 matrix/sparse_matrices.f90
 )
 
@@ -27,5 +32,7 @@ linear_operator/linear_operator_adjoints.f90
 linear_operator/linear_operators.f90
 )
 
-add_library( sigma SHARED types.f90 util.f90 vectors.f90 ${LINEAR_OPERATOR_SRCS} ${GRAPH_SRCS} ${MATRIX_SRCS} ${SOLVER_SRCS} eigensolver.f90 permutations.f90 conversions.f90 wrapper.f90 sigma.f90 )
+#add_library( sigma SHARED types.f90 util.f90 vectors.f90 ${LINEAR_OPERATOR_SRCS} ${GRAPH_SRCS} ${MATRIX_SRCS} ${SOLVER_SRCS} eigensolver.f90 permutations.f90 wrapper.f90 sigma.f90 )
+add_library( sigma SHARED types.f90 util.f90 vectors.f90 ${LINEAR_OPERATOR_SRCS} ${GRAPH_SRCS} ${MATRIX_SRCS} ${SOLVER_SRCS} eigensolver.f90 permutations.f90 sigma.f90 )
 target_link_libraries(sigma blas lapack)
+
