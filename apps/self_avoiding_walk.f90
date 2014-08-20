@@ -132,6 +132,7 @@ implicit none
         s = 0
 
         ! Initialize a queue of visited vertices
+        d = g%max_degree()
         call q%init(capacity = d, min_capacity = 2)
 
         ! So long as there are unvisited neighbor vertices, keep walking
