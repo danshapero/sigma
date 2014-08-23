@@ -13,37 +13,8 @@ use ellpack_matrices
 
 implicit none
 
-interface sparse_matrix
-    module procedure sparse_matrix_factory
-end interface
-
 
 contains
-
-
-
-!--------------------------------------------------------------------------!
-function sparse_matrix_factory(nrow, ncol, g, orientation) result(A)       !
-!--------------------------------------------------------------------------!
-    integer, intent(in) :: nrow, ncol
-    class(graph_interface), target, intent(in) :: g
-    character(len=3), intent(in) :: orientation
-    class(sparse_matrix_interface), pointer :: A
-
-    select type(g)
-        class is(cs_graph)
-            allocate(cs_matrix :: A)
-        class is(ellpack_graph)
-            allocate(ellpack_matrix :: A)
-        class default
-            allocate(default_matrix :: A)
-    end select
-
-    call A%set_ordering(orientation)
-    call A%set_dimensions(nrow, ncol)
-    call A%set_graph(g)
-
-end function sparse_matrix_factory
 
 
 
@@ -74,12 +45,6 @@ subroutine sparse_matrix_sum(A, B, C)                                      !
         print *, 'Terminating.'
         call exit(1)
     endif
-
-    if (.not. A%ordering_set) call A%set_ordering("row")
-
-    ! If `A` is stored with column-major ordering, we need to transpose
-    ! the graph with the structure of `B + C`
-    trans = A%ord(1) == 2
 
     call A%set_dimensions(B%nrow, B%ncol)
     call sparse_matrix_sum_graph(g, B, C)

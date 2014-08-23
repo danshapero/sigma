@@ -7,6 +7,12 @@ module cs_matrices                                                         !
 !==== matrices. These matrices explicitly use the compressed sparse    ====!
 !==== graph data type, but perform matrix operations faster than the   ====!
 !==== default matrix implementation.                                   ====!
+!====     Compressed sparse matrices can be in row- or column-major    ====!
+!==== ordering. These are modelled by the separate classes             ====!
+!====         csr_matrix, csc_matrix.                                  ====!
+!==== Many operations on CSR and CSC matrices do not depend on the     ====!
+!==== matrix ordering; consequently, each type inherits from a common  ====!
+!==== base class cs_matrix, which is private to this module.           ====!
 !==========================================================================!
 !==========================================================================!
 
@@ -23,30 +29,14 @@ implicit none
 
 
 !--------------------------------------------------------------------------!
-type, extends(sparse_matrix_interface) :: cs_matrix                        !
+type, abstract, extends(sparse_matrix_interface) :: cs_matrix              !
 !--------------------------------------------------------------------------!
     class(cs_graph), pointer :: g
     real(dp), allocatable :: val(:)
-
-
-    !---------------
-    ! Function pointers for sundry matrix operations
-    procedure(get_degree_kernel), pointer, nopass, private :: row_deg_impl
-    procedure(get_degree_kernel), pointer, nopass, private :: col_deg_impl
-
-    procedure(get_slice_kernel), pointer, nopass, private :: get_row_impl
-    procedure(get_slice_kernel), pointer, nopass, private :: get_column_impl
-
-    procedure(permute_kernel), pointer, nopass, private :: left_permute_impl
-    procedure(permute_kernel), pointer, nopass, private :: right_permute_impl
-
-    procedure(cs_matvec_add_ifc), pointer, private :: matvec_add_impl
-    procedure(cs_matvec_add_ifc), pointer, private :: matvec_t_add_impl
 contains
     !--------------
     ! Constructors
     !--------------
-    procedure :: set_ordering => cs_matrix_set_ordering
     procedure :: copy_graph_structure => cs_matrix_copy_graph_structure
     procedure :: set_graph => cs_matrix_set_graph
 
@@ -54,7 +44,6 @@ contains
     !-----------
     ! Accessors
     !-----------
-    procedure :: get_value => cs_matrix_get_value
     procedure :: get_row_degree => cs_matrix_get_row_degree
     procedure :: get_column_degree => cs_matrix_get_column_degree
     procedure :: get_row => cs_matrix_get_row
@@ -65,25 +54,22 @@ contains
     ! Edge, value iterators
     !-----------------------
     procedure :: make_cursor => cs_matrix_make_cursor
-    procedure :: get_edges => cs_matrix_get_edges
     procedure :: get_entries => cs_matrix_get_entries
-
-
-    !----------
-    ! Mutators
-    !----------
-    procedure :: set_value => cs_matrix_set_value
-    procedure :: add_value => cs_matrix_add_value
-    procedure :: zero => cs_matrix_zero
-    procedure :: left_permute => cs_matrix_left_permute
-    procedure :: right_permute => cs_matrix_right_permute
 
 
     !------------------------------
     ! Matrix-vector multiplication
     !------------------------------
-    procedure :: matvec_add   => cs_matvec_add
+    procedure :: matvec_add => cs_matvec_add
     procedure :: matvec_t_add => cs_matvec_t_add
+
+
+    !----------
+    ! Mutators
+    !----------
+    procedure :: zero => cs_matrix_zero
+    procedure :: left_permute => cs_matrix_left_permute
+    procedure :: right_permute => cs_matrix_right_permute
 
 
     !-------------
@@ -91,16 +77,103 @@ contains
     !-------------
     procedure :: destroy => cs_matrix_destroy
 
+
+    !--------------------------------------
+    ! Implementations of matrix operations
+    !--------------------------------------
+    procedure(cs_matvec_add_ifc), deferred, nopass :: matvec_add_impl
+    procedure(cs_matvec_add_ifc), deferred, nopass :: matvec_t_add_impl
+
+    procedure(get_degree_kernel), deferred, nopass :: row_deg_impl
+    procedure(get_degree_kernel), deferred, nopass :: col_deg_impl
+
+    procedure(get_slice_kernel), deferred, nopass :: get_row_impl
+    procedure(get_slice_kernel), deferred, nopass :: get_col_impl
+
+    procedure(permute_kernel), deferred, nopass :: left_permute_impl
+    procedure(permute_kernel), deferred, nopass :: right_permute_impl
+
 end type cs_matrix
+
+
+
+!--------------------------------------------------------------------------!
+type, extends(cs_matrix) :: csr_matrix                                     !
+!--------------------------------------------------------------------------!
+contains
+    !-----------
+    ! Accessors
+    !-----------
+    procedure :: get_value => csr_matrix_get_value
+    procedure :: row_deg_impl => get_degree_contiguous
+    procedure :: col_deg_impl => get_degree_discontiguous
+    procedure :: get_row_impl => get_slice_contiguous
+    procedure :: get_col_impl => get_slice_discontiguous
+
+    !-----------------------
+    ! Edge, value iterators
+    !-----------------------
+    procedure :: get_edges => csr_matrix_get_edges
+
+    !----------
+    ! Mutators
+    !----------
+    procedure :: set_value => csr_matrix_set_value
+    procedure :: add_value => csr_matrix_add_value
+    procedure :: left_permute_impl  => graph_leftperm
+    procedure :: right_permute_impl => graph_rightperm
+
+    !------------------------------
+    ! Matrix-vector multiplication
+    !------------------------------
+    procedure :: matvec_add_impl   => csr_matvec_add
+    procedure :: matvec_t_add_impl => csc_matvec_add
+end type csr_matrix
+
+
+
+!--------------------------------------------------------------------------!
+type, extends(cs_matrix) :: csc_matrix                                     !
+!--------------------------------------------------------------------------!
+contains
+    !-----------
+    ! Accessors
+    !-----------
+    procedure :: get_value => csc_matrix_get_value
+    procedure :: row_deg_impl => get_degree_discontiguous
+    procedure :: col_deg_impl => get_degree_contiguous
+    procedure :: get_row_impl => get_slice_discontiguous
+    procedure :: get_col_impl => get_slice_contiguous
+
+    !-----------------------
+    ! Edge, value iterators
+    !-----------------------
+    procedure :: get_edges => csc_matrix_get_edges
+
+    !----------
+    ! Mutators
+    !----------
+    procedure :: set_value => csc_matrix_set_value
+    procedure :: add_value => csc_matrix_add_value
+    procedure :: left_permute_impl  => graph_rightperm
+    procedure :: right_permute_impl => graph_leftperm
+
+    !------------------------------
+    ! Matrix-vector multiplication
+    !------------------------------
+    procedure :: matvec_add_impl   => csc_matvec_add
+    procedure :: matvec_t_add_impl => csr_matvec_add
+end type csc_matrix
 
 
 
 !--------------------------------------------------------------------------!
 abstract interface                                                         !
 !--------------------------------------------------------------------------!
-    subroutine cs_matvec_add_ifc(A, x, y)
-        import :: cs_matrix, dp
-        class(cs_matrix), intent(in) :: A
+    subroutine cs_matvec_add_ifc(g, val, x, y)
+        import :: cs_graph, dp
+        class(cs_graph), intent(in) :: g
+        real(dp), intent(in)    :: val(:)
         real(dp), intent(in)    :: x(:)
         real(dp), intent(inout) :: y(:)
     end subroutine cs_matvec_add_ifc
@@ -115,54 +188,17 @@ contains
 
 
 !==========================================================================!
-!==== Constructors                                                     ====!
+!==========================================================================!
+!==== General routines for CS matrices                                 ====!
+!==========================================================================!
 !==========================================================================!
 
-!--------------------------------------------------------------------------!
-subroutine cs_matrix_set_ordering(A, orientation)                          !
-!--------------------------------------------------------------------------!
-    class(cs_matrix), intent(inout) :: A
-    character(len=3), intent(in) :: orientation
-
-    ! Set the `ord` attribute for the matrix, so that the indices are
-    ! reversed if we use column-major ordering and so the right kernels
-    ! are selected for matvec, getting rows/columns, etc.
-    select case(orientation)
-        case('row')
-            A%ord = [1, 2]
-
-            A%row_deg_impl => get_degree_contiguous
-            A%col_deg_impl => get_degree_discontiguous
-
-            A%get_row_impl    => get_slice_contiguous
-            A%get_column_impl => get_slice_discontiguous
-
-            A%left_permute_impl  => graph_leftperm
-            A%right_permute_impl => graph_rightperm
-
-            A%matvec_add_impl   => csr_matvec_add
-            A%matvec_t_add_impl => csc_matvec_add
-        case('col')
-            A%ord = [2, 1]
-
-            A%row_deg_impl => get_degree_discontiguous
-            A%col_deg_impl => get_degree_contiguous
-
-            A%get_row_impl    => get_slice_discontiguous
-            A%get_column_impl => get_slice_contiguous
-
-            A%left_permute_impl  => graph_rightperm
-            A%right_permute_impl => graph_leftperm
-
-            A%matvec_add_impl   => csc_matvec_add
-            A%matvec_t_add_impl => csr_matvec_add
-    end select
-
-    A%ordering_set = .true.
-
-end subroutine cs_matrix_set_ordering
 
 
+
+!==========================================================================!
+!==== Constructors                                                     ====!
+!==========================================================================!
 
 !--------------------------------------------------------------------------!
 subroutine cs_matrix_copy_graph_structure(A, g, trans)                     !
@@ -243,33 +279,6 @@ end subroutine cs_matrix_set_graph
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-function cs_matrix_get_value(A, i, j) result(z)                            !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(cs_matrix), intent(in) :: A
-    integer, intent(in) :: i, j
-    real(dp) :: z
-    ! local variables
-    integer :: k, ind(2)
-
-    ! Reverse the indices (i,j) according to the ordering (row- or column-
-    ! major) of the matrix
-    ind(1) = i
-    ind(2) = j
-    ind = ind(A%ord)
-
-    ! Set the return value to 0
-    z = 0.0_dp
-
-    do k = A%g%ptr(ind(1)), A%g%ptr(ind(1) + 1) - 1
-        if ( A%g%node(k) == ind(2) ) z = A%val(k)
-    enddo
-
-end function cs_matrix_get_value
-
-
-
-!--------------------------------------------------------------------------!
 function cs_matrix_get_row_degree(A, k) result(d)                          !
 !--------------------------------------------------------------------------!
     class(cs_matrix), intent(in) :: A
@@ -317,7 +326,7 @@ subroutine cs_matrix_get_column(A, nodes, slice, k)                        !
     real(dp), intent(out) :: slice(:)
     integer, intent(in) :: k
 
-    call A%get_column_impl( A%g, A%val, nodes, slice, k)
+    call A%get_col_impl( A%g, A%val, nodes, slice, k)
 
 end subroutine cs_matrix_get_column
 
@@ -337,27 +346,6 @@ function cs_matrix_make_cursor(A) result(cursor)                           !
     cursor = A%g%make_cursor()
 
 end function cs_matrix_make_cursor
-
-
-
-!--------------------------------------------------------------------------!
-subroutine cs_matrix_get_edges(A, edges, cursor, num_edges, num_returned)  !
-!--------------------------------------------------------------------------!
-    class(cs_matrix), intent(in) :: A
-    integer, intent(out) :: edges(2, num_edges)
-    type(graph_edge_cursor), intent(inout) :: cursor
-    integer, intent(in) :: num_edges
-    integer, intent(out) :: num_returned
-
-    ! Get a batch of edges from the connectivity graph of A
-    call A%g%get_edges(edges, cursor, num_edges, num_returned)
-
-    ! Reverse the edges if A is in column-major order
-    !TODO: See if we can do this without making a temporary array and if
-    ! that's any faster
-    edges = edges(A%ord, :)
-
-end subroutine cs_matrix_get_edges
 
 
 
@@ -393,74 +381,6 @@ end subroutine cs_matrix_get_entries
 !==========================================================================!
 !==== Mutators                                                         ====!
 !==========================================================================!
-
-!--------------------------------------------------------------------------!
-subroutine cs_matrix_set_value(A, i, j, z)                                 !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(cs_matrix), intent(inout) :: A
-    integer, intent(in) :: i, j
-    real(dp), intent(in) :: z
-    ! local variables
-    integer :: k, ind(2)
-    logical :: found
-
-    ind(1) = i
-    ind(2) = j
-    ind = ind(A%ord)
-
-    found = .false.
-
-    do k = A%g%ptr(ind(1)), A%g%ptr(ind(1) + 1) - 1
-        if (A%g%node(k) == ind(2)) then
-            A%val(k) = z
-            found = .true.
-        endif
-    enddo
-
-    if (.not. found) then
-        call set_matrix_value_with_reallocation(A%g, A%val, &
-                                                    & ind(1), ind(2), z)
-        A%nnz = A%nnz + 1
-    endif
-
-end subroutine cs_matrix_set_value
-
-
-
-!--------------------------------------------------------------------------!
-subroutine cs_matrix_add_value(A, i, j, z)                                 !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(cs_matrix), intent(inout) :: A
-    integer, intent(in) :: i, j
-    real(dp), intent(in) :: z
-    ! local variables
-    integer :: k, ind(2)
-    logical :: found
-
-    ind(1) = i
-    ind(2) = j
-    ind = ind(A%ord)
-
-    found = .false.
-
-    do k = A%g%ptr(ind(1)), A%g%ptr(ind(1) + 1) - 1
-        if (A%g%node(k) == ind(2)) then
-            A%val(k) = A%val(k) + z
-            found = .true.
-        endif
-    enddo
-
-    if (.not. found) then
-        call set_matrix_value_with_reallocation(A%g, A%val, &
-                                                    & ind(1), ind(2), z)
-        A%nnz = A%nnz + 1
-    endif
-
-end subroutine cs_matrix_add_value
-
-
 
 !--------------------------------------------------------------------------!
 subroutine cs_matrix_zero(A)                                               !
@@ -509,7 +429,7 @@ subroutine cs_matvec_add(A, x, y)                                          !
     real(dp), intent(in)    :: x(:)
     real(dp), intent(inout) :: y(:)
 
-    call A%matvec_add_impl(x, y)
+    call A%matvec_add_impl(A%g, A%val, x, y)
 
 end subroutine cs_matvec_add
 
@@ -522,71 +442,9 @@ subroutine cs_matvec_t_add(A, x, y)                                        !
     real(dp), intent(in)    :: x(:)
     real(dp), intent(inout) :: y(:)
 
-    call A%matvec_t_add_impl(x, y)
+    call A%matvec_t_add_impl(A%g, A%val, x, y)
 
 end subroutine cs_matvec_t_add
-
-
-
-!--------------------------------------------------------------------------!
-subroutine csr_matvec_add(A, x, y)                                         !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(cs_matrix), intent(in) :: A
-    real(dp), intent(in)    :: x(:)
-    real(dp), intent(inout) :: y(:)
-    ! local variables
-    integer :: i, j, k
-    real(dp) :: z
-
-    associate( g => A%g )
-
-
-    do i = 1, g%n
-        z = 0.0_dp
-
-        do k = g%ptr(i), g%ptr(i + 1) - 1
-            j = g%node(k)
-            z = z + A%val(k) * x(j)
-        enddo
-
-        y(i) = y(i) + z
-    enddo
-
-
-    end associate
-
-end subroutine csr_matvec_add
-
-
-
-!--------------------------------------------------------------------------!
-subroutine csc_matvec_add(A, x, y)                                         !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(cs_matrix), intent(in) :: A
-    real(dp), intent(in)    :: x(:)
-    real(dp), intent(inout) :: y(:)
-    ! local variables
-    integer :: i, j, k
-    real(dp) :: z
-
-    associate( g => A%g )
-
-
-    do j = 1, g%n
-        z = x(j)
-
-        do k = g%ptr(j), g%ptr(j + 1) - 1
-            i = g%node(k)
-            y(i) = y(i) + A%val(k) * z
-        enddo
-    enddo
-
-
-    end associate
-
-end subroutine csc_matvec_add
 
 
 
@@ -613,6 +471,118 @@ subroutine cs_matrix_destroy(A)                                            !
     nullify(A%g)
 
 end subroutine cs_matrix_destroy
+
+
+
+
+!==========================================================================!
+!==========================================================================!
+!==== Matrix-vector multiplication kernels                             ====!
+!==========================================================================!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
+subroutine csr_matvec_add(g, val, x, y)                                    !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(cs_graph), intent(in) :: g
+    real(dp), intent(in)    :: val(:)
+    real(dp), intent(in)    :: x(:)
+    real(dp), intent(inout) :: y(:)
+    ! local variables
+    integer :: i, j, k
+    real(dp) :: z
+
+    do i = 1, g%n
+        z = 0.0_dp
+
+        do k = g%ptr(i), g%ptr(i + 1) - 1
+            j = g%node(k)
+            z = z + val(k) * x(j)
+        enddo
+
+        y(i) = y(i) + z
+    enddo
+
+end subroutine csr_matvec_add
+
+
+
+!--------------------------------------------------------------------------!
+subroutine csc_matvec_add(g, val, x, y)                                    !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(cs_graph), intent(in) :: g
+    real(dp), intent(in)    :: val(:)
+    real(dp), intent(in)    :: x(:)
+    real(dp), intent(inout) :: y(:)
+    ! local variables
+    integer :: i, j, k
+    real(dp) :: z
+
+    do j = 1, g%n
+        z = x(j)
+
+        do k = g%ptr(j), g%ptr(j + 1) - 1
+            i = g%node(k)
+            y(i) = y(i) + val(k) * z
+        enddo
+    enddo
+
+end subroutine csc_matvec_add
+
+
+
+
+!==========================================================================!
+!==========================================================================!
+!==== CSR and CSC format-specific routines                             ====!
+!==========================================================================!
+!==========================================================================!
+
+
+!==========================================================================!
+!==== Accessors                                                        ====!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
+function csr_matrix_get_value(A, i, j) result(z)                           !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(csr_matrix), intent(in) :: A
+    integer, intent(in) :: i, j
+    real(dp) :: z
+    ! local variables
+    integer :: k
+
+    z = 0.0_dp
+
+    do k = A%g%ptr(i), A%g%ptr(i + 1) - 1
+        if (A%g%node(k) == j) z = A%val(k)
+    enddo
+
+end function csr_matrix_get_value
+
+
+
+!--------------------------------------------------------------------------!
+function csc_matrix_get_value(A, i, j) result(z)                           !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(csr_matrix), intent(in) :: A
+    integer, intent(in) :: i, j
+    real(dp) :: z
+    ! local variables
+    integer :: k
+
+    z = 0.0_dp
+
+    do k = A%g%ptr(j), A%g%ptr(j + 1) - 1
+        if (A%g%node(k) == i) z = A%val(k)
+    enddo
+
+end function csc_matrix_get_value
+
 
 
 

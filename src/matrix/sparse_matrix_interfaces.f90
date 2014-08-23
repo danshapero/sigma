@@ -34,12 +34,8 @@ type, extends(linear_operator), abstract :: sparse_matrix_interface        !
     ! number of non-zero entries
     integer :: nnz
 
-    ! ordering of the matrix -- [1, 2] if row-major, [2, 1] if column-major
-    integer :: ord(2)
-
     ! variables to tell which phases of initializing the matrix have
     ! already occurred
-    logical :: ordering_set = .false.
     logical :: dimensions_set = .false.
     logical :: graph_set = .false.
 
@@ -49,10 +45,6 @@ contains
     !--------------
     procedure :: init => sparse_matrix_init
     ! Wraps all of the various initialization procedures in one method
-
-    procedure :: set_ordering => sparse_matrix_set_ordering
-    ! Make an empty sparse matrix and set its orientation to either row-
-    ! or column-major
 
     procedure :: set_dimensions => set_sparse_matrix_dimensions
     ! Set the row and column dimension of a sparse matrix
@@ -248,36 +240,16 @@ contains
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine sparse_matrix_init(A, nrow, ncol, g, orientation)               !
+subroutine sparse_matrix_init(A, nrow, ncol, g)                            !
 !--------------------------------------------------------------------------!
     class(sparse_matrix_interface), intent(inout) :: A
     integer, intent(in) :: nrow, ncol
     class(graph_interface), intent(in) :: g
-    character(len=3), intent(in) :: orientation
 
-    call A%set_ordering(orientation)
     call A%set_dimensions(nrow, ncol)
     call A%copy_graph_structure(g)
 
 end subroutine sparse_matrix_init
-
-
-
-!--------------------------------------------------------------------------!
-subroutine sparse_matrix_set_ordering(A, orientation)                      !
-!--------------------------------------------------------------------------!
-    class(sparse_matrix_interface), intent(inout) :: A
-    character(len=3), intent(in) :: orientation
-
-    if (orientation == "col") then
-        A%ord = [2, 1]
-    else
-        A%ord = [1, 2]
-    endif
-
-    A%ordering_set = .true.
-
-end subroutine sparse_matrix_set_ordering
 
 
 
