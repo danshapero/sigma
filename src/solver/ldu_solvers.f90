@@ -34,7 +34,7 @@ implicit none
 type, extends(linear_solver) :: sparse_ldu_solver                          !
 !--------------------------------------------------------------------------!
     ! Unit triangular factors
-    type(cs_matrix) :: L, U
+    type(csr_matrix) :: L, U
 
     ! Diagonal entries
     real(dp), allocatable :: D(:)
@@ -218,7 +218,7 @@ subroutine lower_triangular_solve(M, x)                                    !
 ! then you must have been very determined to break something.              !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    type(cs_matrix), intent(in) :: M
+    type(csr_matrix), intent(in) :: M
     real(dp), intent(inout) :: x(:)
     ! local variables
     integer :: i, j, k
@@ -245,7 +245,7 @@ subroutine upper_triangular_solve(M, x)                                    !
 !     See comment for previous subroutine.                                 !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    type(cs_matrix), intent(in) :: M
+    type(csr_matrix), intent(in) :: M
     real(dp), intent(inout) :: x(:)
     ! local variables
     integer :: i, j, k
@@ -290,7 +290,7 @@ subroutine sparse_static_pattern_ldu_factorization(A, L, D, U)             !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(sparse_matrix_interface), intent(in) :: A
-    type(cs_matrix), intent(inout) :: L, U
+    type(csr_matrix), intent(inout) :: L, U
     real(dp), intent(inout) :: D(:)
     ! local variables
     integer :: i, j, k, n, nn, dl, du, ind1, ind2
@@ -402,7 +402,7 @@ subroutine incomplete_ldu_sparsity_pattern(A, L, U, level)                 !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(sparse_matrix_interface), intent(in) :: A
-    type(cs_matrix), intent(inout) :: L, U
+    type(csr_matrix), intent(inout) :: L, U
     integer, intent(in) :: level
     ! local variables
     integer :: i, j, k, nn
@@ -441,22 +441,12 @@ subroutine incomplete_ldu_sparsity_pattern(A, L, U, level)                 !
     call convert_graph_type(gl, "compressed sparse")
     call convert_graph_type(gu, "compressed sparse")
 
-    select type(gl)
-        class is(cs_graph)
-            call L%init(nn, nn, gl, "row")
-    end select
-
-    select type(gu)
-        class is(cs_graph)
-            call U%init(nn, nn, gu, "row")
-    end select
-
+    call L%init(nn, nn, gl)
+    call U%init(nn, nn, gu)
 
 end subroutine incomplete_ldu_sparsity_pattern
 
 
 
-
-
-
 end module ldu_solvers
+
