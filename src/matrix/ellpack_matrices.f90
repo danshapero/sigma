@@ -29,26 +29,10 @@ type, extends(sparse_matrix_interface) :: ellpack_matrix                   !
 !--------------------------------------------------------------------------!
     class(ellpack_graph), pointer :: g
     real(dp), allocatable :: val(:,:)
-
-
-    !--------------------
-    ! Function pointers for sundry matrix operations
-    procedure(get_degree_kernel), pointer, nopass, private :: row_deg_impl
-    procedure(get_degree_kernel), pointer, nopass, private :: col_deg_impl
-
-    procedure(ellpack_get_slice_ifc), pointer, private :: get_row_impl
-    procedure(ellpack_get_slice_ifc), pointer, private :: get_col_impl
-
-    procedure(ellpack_permute_ifc), pointer, private :: left_permute_impl
-    procedure(ellpack_permute_ifc), pointer, private :: right_permute_impl
-
-    procedure(ellpack_matvec_add_ifc), pointer, private :: matvec_add_impl
-    procedure(ellpack_matvec_add_ifC), pointer, private :: matvec_t_add_impl
 contains
     !--------------
     ! Constructors
     !--------------
-    procedure :: set_ordering => ellpack_matrix_set_ordering
     procedure :: copy_graph_structure => ellpack_matrix_copy_graph_structure
     procedure :: set_graph => ellpack_matrix_set_graph
 
@@ -57,9 +41,9 @@ contains
     ! Accessors
     !-----------
     procedure :: get_value => ellpack_matrix_get_value
-    procedure :: get_row_degree => ellpack_matrix_get_row_degree
+    procedure :: get_row_degree    => ellpack_matrix_get_row_degree
     procedure :: get_column_degree => ellpack_matrix_get_column_degree
-    procedure :: get_row => ellpack_matrix_get_row
+    procedure :: get_row    => ellpack_matrix_get_row
     procedure :: get_column => ellpack_matrix_get_column
 
 
@@ -77,7 +61,7 @@ contains
     procedure :: set_value => ellpack_matrix_set_value
     procedure :: add_value => ellpack_matrix_add_value
     procedure :: zero => ellpack_matrix_zero
-    procedure :: left_permute => ellpack_matrix_left_permute
+    procedure :: left_permute  => ellpack_matrix_left_permute
     procedure :: right_permute => ellpack_matrix_right_permute
 
 
@@ -109,35 +93,6 @@ end type ellpack_matrix
 
 
 
-!--------------------------------------------------------------------------!
-abstract interface                                                         !
-!--------------------------------------------------------------------------!
-    subroutine ellpack_get_slice_ifc(A, nodes, slice, k)
-        import :: ellpack_matrix, dp
-        class(ellpack_matrix), intent(in) :: A
-        integer, intent(out) :: nodes(:)
-        real(dp), intent(out) :: slice(:)
-        integer, intent(in) :: k
-    end subroutine ellpack_get_slice_ifc
-
-    subroutine ellpack_permute_ifc(A, p)
-        import :: ellpack_matrix
-        class(ellpack_matrix), intent(inout) :: A
-        integer, intent(in) :: p(:)
-    end subroutine ellpack_permute_ifc
-
-    subroutine ellpack_matvec_add_ifc(A, x, y)
-        import :: ellpack_matrix, dp
-        class(ellpack_matrix), intent(in) :: A
-        real(dp), intent(in)    :: x(:)
-        real(dp), intent(inout) :: y(:)
-    end subroutine ellpack_matvec_add_ifc
-end interface
-
-
-private :: ellpack_matrix_leftperm, ellpack_matrix_rightperm
-
-
 
 contains
 
@@ -149,80 +104,21 @@ contains
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine ellpack_matrix_set_ordering(A, orientation)                     !
+subroutine ellpack_matrix_copy_graph_structure(A, g)                       !
 !--------------------------------------------------------------------------!
-    class(ellpack_matrix), intent(inout) :: A
-    character(len=3), intent(in) :: orientation
-
-    ! Set the `ord` attribute for the matrix, so that the indices are
-    ! reverse if we use column-major ordering and so the right kernels
-    ! are selected for matvec, getting rows/columns, etc.
-    select case(orientation)
-        case('row')
-            A%ord = [1, 2]
-
-            A%row_deg_impl => get_degree_contiguous
-            A%col_deg_impl => get_degree_discontiguous
-
-            A%get_row_impl => ellpack_get_slice_contiguous
-            A%get_col_impl => ellpack_get_slice_discontiguous
-
-            A%left_permute_impl  => ellpack_matrix_leftperm
-            A%right_permute_impl => ellpack_matrix_rightperm
-
-            A%matvec_add_impl   => ellpackr_matvec_add
-            A%matvec_t_add_impl => ellpackc_matvec_add
-        case('col')
-            A%ord = [2, 1]
-
-            A%row_deg_impl => get_degree_discontiguous
-            A%col_deg_impl => get_degree_contiguous
-
-            A%get_row_impl => ellpack_get_slice_discontiguous
-            A%get_col_impl => ellpack_get_slice_contiguous
-
-            A%left_permute_impl  => ellpack_matrix_rightperm
-            A%right_permute_impl => ellpack_matrix_leftperm
-
-            A%matvec_add_impl   => ellpackc_matvec_add
-            A%matvec_t_add_impl => ellpackr_matvec_add
-    end select
-
-    A%ordering_set = .true.
-
-end subroutine ellpack_matrix_set_ordering
-
-
-
-!--------------------------------------------------------------------------!
-subroutine ellpack_matrix_copy_graph_structure(A, g, trans)                !
-!--------------------------------------------------------------------------!
-    ! input/output variables
     class(ellpack_matrix), intent(inout) :: A
     class(graph_interface), intent(in) :: g
-    logical, intent(in), optional :: trans
-    ! local variables
-    integer :: ord(2), nv(2)
-    logical :: tr
 
-    tr = .false.
-    if (present(trans)) tr = trans
-    ord = [1, 2]
-    if (tr) ord = [2, 1]
-
-    nv = [g%n, g%m]
-    nv = nv(ord)
-
-    if (A%nrow /= nv(1) .or. A%ncol /= nv(2)) then
+    if (A%nrow /= g%n .or. A%ncol /= g%m) then
         print *, 'Attemped to set ellpack matrix connectivity structure to'
         print *, 'graph with inconsistent dimensions.'
         print *, 'Dimensions of matrix:', A%nrow, A%ncol
-        print *, 'Dimensions of graph: ', nv(1), nv(2)
+        print *, 'Dimensions of graph: ', g%n, g%m
         call exit(1)
     endif
 
     if (.not. associated(A%g)) allocate(A%g)
-    call A%g%copy(g, tr)
+    call A%g%copy(g)
 
     A%nnz = g%ne
     allocate(A%val(A%g%max_d, A%g%n))
@@ -280,20 +176,14 @@ function ellpack_matrix_get_value(A, i, j) result(z)                       !
     integer, intent(in) :: i, j
     real(dp) :: z
     ! local variables
-    integer :: k, d, ind(2)
-
-    ! Reverse the indices (i,j) according to the ordering (row- or column-
-    ! major) of the matrix
-    ind(1) = i
-    ind(2) = j
-    ind = ind(A%ord)
+    integer :: k, d
 
     ! Set the return value to 0
     z = 0.0_dp
 
-    d = A%g%degrees(ind(1))
+    d = A%g%degrees(i)
     do k = 1, d
-        if (A%g%node(k, ind(1)) == ind(2)) z = A%val(k, ind(1))
+        if (A%g%node(k, i) == j) z = A%val(k, i)
     enddo
 
 end function ellpack_matrix_get_value
@@ -307,7 +197,7 @@ function ellpack_matrix_get_row_degree(A, k) result(d)                     !
     integer, intent(in) :: k
     integer :: d
 
-    d = A%row_deg_impl(A%g, k)
+    d = A%g%degrees(k)
 
 end function ellpack_matrix_get_row_degree
 
@@ -320,7 +210,7 @@ function ellpack_matrix_get_column_degree(A, k) result(d)                  !
     integer, intent(in) :: k
     integer :: d
 
-    d = A%col_deg_impl(A%g, k)
+    d = get_degree_discontiguous(A%g, k)
 
 end function ellpack_matrix_get_column_degree
 
@@ -328,34 +218,6 @@ end function ellpack_matrix_get_column_degree
 
 !--------------------------------------------------------------------------!
 subroutine ellpack_matrix_get_row(A, nodes, slice, k)                      !
-!--------------------------------------------------------------------------!
-    class(ellpack_matrix), intent(in) :: A
-    integer, intent(out) :: nodes(:)
-    real(dp), intent(out) :: slice(:)
-    integer, intent(in) :: k
-
-    call A%get_row_impl(nodes, slice, k)
-
-end subroutine ellpack_matrix_get_row
-
-
-
-!--------------------------------------------------------------------------!
-subroutine ellpack_matrix_get_column(A, nodes, slice, k)                   !
-!--------------------------------------------------------------------------!
-    class(ellpack_matrix), intent(in) :: A
-    integer, intent(out) :: nodes(:)
-    real(dp), intent(out) :: slice(:)
-    integer, intent(in) :: k
-
-    call A%get_col_impl(nodes, slice, k)
-
-end subroutine ellpack_matrix_get_column
-
-
-
-!--------------------------------------------------------------------------!
-subroutine ellpack_get_slice_contiguous(A, nodes, slice, k)                !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(ellpack_matrix), intent(in) :: A
@@ -373,12 +235,12 @@ subroutine ellpack_get_slice_contiguous(A, nodes, slice, k)                !
     nodes(1 : d) = A%g%node(1 : d, k)
     slice(1 : d) = A%val(1 : d, k)
 
-end subroutine ellpack_get_slice_contiguous
+end subroutine ellpack_matrix_get_row
 
 
 
 !--------------------------------------------------------------------------!
-subroutine ellpack_get_slice_discontiguous(A, nodes, slice, k)             !
+subroutine ellpack_matrix_get_column(A, nodes, slice, k)                   !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(ellpack_matrix), intent(in) :: A
@@ -418,7 +280,7 @@ subroutine ellpack_get_slice_discontiguous(A, nodes, slice, k)             !
         enddo
     enddo
 
-end subroutine ellpack_get_slice_discontiguous
+end subroutine ellpack_matrix_get_column
 
 
 
@@ -449,12 +311,7 @@ subroutine ellpack_matrix_get_edges(A, edges, cursor, &                    !
     integer, intent(in) :: num_edges
     integer, intent(out) :: num_returned
 
-    ! Get a batch of edges from the connectivity graph of `A`
     call A%g%get_edges(edges, cursor, num_edges, num_returned)
-
-    ! Reverse the edges if `A` is in column-major order
-    !TODO: see if we can do this without making a temporary array
-    edges = edges(A%ord, :)
 
 end subroutine ellpack_matrix_get_edges
 
@@ -504,7 +361,6 @@ subroutine ellpack_matrix_get_entries(A, edges, entries, cursor, &         !
     ! Get a batch of edges from the connectivity graph of `A`
 
     call g%get_edges(edges, cursor, num_edges, num_returned)
-    edges = edges(A%ord, :)
 
     end associate
 
@@ -525,24 +381,20 @@ subroutine ellpack_matrix_set_value(A, i, j, z)                            !
     integer, intent(in) :: i, j
     real(dp), intent(in) :: z
     ! local variables
-    integer :: k, d, ind(2)
+    integer :: k, d
     logical :: found
-
-    ind(1) = i
-    ind(2) = j
-    ind = ind(A%ord)
 
     found = .false.
 
-    d = A%g%degrees(ind(1))
+    d = A%g%degrees(i)
     do k = 1, d
-        if (A%g%node(k, ind(1)) == ind(2)) then
-            A%val(k, ind(1)) = z
+        if (A%g%node(k, i) == j) then
+            A%val(k, i) = z
             found = .true.
         endif
     enddo
 
-    if (.not. found) call A%set_unallocated_matrix_value(ind(1), ind(2), z)
+    if (.not. found) call A%set_unallocated_matrix_value(i, j, z)
 
 end subroutine ellpack_matrix_set_value
 
@@ -556,24 +408,20 @@ subroutine ellpack_matrix_add_value(A, i, j, z)                            !
     integer, intent(in) :: i, j
     real(dp), intent(in) :: z
     ! local variables
-    integer :: k, d, ind(2)
+    integer :: k, d
     logical :: found
-
-    ind(1) = i
-    ind(2) = j
-    ind = ind(A%ord)
 
     found = .false.
 
-    d = A%g%degrees(ind(1))
+    d = A%g%degrees(i)
     do k = 1, d
-        if (A%g%node(k, ind(1)) == ind(2)) then
-            A%val(k, ind(1)) = A%val(k, ind(1)) + z
+        if (A%g%node(k, i) == j) then
+            A%val(k, i) = A%val(k, i) + z
             found = .true.
         endif
     enddo
 
-    if (.not. found) call A%set_unallocated_matrix_value(ind(1), ind(2), z)
+    if (.not. found) call A%set_unallocated_matrix_value(i, j, z)
 
 end subroutine ellpack_matrix_add_value
 
@@ -593,30 +441,6 @@ end subroutine ellpack_matrix_zero
 !--------------------------------------------------------------------------!
 subroutine ellpack_matrix_left_permute(A, p)                               !
 !--------------------------------------------------------------------------!
-    class(ellpack_matrix), intent(inout) :: A
-    integer, intent(in) :: p(:)
-
-    call A%left_permute_impl(p)
-
-end subroutine ellpack_matrix_left_permute
-
-
-
-!--------------------------------------------------------------------------!
-subroutine ellpack_matrix_right_permute(A, p)                              !
-!--------------------------------------------------------------------------!
-    class(ellpack_matrix), intent(inout) :: A
-    integer, intent(in) :: p(:)
-
-    call A%right_permute_impl(p)
-
-end subroutine ellpack_matrix_right_permute
-
-
-
-!--------------------------------------------------------------------------!
-subroutine ellpack_matrix_leftperm(A, p)                                   !
-!--------------------------------------------------------------------------!
     ! input/output variables
     class(ellpack_matrix), intent(inout) :: A
     integer, intent(in) :: p(:)
@@ -632,19 +456,19 @@ subroutine ellpack_matrix_leftperm(A, p)                                   !
 
     call A%g%left_permute(p)
 
-end subroutine ellpack_matrix_leftperm
+end subroutine ellpack_matrix_left_permute
 
 
 
 !--------------------------------------------------------------------------!
-subroutine ellpack_matrix_rightperm(A, p)                                  !
+subroutine ellpack_matrix_right_permute(A, p)                              !
 !--------------------------------------------------------------------------!
     class(ellpack_matrix), intent(inout) :: A
     integer, intent(in) :: p(:)
 
     call A%g%right_permute(p)
 
-end subroutine ellpack_matrix_rightperm
+end subroutine ellpack_matrix_right_permute
 
 
 
@@ -656,32 +480,6 @@ end subroutine ellpack_matrix_rightperm
 !--------------------------------------------------------------------------!
 subroutine ellpack_matvec_add(A, x, y)                                     !
 !--------------------------------------------------------------------------!
-    class(ellpack_matrix), intent(in) :: A
-    real(dp), intent(in)    :: x(:)
-    real(dp), intent(inout) :: y(:)
-
-    call A%matvec_add_impl(x, y)
-
-end subroutine ellpack_matvec_add
-
-
-
-!--------------------------------------------------------------------------!
-subroutine ellpack_matvec_t_add(A, x, y)                                   !
-!--------------------------------------------------------------------------!
-    class(ellpack_matrix), intent(in) :: A
-    real(dp), intent(in)    :: x(:)
-    real(dp), intent(inout) :: y(:)
-
-    call A%matvec_t_add_impl(x, y)
-
-end subroutine ellpack_matvec_t_add
-
-
-
-!--------------------------------------------------------------------------!
-subroutine ellpackr_matvec_add(A, x, y)                                    !
-!--------------------------------------------------------------------------!
     ! input/output variables
     class(ellpack_matrix), intent(in) :: A
     real(dp), intent(in)    :: x(:)
@@ -691,7 +489,6 @@ subroutine ellpackr_matvec_add(A, x, y)                                    !
     real(dp) :: z
 
     associate( g => A%g )
-
 
     do i = 1, g%n
         z = 0.0_dp
@@ -704,7 +501,6 @@ subroutine ellpackr_matvec_add(A, x, y)                                    !
         y(i) = y(i) + z
     enddo
 
-
     end associate
 
 end subroutine ellpackr_matvec_add
@@ -712,7 +508,7 @@ end subroutine ellpackr_matvec_add
 
 
 !--------------------------------------------------------------------------!
-subroutine ellpackc_matvec_add(A, x, y)                                    !
+subroutine ellpack_matvec_t_add(A, x, y)                                   !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(ellpack_matrix), intent(in) :: A
@@ -724,7 +520,6 @@ subroutine ellpackc_matvec_add(A, x, y)                                    !
 
     associate( g => A%g)
 
-
     do j = 1, g%n
         z = x(j)
 
@@ -734,10 +529,9 @@ subroutine ellpackc_matvec_add(A, x, y)                                    !
         enddo
     enddo
 
-
     end associate
 
-end subroutine ellpackc_matvec_add
+end subroutine ellpack_matvec_t_add
 
 
 
@@ -787,7 +581,7 @@ subroutine ellpack_matrix_to_dense_matrix(A, B, trans)                     !
 
     ! If we're actually making the transpose of A, set the variable `ord`
     ! so that we reverse the orientation of all edges
-    ord = A%ord
+    ord = [1, 2]
     if (present(trans)) then
         if (trans) ord = [2, 1]
     endif

@@ -147,11 +147,10 @@ end type sparse_matrix_interface
 !--------------------------------------------------------------------------!
 abstract interface                                                         !
 !--------------------------------------------------------------------------!
-    subroutine sparse_mat_copy_graph_structure_ifc(A, g, trans)
+    subroutine sparse_mat_copy_graph_structure_ifc(A, g)
         import :: graph_interface, sparse_matrix_interface
         class(sparse_matrix_interface), intent(inout) :: A
         class(graph_interface), intent(in) :: g
-        logical, intent(in), optional :: trans
     end subroutine sparse_mat_copy_graph_structure_ifc
 
     subroutine sparse_mat_set_graph_ifc(A, g)

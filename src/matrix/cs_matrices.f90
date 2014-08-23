@@ -37,7 +37,6 @@ contains
     !--------------
     ! Constructors
     !--------------
-    procedure :: copy_graph_structure => cs_matrix_copy_graph_structure
     procedure :: set_graph => cs_matrix_set_graph
 
 
@@ -101,6 +100,11 @@ end type cs_matrix
 type, extends(cs_matrix) :: csr_matrix                                     !
 !--------------------------------------------------------------------------!
 contains
+    !--------------
+    ! Constructors
+    !--------------
+    procedure :: copy_graph_structure => csr_matrix_copy_graph_structure
+
     !-----------
     ! Accessors
     !-----------
@@ -136,6 +140,11 @@ end type csr_matrix
 type, extends(cs_matrix) :: csc_matrix                                     !
 !--------------------------------------------------------------------------!
 contains
+    !--------------
+    ! Constructors
+    !--------------
+    procedure :: copy_graph_structure => csc_matrix_copy_graph_structure
+
     !-----------
     ! Accessors
     !-----------
@@ -180,6 +189,9 @@ abstract interface                                                         !
 end interface
 
 
+private :: cs_matrix
+
+
 
 contains
 
@@ -194,51 +206,9 @@ contains
 !==========================================================================!
 
 
-
-
 !==========================================================================!
 !==== Constructors                                                     ====!
 !==========================================================================!
-
-!--------------------------------------------------------------------------!
-subroutine cs_matrix_copy_graph_structure(A, g, trans)                     !
-!--------------------------------------------------------------------------!
-    ! input/output variables
-    class(cs_matrix), intent(inout) :: A
-    class(graph_interface), intent(in) :: g
-    logical, intent(in), optional :: trans
-    ! local variables
-    integer :: ord(2), nv(2)
-    logical :: tr
-
-    tr = .false.
-    if (present(trans)) tr = trans
-    ord = [1, 2]
-    if (tr) ord = [2, 1]
-
-    nv = [g%n, g%m]
-    nv = nv(ord)
-
-    if (A%nrow /= nv(1) .or. A%ncol /= nv(2)) then
-        print *, 'Attempted to set CS matrix connectivity structure to'
-        print *, 'graph with inconsistent dimensions.'
-        print *, 'Dimensions of matrix:', A%nrow, A%ncol
-        print *, 'Dimensions of graph: ', nv(1), nv(2)
-        call exit(1)
-    endif
-
-    if (.not. associated(A%g)) allocate(A%g)
-    call A%g%copy(g, tr)
-
-    A%nnz = g%ne
-    allocate(A%val(A%nnz))
-    A%val = 0.0_dp
-
-    A%graph_set = .true.
-
-end subroutine cs_matrix_copy_graph_structure
-
-
 
 !--------------------------------------------------------------------------!
 subroutine cs_matrix_set_graph(A, g)                                       !
@@ -542,6 +512,67 @@ end subroutine csc_matvec_add
 
 
 !==========================================================================!
+!==== Constructors                                                     ====!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
+subroutine csr_matrix_copy_graph_structure(A, g)                           !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(csr_matrix), intent(inout) :: A
+    class(graph), intent(in) :: g
+    ! local variables
+
+    if (A%nrow /= g%n .or. A%ncol /= g%m) then
+        print *, 'Attempted to set CSR matrix connectivity structure to'
+        print *, 'graph with inconsistent dimensions.'
+        print *, 'Dimensions of matrix:', A%nrow, A%ncol
+        print *, 'Dimensions of graph:', g%n, g%m
+        call exit(1)
+    endif
+
+    if (.not. associated(A%g)) allocate(A%g)
+    call A%g%copy(g)
+
+    A%nnz = g%ne
+    allocate(A%val(A%nnz))
+    A%val = 0.0_dp
+
+    A%graph_set = .true.
+
+end subroutine csr_matrix_copy_graph_structure
+
+
+
+!--------------------------------------------------------------------------!
+subroutine csc_matrix_copy_graph_structure(A, g)                           !
+!--------------------------------------------------------------------------!
+    class(csc_matrix), intent(inout) :: A
+    class(graph), intent(in) :: g
+
+    if (A%nrow /= g%m .or. A%ncol /= g%m) then
+        print *, 'Attempted to set CSC matrix connectivity structure to'
+        print *, 'graph with inconsistent dimensions.'
+        print *, 'Dimensions of matrix:', A%nrow, A%ncol
+        print *, 'Dimensions of graph:', g%m, g%n
+        call exit(1)
+    endif
+
+    if (.not. associated(A%g)) allocate(A%g)
+    call A%g%copy(g, trans = .true.)
+
+    A%nnz = g%ne
+    allocate(A%val(A%nnz))
+    A%val = 0.0_dp
+
+    A%graph_set = .true.
+
+end subroutine csc_matrix_copy_graph_structure
+
+
+
+
+!==========================================================================!
 !==== Accessors                                                        ====!
 !==========================================================================!
 
@@ -586,6 +617,139 @@ end function csc_matrix_get_value
 
 
 
+!==========================================================================!
+!==== Edge, value iterators                                            ====!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
+subroutine csr_matrix_get_edges(A, edges, cursor, num_edges, num_returned) !
+!--------------------------------------------------------------------------!
+    class(csr_matrix), intent(in) :: A
+    integer, intent(out) :: edges(2, num_edges)
+    type(graph_edge_cursor), intent(inout) :: cursor
+    integer, intent(in) :: num_edges
+    integer, intent(out) :: num_returned
+
+    call A%g%get_edges(edges, cursor, num_edges, num_returned)
+
+end subroutine csr_matrix_get_edges
+
+
+
+!--------------------------------------------------------------------------!
+subroutine csc_matrix_get_edges(A, edges, cursor, num_edges, num_returned) !
+!--------------------------------------------------------------------------!
+    class(csc_matrix), intent(in) :: A
+    integer, intent(out) :: edges(2, num_edges)
+    type(graph_edge_cursor), intent(inout) :: cursor
+    integer, intent(in) :: num_edges
+    integer, intent(out) :: num_returned
+
+    call A%g%get_edges(edges, cursor, num_edges, num_returned)
+    edges = edges([2, 1], :)
+
+end subroutine csc_matrix_get_edges
+
+
+
+
+!==========================================================================!
+!==== Mutators                                                         ====!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
+subroutine csr_matrix_set_value(A, i, j, z)                                !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(csr_matrix), intent(inout) :: A
+    integer, intent(in) :: i, j
+    real(dp), intent(in) :: z
+    ! local variables
+    integer :: k
+    logical :: found
+
+    found = .false.
+
+    do k = A%g%ptr(i), A%g%ptr(i + 1) - 1
+        if (A%g%node(k) == j) then
+            A%val(k) = z
+            found = .true.
+        endif
+    enddo
+
+    if (.not. found) then
+        call set_matrix_value_with_reallocation(A%g, A%val, i, j, z)
+        A%nnz = A%nnz + 1
+    endif
+
+end subroutine csr_matrix_set_value
+
+
+
+!--------------------------------------------------------------------------!
+subroutine csr_matrix_add_value(A, i, j, z)                                !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(csr_matrix), intent(inout) :: A
+    integer, intent(in) :: i, j
+    real(dp), intent(in) :: z
+    ! local variables
+    integer :: k
+    logical :: found
+
+    found = .false.
+
+    do k = A%g%ptr(i), A%g%ptr(i + 1) - 1
+        if (A%g%node(k) == j) then
+            A%val(k) = A%val(k) + z
+            found = .true.
+        endif
+    enddo
+
+    if (.not. found) then
+        call set_matrix_value_with_reallocation(A%g, A%val, j, i, z)
+        A%nnz = A%nnz + 1
+    endif
+
+end subroutine csr_matrix_add_value
+
+
+
+!--------------------------------------------------------------------------!
+subroutine csc_matrix_set_value(A, i, j, z)                                !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(csc_matrix), intent(inout) :: A
+    integer, intent(in) :: i, j
+    real(dp), intent(in) :: z
+    ! local variables
+    integer :: k
+
+    do k = A%g%ptr(j), A%g%ptr(j + 1) - 1
+        if (A%g%node(k) == i) A%val(k) = z
+    enddo
+
+end subroutine csc_matrix_set_value
+
+
+
+!--------------------------------------------------------------------------!
+subroutine csc_matrix_add_value(A, i, j, z)                                !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(csc_matrix), intent(inout) :: A
+    integer, intent(in) :: i, j
+    real(dp), intent(in) :: z
+    ! local variables
+    integer :: k
+
+    do k = A%g%ptr(j), A%g%ptr(j + 1) - 1
+        if (A%g%node(k) == i) A%val(k) = A%val(k) + z
+    enddo
+
+end subroutine csc_matrix_add_value
+
 
 
 end module cs_matrices
+
