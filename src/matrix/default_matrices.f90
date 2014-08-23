@@ -24,31 +24,15 @@ implicit none
 
 
 !--------------------------------------------------------------------------!
-type, extends(sparse_matrix_interface) :: default_matrix                   !
+type, abstract, extends(sparse_matrix_interface) :: default_matrix         !
 !--------------------------------------------------------------------------!
     class(graph_interface), pointer :: g
     real(dp), allocatable :: val(:)
-
-
-    !----------------
-    ! The default implementation of a sparse matrix relies on several
-    ! procedures defined in the module default_sparse_matrix_kernels.
-    ! These are associated to each matrix through various function
-    ! pointers.
-    procedure(get_degree_kernel), pointer, nopass, private :: row_deg_impl
-    procedure(get_degree_kernel), pointer, nopass, private :: col_deg_impl
-
-    procedure(get_slice_kernel), pointer, nopass, private :: get_row_impl
-    procedure(get_slice_kernel), pointer, nopass, private :: get_column_impl
-
-    procedure(permute_kernel), pointer, nopass, private :: left_permute_impl
-    procedure(permute_kernel), pointer, nopass, private :: right_permute_impl
-
+    integer :: ord(2)
 contains
     !--------------
     ! Constructors
     !--------------
-    procedure :: set_ordering => default_matrix_set_ordering
     procedure :: copy_graph_structure => default_matrix_copy_graph_structure
     procedure :: set_graph => default_matrix_set_graph
 
@@ -92,7 +76,92 @@ contains
     !-------------
     procedure :: destroy => default_matrix_destroy
 
+
+    !--------------------
+    ! Auxiliary routines
+    !--------------------
+    procedure(default_matrix_set_ordering_ifc), deferred :: set_ordering
+
+
+    !--------------------------------------
+    ! Implementations of matrix operations
+    !--------------------------------------
+    procedure(get_degree_kernel), deferred, nopass :: row_deg_impl
+    procedure(get_degree_kernel), deferred, nopass :: col_deg_impl
+
+    procedure(get_slice_kernel), deferred, nopass :: get_row_impl
+    procedure(get_slice_kernel), deferred, nopass :: get_col_impl
+
+    procedure(permute_kernel), deferred, nopass :: left_permute_impl
+    procedure(permute_kernel), deferred, nopass :: right_permute_impl
 end type default_matrix
+
+
+
+!--------------------------------------------------------------------------!
+type, extends(default_matrix) :: default_row_matrix                        !
+!--------------------------------------------------------------------------!
+contains
+    !-----------
+    ! Accessors
+    !-----------
+    procedure, nopass :: row_deg_impl => get_degree_contiguous
+    procedure, nopass :: col_deg_impl => get_degree_discontiguous
+    procedure, nopass :: get_row_impl => get_slice_contiguous
+    procedure, nopass :: get_col_impl => get_slice_discontiguous
+
+    !----------
+    ! Mutators
+    !----------
+    procedure, nopass :: left_permute_impl  => graph_leftperm
+    procedure, nopass :: right_permute_impl => graph_rightperm
+
+    !--------------------
+    ! Auxiliary routines
+    !--------------------
+    procedure :: set_ordering => default_row_matrix_set_ordering
+end type default_row_matrix
+
+
+
+!--------------------------------------------------------------------------!
+type, extends(default_matrix) :: default_column_matrix                     !
+!--------------------------------------------------------------------------!
+contains
+    !-----------
+    ! Accessors
+    !-----------
+    procedure, nopass :: row_deg_impl => get_degree_discontiguous
+    procedure, nopass :: col_deg_impl => get_degree_contiguous
+    procedure, nopass :: get_row_impl => get_slice_discontiguous
+    procedure, nopass :: get_col_impl => get_slice_contiguous
+
+    !----------
+    ! Mutators
+    !----------
+    procedure, nopass :: left_permute_impl  => graph_rightperm
+    procedure, nopass :: right_permute_impl => graph_leftperm
+
+    !--------------------
+    ! Auxiliary routines
+    !--------------------
+    procedure :: set_ordering => default_column_matrix_set_ordering
+end type default_column_matrix
+
+
+
+
+!--------------------------------------------------------------------------!
+abstract interface                                                         !
+!--------------------------------------------------------------------------!
+    subroutine default_matrix_set_ordering_ifc(A)
+        import :: default_matrix
+        class(default_matrix), intent(inout) :: A
+    end subroutine default_matrix_set_ordering_ifc
+end interface
+
+
+private :: default_matrix
 
 
 
@@ -103,67 +172,29 @@ contains
 
 
 !==========================================================================!
+!========                                                          ========!
+!====         General routines for default row / column matrices       ====!
+!========                                                          ========!
+!==========================================================================!
+
+
+!==========================================================================!
 !==== Constructors                                                     ====!
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine default_matrix_set_ordering(A, orientation)                     !
-!--------------------------------------------------------------------------!
-    class(default_matrix), intent(inout) :: A
-    character(len=3), intent(in) :: orientation
-
-    ! Set the `ord` attribute for the matrix, so that the indices are
-    ! reversed if we use column-major ordering and so the right kernels
-    ! are selected for matvec, getting rows/columns, etc.
-    select case(orientation)
-        case('row')
-            A%ord = [1, 2]
-
-            A%row_deg_impl => get_degree_contiguous
-            A%col_deg_impl => get_degree_discontiguous
-
-            A%get_row_impl    => get_slice_contiguous
-            A%get_column_impl => get_slice_discontiguous
-
-            A%left_permute_impl  => graph_leftperm
-            A%right_permute_impl => graph_rightperm
-        case('col')
-            A%ord = [2, 1]
-
-            A%row_deg_impl => get_degree_discontiguous
-            A%col_deg_impl => get_degree_contiguous
-
-            A%get_row_impl    => get_slice_discontiguous
-            A%get_column_impl => get_slice_contiguous
-
-            A%left_permute_impl  => graph_rightperm
-            A%right_permute_impl => graph_leftperm
-    end select
-
-    A%ordering_set = .true.
-
-end subroutine default_matrix_set_ordering
-
-
-
-!--------------------------------------------------------------------------!
-subroutine default_matrix_copy_graph_structure(A, g, trans)                !
+subroutine default_matrix_copy_graph_structure(A, g)                       !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(default_matrix), intent(inout) :: A
     class(graph_interface), intent(in) :: g
-    logical, intent(in), optional :: trans
     ! local variables
-    integer :: ord(2), nv(2)
-    logical :: tr
+    integer :: nv(2)
 
-    tr = .false.
-    if (present(trans)) tr = trans
-    ord = [1, 2]
-    if (tr) ord = [2, 1]
+    call A%set_ordering()
 
     nv = [g%n, g%m]
-    nv = nv(ord)
+    nv = nv(A%ord)
 
     if (A%nrow /= nv(1) .or. A%ncol /= nv(2)) then
         print *, 'Attemped to set default matrix connectivity structure to'
@@ -178,7 +209,7 @@ subroutine default_matrix_copy_graph_structure(A, g, trans)                !
     ! work for the time being.
     !TODO: make it allocate A%g as a mold of g
     if (.not. associated(A%g)) allocate(ll_graph :: A%g)
-    call A%g%copy(g, tr)
+    call A%g%copy(g)
 
     A%nnz = g%ne
     allocate(A%val(A%nnz))
@@ -196,13 +227,7 @@ subroutine default_matrix_set_graph(A, g)                                  !
     class(default_matrix), intent(inout) :: A
     class(graph_interface), target, intent(in) :: g
 
-   if (A%nrow /= g%n .or. A%ncol /= g%m) then
-        print *, 'Attempted to set sparse matrix connectivity structure to'
-        print *, 'graph with inconsistent dimensions.'
-        print *, 'Dimensions of matrix:', A%nrow, A%ncol
-        print *, 'Dimensions of graph: ', g%n, g%m
-        call exit(1)
-    endif
+    call A%set_ordering()
 
     A%g => g
 
@@ -298,7 +323,7 @@ subroutine default_matrix_get_column(A, nodes, slice, k)                   !
     real(dp), intent(out) :: slice(:)
     integer, intent(in) :: k
 
-    call A%get_column_impl( A%g, A%val, nodes, slice, k)
+    call A%get_col_impl( A%g, A%val, nodes, slice, k)
 
 end subroutine default_matrix_get_column
 
@@ -527,10 +552,45 @@ subroutine default_matrix_destroy(A)                                       !
 
     A%graph_set = .false.
     A%dimensions_set = .false.
-    A%ordering_set = .false.
 
 end subroutine default_matrix_destroy
 
 
 
+
+
+!==========================================================================!
+!========                                                          ========!
+!====    Format-specific routines for default row / column matrices    ====!
+!========                                                          ========!
+!==========================================================================!
+
+
+!==========================================================================!
+!==== Auxiliary routines                                               ====!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
+subroutine default_row_matrix_set_ordering(A)                              !
+!--------------------------------------------------------------------------!
+    class(default_row_matrix), intent(inout) :: A
+
+    A%ord = [1, 2]
+
+end subroutine default_row_matrix_set_ordering
+
+
+
+!--------------------------------------------------------------------------!
+subroutine default_column_matrix_set_ordering(A)                           !
+!--------------------------------------------------------------------------!
+    class(default_column_matrix), intent(inout) :: A
+
+    A%ord = [2, 1]
+
+end subroutine default_column_matrix_set_ordering
+
+
+
 end module default_matrices
+

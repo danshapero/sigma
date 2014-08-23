@@ -35,7 +35,6 @@ subroutine sparse_matrix_sum(A, B, C)                                      !
     class(sparse_matrix_interface), intent(in)    :: B, C
     ! local variables
     type(ll_graph) :: g
-    logical :: trans
 
     if (B%nrow /= C%nrow .or. B%ncol /= C%ncol) then
         print *, 'Dimensions of matrices for sparse matrix sum'
@@ -48,7 +47,7 @@ subroutine sparse_matrix_sum(A, B, C)                                      !
 
     call A%set_dimensions(B%nrow, B%ncol)
     call sparse_matrix_sum_graph(g, B, C)
-    call A%copy_graph_structure(g, trans)
+    call A%copy_graph_structure(g)
     call sparse_matrix_sum_fill_entries(A, B, C)
 
 end subroutine sparse_matrix_sum
@@ -165,7 +164,6 @@ subroutine sparse_matrix_product(A, B, C)                                  !
     class(sparse_matrix_interface), intent(in) :: B, C
     ! local variables
     type(ll_graph) :: g
-    logical :: trans
 
     if (B%ncol /= C%nrow) then
         print *, 'Dimensions of matrices for sparse matrix product'
@@ -175,15 +173,9 @@ subroutine sparse_matrix_product(A, B, C)                                  !
         call exit(1)
     endif
 
-    if (.not. A%ordering_set) call A%set_ordering("row")
-
-    ! If `A` is stored with column-major ordering, we need to transpose
-    ! the graph with the structure of `B * C`
-    trans = A%ord(1) == 2
-
     call A%set_dimensions(B%nrow, C%ncol)
     call sparse_matrix_product_graph(g, B, C)
-    call A%copy_graph_structure(g, trans)
+    call A%copy_graph_structure(g)
     call sparse_matrix_product_fill_entries(A, B, C)
 
 end subroutine sparse_matrix_product

@@ -503,7 +503,7 @@ subroutine ellpack_matvec_add(A, x, y)                                     !
 
     end associate
 
-end subroutine ellpackr_matvec_add
+end subroutine ellpack_matvec_add
 
 
 

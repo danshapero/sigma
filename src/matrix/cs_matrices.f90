@@ -109,10 +109,10 @@ contains
     ! Accessors
     !-----------
     procedure :: get_value => csr_matrix_get_value
-    procedure :: row_deg_impl => get_degree_contiguous
-    procedure :: col_deg_impl => get_degree_discontiguous
-    procedure :: get_row_impl => get_slice_contiguous
-    procedure :: get_col_impl => get_slice_discontiguous
+    procedure, nopass :: row_deg_impl => get_degree_contiguous
+    procedure, nopass :: col_deg_impl => get_degree_discontiguous
+    procedure, nopass :: get_row_impl => get_slice_contiguous
+    procedure, nopass :: get_col_impl => get_slice_discontiguous
 
     !-----------------------
     ! Edge, value iterators
@@ -124,14 +124,14 @@ contains
     !----------
     procedure :: set_value => csr_matrix_set_value
     procedure :: add_value => csr_matrix_add_value
-    procedure :: left_permute_impl  => graph_leftperm
-    procedure :: right_permute_impl => graph_rightperm
+    procedure, nopass :: left_permute_impl  => graph_leftperm
+    procedure, nopass :: right_permute_impl => graph_rightperm
 
     !------------------------------
     ! Matrix-vector multiplication
     !------------------------------
-    procedure :: matvec_add_impl   => csr_matvec_add
-    procedure :: matvec_t_add_impl => csc_matvec_add
+    procedure, nopass :: matvec_add_impl   => csr_matvec_add
+    procedure, nopass :: matvec_t_add_impl => csc_matvec_add
 end type csr_matrix
 
 
@@ -149,10 +149,10 @@ contains
     ! Accessors
     !-----------
     procedure :: get_value => csc_matrix_get_value
-    procedure :: row_deg_impl => get_degree_discontiguous
-    procedure :: col_deg_impl => get_degree_contiguous
-    procedure :: get_row_impl => get_slice_discontiguous
-    procedure :: get_col_impl => get_slice_contiguous
+    procedure, nopass :: row_deg_impl => get_degree_discontiguous
+    procedure, nopass :: col_deg_impl => get_degree_contiguous
+    procedure, nopass :: get_row_impl => get_slice_discontiguous
+    procedure, nopass :: get_col_impl => get_slice_contiguous
 
     !-----------------------
     ! Edge, value iterators
@@ -164,14 +164,14 @@ contains
     !----------
     procedure :: set_value => csc_matrix_set_value
     procedure :: add_value => csc_matrix_add_value
-    procedure :: left_permute_impl  => graph_rightperm
-    procedure :: right_permute_impl => graph_leftperm
+    procedure, nopass :: left_permute_impl  => graph_rightperm
+    procedure, nopass :: right_permute_impl => graph_leftperm
 
     !------------------------------
     ! Matrix-vector multiplication
     !------------------------------
-    procedure :: matvec_add_impl   => csc_matvec_add
-    procedure :: matvec_t_add_impl => csr_matvec_add
+    procedure, nopass :: matvec_add_impl   => csc_matvec_add
+    procedure, nopass :: matvec_t_add_impl => csr_matvec_add
 end type csc_matrix
 
 
@@ -200,9 +200,9 @@ contains
 
 
 !==========================================================================!
-!==========================================================================!
-!==== General routines for CS matrices                                 ====!
-!==========================================================================!
+!========                                                          ========!
+!====             General routines for CSR / CSC matrices              ====!
+!========                                                          ========!
 !==========================================================================!
 
 
@@ -215,14 +215,6 @@ subroutine cs_matrix_set_graph(A, g)                                       !
 !--------------------------------------------------------------------------!
     class(cs_matrix), intent(inout) :: A
     class(graph_interface), target, intent(in) :: g
-
-    if (A%nrow /= g%n .or. A%ncol /= g%m) then
-        print *, 'Attempted to set CS matrix connectivity structure to'
-        print *, 'graph with inconsistent dimensions.'
-        print *, 'Dimensions of matrix:', A%nrow, A%ncol
-        print *, 'Dimensions of graph: ', g%n, g%m
-        call exit(1)
-    endif
 
     select type(g)
         class is(cs_graph)
@@ -505,9 +497,9 @@ end subroutine csc_matvec_add
 
 
 !==========================================================================!
-!==========================================================================!
-!==== CSR and CSC format-specific routines                             ====!
-!==========================================================================!
+!========                                                          ========!
+!====               CSR / CSC format-specific routines                 ====!
+!========                                                          ========!
 !==========================================================================!
 
 
@@ -520,7 +512,7 @@ subroutine csr_matrix_copy_graph_structure(A, g)                           !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(csr_matrix), intent(inout) :: A
-    class(graph), intent(in) :: g
+    class(graph_interface), intent(in) :: g
     ! local variables
 
     if (A%nrow /= g%n .or. A%ncol /= g%m) then
@@ -548,7 +540,7 @@ end subroutine csr_matrix_copy_graph_structure
 subroutine csc_matrix_copy_graph_structure(A, g)                           !
 !--------------------------------------------------------------------------!
     class(csc_matrix), intent(inout) :: A
-    class(graph), intent(in) :: g
+    class(graph_interface), intent(in) :: g
 
     if (A%nrow /= g%m .or. A%ncol /= g%m) then
         print *, 'Attempted to set CSC matrix connectivity structure to'
@@ -600,7 +592,7 @@ end function csr_matrix_get_value
 function csc_matrix_get_value(A, i, j) result(z)                           !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(csr_matrix), intent(in) :: A
+    class(csc_matrix), intent(in) :: A
     integer, intent(in) :: i, j
     real(dp) :: z
     ! local variables
