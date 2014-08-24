@@ -28,7 +28,7 @@ implicit none
     class(sparse_matrix_interface), pointer :: A
 
     ! some integer indices
-    integer :: i, j, k
+    integer :: i, j, k, nn
 
     ! variables for making the transition matrix corresponding to a Markov
     ! chain on g
@@ -39,30 +39,31 @@ implicit none
     real(dp), allocatable :: x(:), y(:)
 
 
+    nn = 512
 
     ! initialize a random seed
     call init_seed()
-    p = 7.0 / 512
+    p = 7.0 / nn
 
-    allocate(x(512), y(512))
+    allocate(x(nn), y(nn))
 
 
 
     !----------------------------------------------------------------------!
     ! Set up a random graph g                                              !
     !----------------------------------------------------------------------!
-    allocate(ll_graph::g)
-    call g%init(512)
+    call choose_graph_type(g, "list of lists")
+    call g%init(nn)
 
-    do i = 1, 512
+    do i = 1, nn
         call random_number(z)
 
-        do j = 1,512
+        do j = 1, nn
             if (z(j) < p) call g%add_edge(i, j)
         enddo
     enddo
 
-    do i = 1, 512
+    do i = 1, nn
         if (g%degree(i) == 0) call g%add_edge(i, i)
     enddo
 
@@ -76,12 +77,12 @@ implicit none
     !----------------------------------------------------------------------!
     ! Initialize a sparse matrix with 512 rows and columns, in row-major 
     ! ordering, with g representing its connectivity
-    A => sparse_matrix(512, 512, g, 'row')
+    call choose_matrix_type(A, "compressed sparse row")
 
     allocate(neighbors(d))
 
     ! For each vertex i,
-    do i = 1, 512
+    do i = 1, nn
         ! compute the degree d of i
         d = g%degree(i)
 
@@ -91,10 +92,7 @@ implicit none
         ! For each neighbor j,
         do k = 1, d
             j = neighbors(k)
-            if (j /= 0) then
-                ! Set A[i,j] = 1/degree(i)
-                call A%set_value(i, j, 1.0_dp / d)
-            endif
+            call A%set_value(i, j, 1.0_dp / d)
         enddo
     enddo
 
@@ -121,18 +119,18 @@ implicit none
     x = 0.0
     x(1) = 1.0
 
-    do k = 1, 2048
+    do k = 1, 4 * nn
         call A%matvec_t(x, y)
         x = y / sum(y)
     enddo
 
     entropy = 0.0
-    do i = 1, 512
+    do i = 1, nn
         if (x(i) /= 0) entropy = entropy - x(i) * log(x(i))
     enddo
 
-    write(*,30) 100*entropy / log(512.0)
-30  format('After 1024 iterations, entropy relative maximum is ',f9.6,'%.')
+    write(*,30) 100*entropy / log(1.0_dp * nn)
+30  format('After 2048 iterations, entropy relative maximum is ',f9.6,'%.')
 
     call A%matvec_t(x, y)
     write(*,40)

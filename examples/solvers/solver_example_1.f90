@@ -18,7 +18,7 @@ implicit none
     real(dp), allocatable :: z(:)
 
     ! a sparse matrix
-    class(sparse_matrix_interface), pointer :: A
+    type(csc_matrix) :: A
 
     ! a solver object
     type(cg_solver) :: solver
@@ -74,7 +74,8 @@ implicit none
     !----------------------------------------------------------------------!
     ! Make A the graph Laplacian of g + the identity matrix                !
     !----------------------------------------------------------------------!
-    A => sparse_matrix(nn, nn, g, 'row')
+    call A%set_dimensions(nn, nn)
+    call A%set_graph(g)
     call A%zero()
 
     d = g%max_degree()
@@ -128,7 +129,7 @@ implicit none
     call g%destroy()
     call A%destroy()
     deallocate(g)
-    deallocate(x,b)
+    deallocate(x, b)
 
 
 end program solver_example_1

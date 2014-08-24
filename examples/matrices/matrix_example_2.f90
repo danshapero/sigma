@@ -14,7 +14,7 @@ implicit none
     real(dp) :: z(2), p
 
     ! a sparse_matrix
-    class(sparse_matrix_interface), pointer :: A
+    type(csr_matrix) :: A
 
     ! some integer indices
     integer :: i, j, k, x, y, nx, ny, d, di, dj, n
@@ -110,7 +110,7 @@ implicit none
     !----------------------------------------------------------------------!
     ! Make the Laplacian matrix of g                                       !
     !----------------------------------------------------------------------!
-    A => sparse_matrix(nx * ny, nx * ny, g, 'row')
+    call A%init(nx * ny, nx * ny, g)
 
     d = g%max_degree()
     allocate(neighbors(d))

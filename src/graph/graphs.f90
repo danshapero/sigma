@@ -41,7 +41,7 @@ subroutine choose_graph_type_by_name(g, frmt)                              !
     nullify(g)
 
     select case( trim(frmt) )
-        case("ll", "lol", "list oflists")
+        case("ll", "lol", "list of lists")
             allocate(ll_graph::g)
 
         case("coo","coordinate")
