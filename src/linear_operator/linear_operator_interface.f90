@@ -73,7 +73,7 @@ abstract interface                                                         !
 !--------------------------------------------------------------------------!
 ! Interfaces for linear operator methods.                                  !
 !--------------------------------------------------------------------------!
-    subroutine opvec_add_ifc(A,x,y)
+    subroutine opvec_add_ifc(A, x, y)
         import :: linear_operator, dp
         class(linear_operator), intent(in) :: A
         real(dp), intent(in) :: x(:)
@@ -88,13 +88,13 @@ abstract interface                                                         !
 !--------------------------------------------------------------------------!
 ! Interfaces for linear solver methods.                                    !
 !--------------------------------------------------------------------------!
-    subroutine linear_solver_setup_ifc(solver,A)
+    subroutine linear_solver_setup_ifc(solver, A)
         import :: linear_solver, linear_operator
         class(linear_solver), intent(inout) :: solver
         class(linear_operator), intent(in) :: A
     end subroutine linear_solver_setup_ifc
 
-    subroutine linear_solve_ifc(solver,A,x,b)
+    subroutine linear_solve_ifc(solver, A, x, b)
         import :: linear_solver, linear_operator, dp
         class(linear_solver), intent(inout) :: solver
         class(linear_operator), intent(in) :: A
@@ -102,7 +102,7 @@ abstract interface                                                         !
         real(dp), intent(in) :: b(:)
     end subroutine linear_solve_ifc
 
-    subroutine linear_solve_pc_ifc(solver,A,x,b,pc)
+    subroutine linear_solve_pc_ifc(solver, A, x, b, pc)
         import :: linear_solver, linear_operator, dp
         class(linear_solver), intent(inout) :: solver
         class(linear_operator), intent(in) :: A
@@ -135,7 +135,7 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine assign_operators(A,B)                                           !
+subroutine assign_operators(A, B)                                          !
 !--------------------------------------------------------------------------!
     class(linear_operator), pointer, intent(out) :: A
     class(linear_operator), target, intent(in) :: B
@@ -147,7 +147,7 @@ end subroutine assign_operators
 
 
 !--------------------------------------------------------------------------!
-function linear_operator_get_value(A,i,j) result(z)                        !
+function linear_operator_get_value(A, i, j) result(z)                      !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(linear_operator), intent(in) :: A
@@ -165,7 +165,7 @@ end function linear_operator_get_value
 
 
 !--------------------------------------------------------------------------!
-subroutine linear_operator_matvec(A,x,y)                                   !
+subroutine linear_operator_matvec(A, x, y)                                 !
 !--------------------------------------------------------------------------!
     class(linear_operator), intent(in) :: A
     real(dp), intent(in) :: x(:)
@@ -179,7 +179,7 @@ end subroutine linear_operator_matvec
 
 
 !--------------------------------------------------------------------------!
-subroutine linear_operator_matvec_t(A,x,y)                                 !
+subroutine linear_operator_matvec_t(A, x, y)                               !
 !--------------------------------------------------------------------------!
     class(linear_operator), intent(in) :: A
     real(dp), intent(in) :: x(:)
@@ -193,7 +193,7 @@ end subroutine linear_operator_matvec_t
 
 
 !--------------------------------------------------------------------------!
-subroutine linear_operator_solve(A,x,b)                                    !
+subroutine linear_operator_solve(A, x, b)                                  !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(linear_operator), intent(in) :: A
@@ -208,9 +208,9 @@ subroutine linear_operator_solve(A,x,b)                                    !
     ! This subroutine is a facade for more complex operations that occur
     ! in a dedicated solver object contained in the operator itself
     if (associated(A%pc)) then
-        call solver%solve(A,x,b,pc)
+        call solver%solve(A, x, b, pc)
     else
-        call solver%solve(A,x,b)
+        call solver%solve(A, x, b)
     endif
 
 end subroutine linear_operator_solve
@@ -218,7 +218,7 @@ end subroutine linear_operator_solve
 
 
 !--------------------------------------------------------------------------!
-subroutine linear_solve_pc(solver,A,x,b,pc)                                !
+subroutine linear_solve_pc(solver, A, x, b, pc)                            !
 !--------------------------------------------------------------------------!
 !     This is a lazy, default implementation of a preconditioned solver.   !
 ! It's required in the linear_solver contract that every solver override   !
@@ -232,14 +232,14 @@ subroutine linear_solve_pc(solver,A,x,b,pc)                                !
     real(dp), intent(in)                :: b(:)
     class(linear_solver), intent(inout) :: pc
 
-    call solver%solve(A,x,b)
+    call solver%solve(A, x, b)
 
 end subroutine linear_solve_pc
 
 
 
 !--------------------------------------------------------------------------!
-subroutine set_solver(A,solver)                                            !
+subroutine set_solver(A, solver)                                           !
 !--------------------------------------------------------------------------!
     class(linear_operator), intent(inout) :: A
     class(linear_solver), target, intent(inout) :: solver
@@ -252,7 +252,7 @@ end subroutine set_solver
 
 
 !--------------------------------------------------------------------------!
-subroutine set_preconditioner(A,pc)                                        !
+subroutine set_preconditioner(A, pc)                                       !
 !--------------------------------------------------------------------------!
     class(linear_operator), intent(inout) :: A
     class(linear_solver), target, intent(inout) :: pc
@@ -264,5 +264,5 @@ end subroutine set_preconditioner
 
 
 
-
 end module linear_operator_interface
+

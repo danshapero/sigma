@@ -10,7 +10,7 @@ implicit none
 !--------------------------------------------------------------------------!
 type, extends(linear_operator) :: operator_adjoint                         !
 !--------------------------------------------------------------------------!
-    class(linear_operator), pointer :: op
+    class(linear_operator), pointer :: op => null()
 contains
     procedure :: get_value => operator_adjoint_get_value
     procedure :: matvec_add => operator_adjoint_matvec_add

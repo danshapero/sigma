@@ -230,7 +230,7 @@ end interface
 !--------------------------------------------------------------------------!
 type :: graph_pointer                                                      !
 !--------------------------------------------------------------------------!
-    class(graph_interface), pointer :: g
+    class(graph_interface), pointer :: g => null()
 end type graph_pointer
 
 

@@ -34,13 +34,13 @@ contains
 
 
 !--------------------------------------------------------------------------!
-function add_operators(A,B) result(C)                                      !
+function add_operators(A, B) result(C)                                     !
 !--------------------------------------------------------------------------!
     class(linear_operator), target, intent(in) :: A, B
     class(linear_operator), pointer :: C
 
     ! Do some error checking
-    if (A%nrow/=B%nrow .or. A%ncol/=B%ncol) then
+    if (A%nrow /= B%nrow .or. A%ncol /= B%ncol) then
         print *, 'Dimensions of operators to be summed are not consistent'
         call exit(1)
     endif
@@ -68,18 +68,18 @@ end function add_operators
 
 
 !--------------------------------------------------------------------------!
-function operator_sum_get_value(A,i,j) result(z)                           !
+function operator_sum_get_value(A, i, j) result(z)                         !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(operator_sum), intent(in) :: A
-    integer, intent(in) :: i,j
+    integer, intent(in) :: i, j
     real(dp) :: z
     ! local variables
     integer :: k
 
     z = 0.0_dp
 
-    do k=1,A%num_summands
+    do k = 1, A%num_summands
         z = z + A%summands(k)%ap%get_value(i, j)
     enddo
 
@@ -88,7 +88,7 @@ end function operator_sum_get_value
 
 
 !--------------------------------------------------------------------------!
-subroutine operator_sum_matvec_add(A,x,y)                                  !
+subroutine operator_sum_matvec_add(A, x, y)                                !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(operator_sum), intent(in) :: A
@@ -97,8 +97,8 @@ subroutine operator_sum_matvec_add(A,x,y)                                  !
     ! local variables
     integer :: k
 
-    do k=1,A%num_summands
-        call A%summands(k)%ap%matvec_add(x,y)
+    do k = 1, A%num_summands
+        call A%summands(k)%ap%matvec_add(x, y)
     enddo
 
 end subroutine operator_sum_matvec_add
@@ -106,7 +106,7 @@ end subroutine operator_sum_matvec_add
 
 
 !--------------------------------------------------------------------------!
-subroutine operator_sum_matvec_t_add(A,x,y)                                !
+subroutine operator_sum_matvec_t_add(A, x, y)                              !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(operator_sum), intent(in) :: A
@@ -115,8 +115,8 @@ subroutine operator_sum_matvec_t_add(A,x,y)                                !
     ! local variables
     integer :: k
 
-    do k=1,A%num_summands
-        call A%summands(k)%ap%matvec_t_add(x,y)
+    do k = 1, A%num_summands
+        call A%summands(k)%ap%matvec_t_add(x, y)
     enddo
 
 end subroutine operator_sum_matvec_t_add
