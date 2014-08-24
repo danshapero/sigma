@@ -25,7 +25,7 @@ implicit none
     real(dp), allocatable :: x(:), y1(:), y2(:)
 
     ! integer indices
-    integer :: i, j, k, d, nn, frmt, ordering
+    integer :: i, j, k, d, nn, frmt
 
     ! permutation
     integer, allocatable :: p(:)
@@ -43,8 +43,7 @@ implicit none
     logical :: verbose
 
     ! other junk
-    logical :: correct, trans
-    character(len=3) :: orientation
+    logical :: correct
 
 
 

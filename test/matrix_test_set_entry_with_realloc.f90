@@ -17,7 +17,7 @@ implicit none
     class(sparse_matrix_interface), pointer :: A
 
     ! integer indices
-    integer :: i, j, nn, frmt, ordering
+    integer :: i, j, nn, frmt
 
     ! command-line argument parsing
     character(len=16) :: arg

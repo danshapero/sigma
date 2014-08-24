@@ -17,7 +17,7 @@ implicit none
     real(dp), allocatable :: AD(:,:), BD(:,:), CD(:,:)
 
     ! indices
-    integer :: i, j, k, d, nn
+    integer :: i, j, nn
     integer :: frmt1, frmt2, frmt3
 
     ! error in computing sparse matrix product
