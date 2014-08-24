@@ -33,7 +33,7 @@ contains
 subroutine choose_graph_type_by_name(g, frmt)                              !
 !--------------------------------------------------------------------------!
 !     Take in a polymorphic graph pointer and allocate to a graph type     !
-! according to a string specifying the name of the desried storage format. !
+! according to a string specifying the name of the desired storage format. !
 !--------------------------------------------------------------------------!
     class(graph_interface), pointer, intent(inout) :: g
     character(len=*), intent(in) :: frmt
