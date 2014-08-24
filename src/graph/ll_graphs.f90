@@ -73,6 +73,8 @@ subroutine ll_graph_init(g, n, m)                                          !
     ! local variables
     integer :: k
 
+    call g%add_reference()
+
     g%n = n
     allocate(g%lists(n))
 
@@ -507,6 +509,7 @@ subroutine ll_destroy(g)                                                   !
     g%m = 0
     g%ne = 0
     g%max_d = 0
+    g%reference_count = 0
 
 end subroutine ll_destroy
 

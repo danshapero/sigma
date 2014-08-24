@@ -219,6 +219,7 @@ subroutine cs_matrix_set_graph(A, g)                                       !
     select type(g)
         class is(cs_graph)
             A%g => g
+            call A%g%add_reference()
         class default
             print *, 'Attempted to set CS matrix connectivity structure to'
             print *, 'point to a graph which is not a CS graph.'
@@ -428,9 +429,20 @@ subroutine cs_matrix_destroy(A)                                            !
     ! Decrement the reference counter for A%g
     call A%g%remove_reference()
 
-    ! Nullify A's pointer to its graph. Don't de-allocate it -- there might
-    ! still be other references to it someplace else.
-    nullify(A%g)
+    ! Check how many references A%g has left -- if it's 0, we need to 
+    ! destroy and deallocate it to avoid a memory leak
+    if (A%g%reference_count == 0) then
+        call A%g%destroy()
+        deallocate(A%g)
+
+    ! Otherwise, nullify the reference to the graph -- someone else is
+    ! responsible for destroying it
+    else
+        nullify(A%g)
+    endif
+
+    A%graph_set = .false.
+    A%dimensions_set = .false.
 
 end subroutine cs_matrix_destroy
 

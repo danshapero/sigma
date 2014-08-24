@@ -233,6 +233,7 @@ subroutine default_matrix_set_graph(A, g)                                  !
     call A%set_ordering()
 
     A%g => g
+    call A%g%add_reference()
 
     A%nnz = g%ne
     allocate(A%val(A%nnz))
@@ -543,15 +544,25 @@ subroutine default_matrix_destroy(A)                                       !
 !--------------------------------------------------------------------------!
     class(default_matrix), intent(inout) :: A
 
+    A%nnz = 0
+
     ! Deallocate the array of A's matrix entries
     deallocate(A%val)
 
     ! Decrement the reference counter for A%g
     call A%g%remove_reference()
 
-    ! Nullify A's pointer to its graph. Don't de-allocate it -- there might
-    ! still be other references to it someplace else.
-    nullify(A%g)
+    ! Check how many references A%g has left -- if it's 0, we need to 
+    ! destroy and deallocate it to avoid a memory leak
+    if (A%g%reference_count == 0) then
+        call A%g%destroy()
+        deallocate(A%g)
+
+    ! Otherwise, nullify the reference to the graph -- someone else is
+    ! responsible for destroying it
+    else
+        nullify(A%g)
+    endif
 
     A%graph_set = .false.
     A%dimensions_set = .false.

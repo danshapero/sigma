@@ -77,6 +77,8 @@ subroutine ellpack_graph_init(g, n, m)                                     !
     integer, intent(in) :: n
     integer, intent(in), optional :: m
 
+    call g%add_reference()
+
     g%n = n
 
     if (present(m)) then
@@ -107,6 +109,8 @@ subroutine ellpack_graph_copy(g, h, trans)                                 !
     integer :: n, num_batches, num_returned, edges(2, batch_size)
     type(graph_edge_cursor) :: cursor
     logical :: tr
+
+    call g%add_reference()
 
     nv = [h%n, h%m]
     ord = [1, 2]
@@ -550,6 +554,7 @@ subroutine ellpack_destroy(g)                                              !
     g%m = 0
     g%ne = 0
     g%max_d = 0
+    g%reference_count = 0
 
 end subroutine ellpack_destroy
 

@@ -77,6 +77,8 @@ subroutine cs_graph_init(g, n, m)                                          !
     integer, intent(in) :: n
     integer, intent(in), optional :: m
 
+    call g%add_reference()
+
     ! Set the number of (left-)nodes in the graph and allocate the node
     ! pointer array ptr
     g%n = n
@@ -113,6 +115,8 @@ subroutine cs_graph_copy(g, h, trans)                                      !
     integer :: i, j, k, l, ord(2), nv(2)
     integer :: n, num_batches, num_returned, edges(2,batch_size)
     type(graph_edge_cursor) :: cursor
+
+    call g%add_reference()
 
     nv = [h%n, h%m]
     ord = [1, 2]
@@ -564,6 +568,7 @@ subroutine cs_destroy(g)                                                   !
     g%m = 0
     g%ne = 0
     g%max_d = 0
+    g%reference_count = 0
 
 end subroutine cs_destroy
 
