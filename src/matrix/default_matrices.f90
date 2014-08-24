@@ -190,6 +190,7 @@ subroutine default_matrix_copy_graph_structure(A, g)                       !
     class(graph_interface), intent(in) :: g
     ! local variables
     integer :: nv(2)
+    logical :: trans
 
     call A%set_ordering()
 
@@ -209,7 +210,9 @@ subroutine default_matrix_copy_graph_structure(A, g)                       !
     ! work for the time being.
     !TODO: make it allocate A%g as a mold of g
     if (.not. associated(A%g)) allocate(ll_graph :: A%g)
-    call A%g%copy(g)
+
+    trans = A%ord(1) == 2
+    call A%g%copy(g, trans)
 
     A%nnz = g%ne
     allocate(A%val(A%nnz))
