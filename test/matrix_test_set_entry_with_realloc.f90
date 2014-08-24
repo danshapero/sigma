@@ -25,8 +25,6 @@ implicit none
 
     ! other junk
     real(dp) :: z
-    logical :: trans
-    character(len=3) :: orientation
 
 
 

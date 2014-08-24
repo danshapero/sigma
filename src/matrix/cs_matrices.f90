@@ -699,7 +699,7 @@ subroutine csr_matrix_add_value(A, i, j, z)                                !
     enddo
 
     if (.not. found) then
-        call set_matrix_value_with_reallocation(A%g, A%val, j, i, z)
+        call set_matrix_value_with_reallocation(A%g, A%val, i, j, z)
         A%nnz = A%nnz + 1
     endif
 
@@ -716,10 +716,21 @@ subroutine csc_matrix_set_value(A, i, j, z)                                !
     real(dp), intent(in) :: z
     ! local variables
     integer :: k
+    logical :: found
+
+    found = .false.
 
     do k = A%g%ptr(j), A%g%ptr(j + 1) - 1
-        if (A%g%node(k) == i) A%val(k) = z
+        if (A%g%node(k) == i) then
+            A%val(k) = z
+            found = .true.
+        endif
     enddo
+
+    if (.not. found) then
+        call set_matrix_value_with_reallocation(A%g, A%val, j, i, z)
+        A%nnz = A%nnz + 1
+    endif
 
 end subroutine csc_matrix_set_value
 
@@ -734,10 +745,21 @@ subroutine csc_matrix_add_value(A, i, j, z)                                !
     real(dp), intent(in) :: z
     ! local variables
     integer :: k
+    logical :: found
+
+    found = .false.
 
     do k = A%g%ptr(j), A%g%ptr(j + 1) - 1
-        if (A%g%node(k) == i) A%val(k) = A%val(k) + z
+        if (A%g%node(k) == i) then
+            A%val(k) = A%val(k) + z
+            found = .true.
+        endif
     enddo
+
+    if (.not. found) then
+        call set_matrix_value_with_reallocation(A%g, A%val, j, i, z)
+        A%nnz = A%nnz + 1
+    endif
 
 end subroutine csc_matrix_add_value
 
