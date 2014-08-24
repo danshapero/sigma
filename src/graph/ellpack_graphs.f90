@@ -545,7 +545,7 @@ subroutine ellpack_destroy(g)                                              !
 !--------------------------------------------------------------------------!
     class(ellpack_graph), intent(inout) :: g
 
-    deallocate(g%node)
+    deallocate(g%node, g%degrees)
     g%n = 0
     g%m = 0
     g%ne = 0
