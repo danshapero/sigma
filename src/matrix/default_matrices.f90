@@ -26,7 +26,7 @@ implicit none
 !--------------------------------------------------------------------------!
 type, abstract, extends(sparse_matrix_interface) :: default_matrix         !
 !--------------------------------------------------------------------------!
-    class(graph_interface), pointer :: g
+    class(graph_interface), pointer :: g => null()
     real(dp), allocatable :: val(:)
     integer :: ord(2)
 contains

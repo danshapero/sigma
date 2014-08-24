@@ -31,7 +31,7 @@ implicit none
 !--------------------------------------------------------------------------!
 type, abstract, extends(sparse_matrix_interface) :: cs_matrix              !
 !--------------------------------------------------------------------------!
-    class(cs_graph), pointer :: g
+    class(cs_graph), pointer :: g => null()
     real(dp), allocatable :: val(:)
 contains
     !--------------
@@ -510,10 +510,8 @@ end subroutine csc_matvec_add
 !--------------------------------------------------------------------------!
 subroutine csr_matrix_copy_graph_structure(A, g)                           !
 !--------------------------------------------------------------------------!
-    ! input/output variables
     class(csr_matrix), intent(inout) :: A
     class(graph_interface), intent(in) :: g
-    ! local variables
 
     if (A%nrow /= g%n .or. A%ncol /= g%m) then
         print *, 'Attempted to set CSR matrix connectivity structure to'

@@ -27,7 +27,7 @@ implicit none
 !--------------------------------------------------------------------------!
 type, extends(sparse_matrix_interface) :: ellpack_matrix                   !
 !--------------------------------------------------------------------------!
-    class(ellpack_graph), pointer :: g
+    class(ellpack_graph), pointer :: g => null()
     real(dp), allocatable :: val(:,:)
 contains
     !--------------
