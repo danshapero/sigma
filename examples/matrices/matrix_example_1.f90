@@ -78,6 +78,7 @@ implicit none
     ! Initialize a sparse matrix with 512 rows and columns, in row-major 
     ! ordering, with g representing its connectivity
     call choose_matrix_type(A, "compressed sparse row")
+    call A%init(nn, nn, g)
 
     allocate(neighbors(d))
 
