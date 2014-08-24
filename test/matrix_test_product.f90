@@ -10,7 +10,7 @@ use sigma
 implicit none
 
     ! graphs used as the matrix substrates
-    class(graph_interface), pointer :: gr, hr, g, h
+    type(ll_graph) :: g, h
 
     ! sparse and dense matrices
     class(sparse_matrix_interface), pointer :: A, B, C
@@ -18,8 +18,7 @@ implicit none
 
     ! indices
     integer :: i, j, k, d, nn
-    integer :: frmt1, frmt2, frtm3, ordering1, ordering2, ordering3
-    logical :: trans1, trans2, trans3
+    integer :: frmt1, frmt2, frmt3
 
     ! error in computing sparse matrix product
     real(dp) :: misfit
@@ -30,8 +29,6 @@ implicit none
 
     ! other junk
     real(dp) :: z
-    logical :: trans
-    character(len=3) :: orientation1, orientation2, orientation3
 
 
 
@@ -72,40 +69,24 @@ implicit none
     !----------------------------------------------------------------------!
     ! Make graphs on those matrices                                        !
     !----------------------------------------------------------------------!
-    allocate(ll_graph :: gr)
-    allocate(ll_graph :: hr)
-    call gr%init(nn, nn)
-    call hr%init(nn, nn)
+    call g%init(nn, nn)
+    call h%init(nn, nn)
 
     do j = 1, nn
         do i = 1, nn
-            if (BD(i, j) /= 0) call gr%add_edge(i, j)
-            if (CD(i, j) /= 0) call hr%add_edge(i, j)
+            if (BD(i, j) /= 0) call g%add_edge(i, j)
+            if (CD(i, j) /= 0) call h%add_edge(i, j)
         enddo
     enddo
-
-    call convert_graph_type(gr, "compressed sparse")
-    call convert_graph_type(hr, "compressed sparse")
 
 
 
     !----------------------------------------------------------------------!
     ! Test each matrix type                                                !
     !----------------------------------------------------------------------!
-    do frmt1 = 1, num_graph_types
-    do ordering1 = 1, 2
-        call choose_graph_type(g, frmt1)
-        call g%copy(gr, trans)
-
-        if (ordering1 == 1) then
-            orientation1 = "row"
-            trans1 = .false.
-        else
-            orientation1 = "col"
-            trans1 = .true.
-        endif
-
-        B => sparse_matrix(nn, nn, g, orientation1)
+    do frmt1 = 1, num_matrix_types
+        call choose_matrix_type(B, frmt1)
+        call B%init(nn, nn, g)
 
         do j = 1, nn
         do i = 1, nn
@@ -115,20 +96,9 @@ implicit none
         enddo
 
 
-        do frmt2 = 1, num_graph_types
-        do ordering2 = 1, 2
-            call choose_graph_type(h, frmt2)
-            call h%copy(hr, trans)
-
-            if (ordering2 == 1) then
-                orientation2 = "row"
-                trans2 = .false.
-            else
-                orientation2 = "col"
-                trans2 = .true.
-            endif
-
-            C => sparse_matrix(nn, nn, h, orientation2)
+        do frmt2 = 1, num_matrix_types
+            call choose_matrix_type(C, frmt2)
+            call C%init(nn, nn, h)
 
             do j = 1, nn
             do i = 1, nn
@@ -138,17 +108,10 @@ implicit none
             enddo
 
 
-            do ordering3 = 1, 2
-                if (ordering3 == 1) then
-                    orientation3 = "row"
-                    trans3 = .false.
-                else
-                    orientation3 = "col"
-                    trans3 = .true.
-                endif
+            do frmt3 = 1, num_matrix_types
+                call choose_matrix_type(A, frmt3)
+                call A%set_dimensions(nn, nn)
 
-                allocate(cs_matrix :: A)
-                call A%set_ordering(orientation3)
                 call sparse_matrix_product(A, B, C)
 
                 call A%to_dense_matrix(AD)
@@ -161,23 +124,24 @@ implicit none
                     call exit(1)
                 endif
 
-
                 call A%destroy()
                 deallocate(A)
 
-            enddo
+            enddo   ! End of loop over frmt3
 
             call C%destroy()
             deallocate(C)
 
-        enddo   ! End of loop over ordering2
         enddo   ! End of loop over frmt2
 
         call B%destroy()
         deallocate(B)
 
-    enddo   ! End of loop over ordering1
     enddo   ! End of loop over frmt1
+
+
+    call g%destroy()
+    call h%destroy()
 
 
 

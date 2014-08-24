@@ -15,7 +15,7 @@ use sigma
 implicit none
 
     ! graph used as the matrix substrate
-    class(graph_interface), pointer :: g, h
+    type(ll_graph) :: g
 
     ! sparse and dense matrices
     class(sparse_matrix_interface), pointer :: A
@@ -163,12 +163,11 @@ implicit none
     ! Make a graph on the reference matrix                                 !
     !----------------------------------------------------------------------!
 
-    allocate(ll_graph :: h)
-    call h%init(nn, nn)
+    call g%init(nn, nn)
 
     do j = 1, nn
         do i = 1, nn
-            if (B(i, j) /= 0) call h%add_edge(i, j)
+            if (B(i, j) /= 0) call g%add_edge(i, j)
         enddo
     enddo
 
@@ -179,24 +178,13 @@ implicit none
     !----------------------------------------------------------------------!
     ! Test each matrix type                                                !
     !----------------------------------------------------------------------!
-    do frmt = 1, num_graph_types
-    do ordering = 1, 2
-        orientation = "row"
-        trans = .false.
+    do frmt = 1, num_matrix_types
+        if (verbose) print *, 'Format #',frmt
 
-        if (ordering == 2) then
-            orientation = "col"
-            trans = .true.
-        endif
-
-        if (verbose) print *, 'Format #',frmt, '; order: ',orientation
-
-        ! Make a copy `g` of `h`, possibly with the edges reversed
-        call choose_graph_type(g, frmt)
-        call g%copy(h, trans)
-
-        ! Make a sparse matrix `A` on that graph
-        A => sparse_matrix(nn, nn, g, orientation)
+        !-----------------------------------------
+        ! Choose a type for `A` and initialize it
+        call choose_matrix_type(A, frmt)
+        call A%init(nn, nn, g)
 
 
         !--------
@@ -406,19 +394,17 @@ implicit none
 
         ! Destroy the matrix and graph so they're ready for the next test
         call A%destroy()
-        call g%destroy()
         deallocate(A)
-        deallocate(g)
-    enddo
     enddo
 
 
-    call h%destroy()
-    deallocate(h)
+    call g%destroy()
     deallocate(p)
     deallocate(x, y1, y2)
     deallocate(B, BP)
     deallocate(nodes, slice)
 
 
+
 end program matrix_test_basics
+

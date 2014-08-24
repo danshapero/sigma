@@ -10,7 +10,7 @@ implicit none
     class(graph_interface), pointer :: g
 
     ! sparse matrix
-    class(sparse_matrix_interface), pointer :: A
+    type(ellpack_matrix) :: A
 
     ! linear solver
     class(linear_solver), pointer :: solver
@@ -64,7 +64,11 @@ implicit none
     enddo
     call g%add_edge(nn, nn)
 
-    A => sparse_matrix(nn, nn, g, 'row')
+    call convert_graph_type(g, "ellpack")
+
+    call A%set_dimensions(nn, nn)
+    call A%set_graph(g)
+    call A%zero()
 
     do i = 1, nn - 1
         call A%set_value(i, i,     +2.0_dp)
@@ -123,6 +127,6 @@ implicit none
     call A%destroy()
     call solver%destroy()
 
-    deallocate(g, A, solver)
+    deallocate(g, solver)
 
 end program solver_test_diffusion_1d

@@ -15,7 +15,8 @@ implicit none
     class(graph_interface), pointer :: g, h
 
     ! sparse matrices
-    class(sparse_matrix_interface), pointer :: A, B
+    type(csr_matrix), target :: A
+    type(csc_matrix), target :: B
 
     ! linear operators
     class(linear_operator), pointer :: L
@@ -99,8 +100,8 @@ implicit none
     ! Make random matrices on those graphs                                 !
     !----------------------------------------------------------------------!
 
-    A => sparse_matrix(nn, nn, g, "row")
-    B => sparse_matrix(nn, nn, h, "col")
+    call A%init(nn, nn, g)
+    call B%init(nn, nn, h)
 
 
     cursor = g%make_cursor()
@@ -285,7 +286,6 @@ implicit none
 
     call A%destroy()
     call B%destroy()
-    deallocate(A, B)
     deallocate(L)
     
 

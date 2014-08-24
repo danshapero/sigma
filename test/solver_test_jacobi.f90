@@ -13,7 +13,7 @@ implicit none
     class(graph_interface), pointer :: g
 
     ! sparse matrix
-    class(sparse_matrix_interface), pointer :: A
+    type(csr_matrix) :: A
 
     ! linear solver
     class(linear_solver), pointer :: solver, pc
@@ -96,13 +96,16 @@ implicit none
         print *, '    Max vertex degree: ', d
     endif
 
+    call convert_graph_type(g, "compressed sparse")
+
 
 
     !----------------------------------------------------------------------!
     ! Make a random matrix `A` on the graph `g`                            !
     !----------------------------------------------------------------------!
 
-    A => sparse_matrix(nn, nn, g, 'row')
+    call A%set_dimensions(nn, nn)
+    call A%set_graph(g)
     call A%zero()
 
     do i = 1, nn
@@ -305,7 +308,7 @@ implicit none
     call A%destroy()
     call solver%destroy()
     call pc%destroy()
-    deallocate(g, A, solver, pc)
+    deallocate(g, solver, pc)
 
 
 end program solver_test_jacobi

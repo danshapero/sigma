@@ -11,7 +11,7 @@ use sigma
 implicit none
 
     ! graph used as the matrix substrate
-    class(graph_interface), pointer :: g, h
+    type(ll_graph) :: g
 
     ! sparse and dense matrices
     class(sparse_matrix_interface), pointer :: A
@@ -51,16 +51,14 @@ implicit none
     !----------------------------------------------------------------------!
 
     nn = 64
-
-    allocate(ll_graph :: h)
-    call h%init(nn, nn)
+    call g%init(nn, nn)
 
     do i = 1, nn
-        call h%add_edge(i, i)
+        call g%add_edge(i, i)
 
         j = mod(i, nn) + 1
-        call h%add_edge(i, j)
-        call h%add_edge(j, i)
+        call g%add_edge(i, j)
+        call g%add_edge(j, i)
     enddo
 
 
@@ -68,24 +66,12 @@ implicit none
     !----------------------------------------------------------------------!
     ! Test each matrix type                                                !
     !----------------------------------------------------------------------!
-    do frmt = 1, 4
-    do ordering = 1, 2
-        orientation = "row"
-        trans = .false.
+    do frmt = 1, num_matrix_types
+        if (verbose) print *, 'Format #', frmt
 
-        if (ordering == 2) then
-            orientation = "col"
-            trans = .true.
-        endif
-
-        if (verbose) print *, 'Format #',frmt,'; order: ',orientation
-
-        ! Make a copy `g` of `h`, possibly with edges reversed
-        call choose_graph_type(g, frmt)
-        call g%copy(h, trans)
-
-        ! Make a sparse matrix `A` on that graph
-        A => sparse_matrix(nn, nn, g, orientation)
+        ! Make a sparse matrix `A` on the reference graph `g`
+        call choose_matrix_type(A, frmt)
+        call A%init(nn, nn, g)
 
         ! Set the entries of `A`
         do i = 1, nn
@@ -119,11 +105,8 @@ implicit none
 
         call A%destroy()
         deallocate(A)
-        call g%destroy()
-        deallocate(g)
-    enddo
     enddo
 
-
+    call g%destroy()
 
 end program matrix_test_set_entry_with_realloc
