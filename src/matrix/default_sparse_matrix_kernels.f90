@@ -185,7 +185,7 @@ subroutine set_matrix_value_with_reallocation(g, val, i, j, z)             !
     integer :: k, l, m, indx
     integer :: n, num_batches, num_returned, edges(2, batch_size)
     type(graph_edge_cursor) :: cursor
-    class(graph_interface), pointer :: h
+    class(graph_interface), allocatable :: h
 
     allocate(h, mold = g)
     call h%copy(g)
@@ -211,6 +211,7 @@ subroutine set_matrix_value_with_reallocation(g, val, i, j, z)             !
         enddo
     enddo
 
+    call h%destroy()
     deallocate(h)
 
     call move_alloc(from = val_temp, to = val)
