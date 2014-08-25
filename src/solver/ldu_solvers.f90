@@ -382,7 +382,9 @@ subroutine sparse_static_pattern_ldu_factorization(A, L, D, U)             !
         enddo
 
     enddo   ! End of loop over all rows `i`
-    
+
+
+    deallocate(lneighbors, uneighbors)
 
 end subroutine sparse_static_pattern_ldu_factorization
 
@@ -406,7 +408,7 @@ subroutine incomplete_ldu_sparsity_pattern(A, L, U, level)                 !
     integer, intent(in) :: level
     ! local variables
     integer :: i, j, k, nn
-    class(graph_interface), pointer :: gl, gu
+    type(ll_graph) :: gl, gu
     ! graph edge iterators
     type(graph_edge_cursor) :: cursor
     integer :: n, num_batches, edges(2, batch_size), num_returned
@@ -418,8 +420,6 @@ subroutine incomplete_ldu_sparsity_pattern(A, L, U, level)                 !
 
     nn = A%nrow
 
-    allocate(ll_graph :: gl)
-    allocate(ll_graph :: gu)
     call gl%init(nn)
     call gu%init(nn)
 
@@ -437,9 +437,6 @@ subroutine incomplete_ldu_sparsity_pattern(A, L, U, level)                 !
             if (j > i) call gu%add_edge(i, j)
         enddo
     enddo
-
-    call convert_graph_type(gl, "compressed sparse")
-    call convert_graph_type(gu, "compressed sparse")
 
     call L%init(nn, nn, gl)
     call U%init(nn, nn, gu)
