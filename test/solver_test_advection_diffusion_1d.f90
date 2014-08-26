@@ -70,7 +70,7 @@ implicit none
 
     call convert_graph_type(g, "ellpack")
 
-    call A%set_dimensions(nn, nn)
+    call A%init(nn, nn)
     call A%set_graph(g)
     call A%zero()
 

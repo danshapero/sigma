@@ -43,22 +43,26 @@ contains
     !--------------
     ! Constructors
     !--------------
-    procedure :: init => sparse_matrix_init
-    ! Wraps all of the various initialization procedures in one method
+    generic :: init => set_dimensions, setup
+    ! Bind some of the initialization routines that follow to the same name
 
     procedure :: set_dimensions => set_sparse_matrix_dimensions
     ! Set the row and column dimension of a sparse matrix
 
+    procedure :: setup => sparse_matrix_setup
+    ! Set the row and column dimension of a sparse matrix and copy the
+    ! connectivity structure from another graph
+
     procedure(sparse_mat_copy_graph_structure_ifc), deferred :: &
                                                       & copy_graph_structure
-    ! Given an input graph, initialize the matrix's graph structure to be a
-    ! copy of the input graph. The input graph need not be of the same format
-    ! as the matrix's graph.
+    ! Initialize the matrix's connectivity structure as a copy of an
+    ! input graph. The input graph need not be of the same format as the 
+    ! matrix's graph
 
     procedure(sparse_mat_set_graph_ifc), deferred :: set_graph
     ! Given an input graph with the `target` attribute, check if that graph
-    ! of a type compatible with the invoking matrix. If so, make the matrix
-    ! point to that graph; if not, throw an error
+    ! is of a type compatible with the invoking matrix. If so, make the
+    ! matrix point to that graph; if not, throw an error.
 
 
     !-----------
@@ -239,7 +243,7 @@ contains
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine sparse_matrix_init(A, nrow, ncol, g)                            !
+subroutine sparse_matrix_setup(A, nrow, ncol, g)                           !
 !--------------------------------------------------------------------------!
     class(sparse_matrix_interface), intent(inout) :: A
     integer, intent(in) :: nrow, ncol
@@ -248,7 +252,7 @@ subroutine sparse_matrix_init(A, nrow, ncol, g)                            !
     call A%set_dimensions(nrow, ncol)
     call A%copy_graph_structure(g)
 
-end subroutine sparse_matrix_init
+end subroutine sparse_matrix_setup
 
 
 

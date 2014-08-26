@@ -103,7 +103,7 @@ implicit none
     ! Make a random matrix `A` on the graph `g`                            !
     !----------------------------------------------------------------------!
 
-    call A%set_dimensions(nn, nn)
+    call A%init(nn, nn)
     call A%set_graph(g)
     call A%zero()
 

@@ -74,7 +74,7 @@ implicit none
     !----------------------------------------------------------------------!
     ! Make A the graph Laplacian of g + the identity matrix                !
     !----------------------------------------------------------------------!
-    call A%set_dimensions(nn, nn)
+    call A%init(nn, nn)
     call A%set_graph(g)
     call A%zero()
 
