@@ -16,6 +16,7 @@ contains
     procedure :: get_value => operator_sum_get_value
     procedure :: matvec_add => operator_sum_matvec_add
     procedure :: matvec_t_add => operator_sum_matvec_t_add
+    procedure :: destroy => operator_sum_destroy
 end type operator_sum
 
 
@@ -61,6 +62,8 @@ function add_operators(A, B) result(C)                                     !
             ! Make the operator_sum point to its two summands
             C%summands(1)%ap => A
             C%summands(2)%ap => B
+            call C%summands(1)%ap%add_reference()
+            call C%summands(2)%ap%add_reference()
     end select
 
 end function add_operators
@@ -123,6 +126,37 @@ end subroutine operator_sum_matvec_t_add
 
 
 
+!--------------------------------------------------------------------------!
+subroutine operator_sum_destroy(A)                                         !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(operator_sum), intent(inout) :: A
+    ! local variables
+    integer :: k
+
+    ! Decrement the reference count for each summand, and destroy it if the
+    ! reference count is 0
+    do k = 1, A%num_summands
+        call A%summands(k)%ap%remove_reference()
+
+        if (A%summands(k)%ap%reference_count <= 0) then
+            call A%summands(k)%ap%destroy()
+            deallocate(A%summands(k)%ap)
+        endif
+    enddo
+
+    do k = 1, A%num_summands
+        nullify(A%summands(k)%ap)
+    enddo
+
+    deallocate(A%summands)
+
+    A%reference_count = 0
+    A%num_summands = 0
+
+end subroutine operator_sum_destroy
+
 
 
 end module linear_operator_sums
+

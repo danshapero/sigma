@@ -16,6 +16,7 @@ type, extends(linear_operator) :: operator_product                         !
 contains
     procedure :: matvec_add => operator_product_matvec_add
     procedure :: matvec_t_add => operator_product_matvec_t_add
+    procedure :: destroy => operator_product_destroy
 end type operator_product
 
 
@@ -34,7 +35,7 @@ contains
 
 
 !--------------------------------------------------------------------------!
-function multiply_operators(A,B) result(C)                                 !
+function multiply_operators(A, B) result(C)                                !
 !--------------------------------------------------------------------------!
     class(linear_operator), target, intent(in) :: A, B
     class(linear_operator), pointer :: C
@@ -65,6 +66,8 @@ function multiply_operators(A,B) result(C)                                 !
             ! Make the operator_product point to its two factors
             C%products(1)%ap => A
             C%products(2)%ap => B
+            call C%products(1)%ap%add_reference()
+            call C%products(2)%ap%add_reference()
     end select
 
 end function multiply_operators
@@ -146,6 +149,41 @@ subroutine operator_product_matvec_t_add(A, x, y)                          !
     z2(:) = 0.0_dp
 
 end subroutine operator_product_matvec_t_add
+
+
+
+!--------------------------------------------------------------------------!
+subroutine operator_product_destroy(A)                                     !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(operator_product), intent(inout) :: A
+    ! local variables
+    integer :: k
+
+    ! Decrement the reference count for each factor, and destroy it if the
+    ! reference count is 0
+    do k = 1, A%num_products
+        call A%products(k)%ap%remove_reference()
+
+        if (A%products(k)%ap%reference_count <= 0) then
+            call A%products(k)%ap%destroy()
+            deallocate(A%products(k)%ap)
+        endif
+    enddo
+
+    do k = 1, A%num_products
+        nullify(A%products(k)%ap)
+    enddo
+
+    deallocate(A%products)
+
+    deallocate(A%z1, A%z2)
+    A%temp_vec_size = 0
+
+    A%reference_count = 0
+    A%num_products = 0
+
+end subroutine operator_product_destroy
 
 
 

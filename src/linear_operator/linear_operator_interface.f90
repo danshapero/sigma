@@ -26,6 +26,7 @@ type, abstract :: linear_operator                                          !
 ! reflects the fact that linear operators form a C*-algebra.               !
 !--------------------------------------------------------------------------!
     integer :: nrow, ncol
+    integer :: reference_count = 0
     class(linear_solver), pointer :: solver => null(), pc => null()
 contains
     procedure :: get_value => linear_operator_get_value
@@ -36,6 +37,9 @@ contains
     procedure :: solve => linear_operator_solve
     procedure :: set_solver
     procedure :: set_preconditioner
+    procedure :: add_reference => linear_operator_add_reference
+    procedure :: remove_reference => linear_operator_remove_reference
+    procedure(linear_operator_destroy_ifc), deferred :: destroy
 end type linear_operator
 
 
@@ -79,6 +83,11 @@ abstract interface                                                         !
         real(dp), intent(in) :: x(:)
         real(dp), intent(inout) :: y(:)
     end subroutine opvec_add_ifc
+
+    subroutine linear_operator_destroy_ifc(A)
+        import :: linear_operator
+        class(linear_operator), intent(inout) :: A
+    end subroutine linear_operator_destroy_ifc
 end interface
 
 
@@ -261,6 +270,28 @@ subroutine set_preconditioner(A, pc)                                       !
     call pc%setup(A)
 
 end subroutine set_preconditioner
+
+
+
+!--------------------------------------------------------------------------!
+subroutine linear_operator_add_reference(A)                                !
+!--------------------------------------------------------------------------!
+    class(linear_operator), intent(inout) :: A
+
+    A%reference_count = A%reference_count + 1
+
+end subroutine linear_operator_add_reference
+
+
+
+!--------------------------------------------------------------------------!
+subroutine linear_operator_remove_reference(A)                             !
+!--------------------------------------------------------------------------!
+    class(linear_operator), intent(inout) :: A
+
+    A%reference_count = A%reference_count - 1
+
+end subroutine linear_operator_remove_reference
 
 
 

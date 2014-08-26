@@ -569,6 +569,8 @@ subroutine ellpack_matrix_destroy(A)                                       !
     A%graph_set = .false.
     A%dimensions_set = .false.
 
+    A%reference_count = 0
+
 end subroutine ellpack_matrix_destroy
 
 

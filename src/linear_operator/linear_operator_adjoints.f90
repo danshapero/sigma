@@ -15,6 +15,7 @@ contains
     procedure :: get_value => operator_adjoint_get_value
     procedure :: matvec_add => operator_adjoint_matvec_add
     procedure :: matvec_t_add => operator_adjoint_matvec_t_add
+    procedure :: destroy => operator_adjoint_destroy
 end type operator_adjoint
 
 
@@ -38,6 +39,7 @@ function adjoint(A) result(B)                                              !
     select type(B)
         type is(operator_adjoint)
             B%op => A
+            call B%op%add_reference()
     end select
 
 end function adjoint
@@ -81,6 +83,25 @@ subroutine operator_adjoint_matvec_t_add(A,x,y)                            !
 
 end subroutine operator_adjoint_matvec_t_add
 
+
+
+!--------------------------------------------------------------------------!
+subroutine operator_adjoint_destroy(A)                                     !
+!--------------------------------------------------------------------------!
+    class(operator_adjoint), intent(inout) :: A
+
+    call A%op%remove_reference()
+
+    if (A%op%reference_count <= 0) then
+        call A%op%destroy()
+        deallocate(A%op)
+    endif
+
+    nullify(A%op)
+
+    A%reference_count = 0
+
+end subroutine operator_adjoint_destroy
 
 
 

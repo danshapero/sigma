@@ -91,20 +91,20 @@ contains
     ! Apply a permutation to the graph's right-vertices.
     ! Optionally return compact array describing edge permutation.
 
-    procedure :: add_reference
+
+    !------------------------------------
+    ! Destructors and reference counting
+    !------------------------------------
+    procedure :: add_reference => graph_add_reference
     ! Whenever another object, such as a matrix, points to a graph, we
     ! need to increment the graph's reference counter.
     !TODO If the reference
     ! counter goes above 2, the graph needs to be made immutable.
 
-    procedure :: remove_reference
+    procedure :: remove_reference => graph_remove_reference
     ! If another object that was pointing to a graph is destroyed, the
     ! graph's reference counter decreases.
 
-
-    !-------------
-    ! Destructors
-    !-------------
     procedure(destroy_graph_ifc), deferred :: destroy
     ! Set all graph attributes to 0 and deallocate any internal data.
 
@@ -268,25 +268,25 @@ end function get_neighbors_is_fast
 
 
 !--------------------------------------------------------------------------!
-subroutine add_reference(g)                                                !
+subroutine graph_add_reference(g)                                          !
 !--------------------------------------------------------------------------!
     class(graph_interface), intent(inout) :: g
 
     g%reference_count = g%reference_count + 1
     !TODO reimplement: if (g%reference_count > 1) g%mutable = .false.
 
-end subroutine add_reference
+end subroutine graph_add_reference
 
 
 
 !--------------------------------------------------------------------------!
-subroutine remove_reference(g)                                             !
+subroutine graph_remove_reference(g)                                       !
 !--------------------------------------------------------------------------!
     class(graph_interface), intent(inout) :: g
 
     g%reference_count = g%reference_count - 1
 
-end subroutine remove_reference
+end subroutine graph_remove_reference
 
 
 

@@ -12,7 +12,7 @@ use sigma
 implicit none
 
     ! graphs
-    class(graph_interface), pointer :: g, h
+    type(ll_graph) :: g, h
 
     ! sparse matrices
     type(csr_matrix), target :: A
@@ -70,10 +70,6 @@ implicit none
     !----------------------------------------------------------------------!
     ! Make random graphs                                                   !
     !----------------------------------------------------------------------!
-
-    allocate(ll_graph :: g)
-    allocate(ll_graph :: h)
-
     call g%init(nn)
     call h%init(nn)
 
@@ -192,7 +188,8 @@ implicit none
         call exit(1)
     endif
 
-    nullify(L)
+    call L%destroy()
+    deallocate(L)
 
 
 
@@ -234,7 +231,8 @@ implicit none
         call exit(1)
     endif
 
-    nullify(L)
+    call L%destroy()
+    deallocate(L)
 
 
 
@@ -258,7 +256,8 @@ implicit none
         call exit(1)
     endif
 
-    nullify(L)
+    call L%destroy()
+    deallocate(L)
 
 
 
@@ -284,9 +283,14 @@ implicit none
     endif
 
 
+    call L%destroy()
+    deallocate(L)
+
+    call g%destroy()
+    call h%destroy()
     call A%destroy()
     call B%destroy()
-    deallocate(L)
+    deallocate(w, x, y, z)
     
 
 end program linear_operator_test_algebra
