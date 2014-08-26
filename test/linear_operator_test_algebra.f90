@@ -19,7 +19,7 @@ implicit none
     type(csc_matrix), target :: B
 
     ! linear operators
-    class(linear_operator), pointer :: L
+    class(linear_operator), pointer :: L => null()
 
     ! vectors
     real(dp), dimension(:), allocatable :: w, x, y, z
@@ -188,9 +188,6 @@ implicit none
         call exit(1)
     endif
 
-    call L%destroy()
-    deallocate(L)
-
 
 
     !----------------------------------------------------------------------!
@@ -231,9 +228,6 @@ implicit none
         call exit(1)
     endif
 
-    call L%destroy()
-    deallocate(L)
-
 
 
     !----------------------------------------------------------------------!
@@ -255,9 +249,6 @@ implicit none
         print *, 'Terminating.'
         call exit(1)
     endif
-
-    call L%destroy()
-    deallocate(L)
 
 
 
