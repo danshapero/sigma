@@ -150,6 +150,7 @@ subroutine assign_operators(A, B)                                          !
     class(linear_operator), target, intent(in) :: B
 
     A => B
+    call A%add_reference()
 
 end subroutine assign_operators
 
