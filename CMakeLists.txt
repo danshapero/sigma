@@ -5,7 +5,12 @@ enable_language(Fortran)
 enable_language(CXX)
 enable_testing()
 
-set(CMAKE_Fortran_FLAGS_DEBUG "-g -Wall -fbounds-check")
+if ("${CMAKE_Fortran_COMPILER_ID}" MATCHES "GNU")
+    set(CMAKE_Fortran_FLAGS_DEBUG "-g -Wall -fbounds-check")
+elseif("${CMAKE_Fortran_COMPILER_ID}" MATCHES "Intel")
+    set (CMAKE_Fortran_FLAGS_DEBUG "-g -Wall -check -fpe0")
+endif()
+
 set(CMAKE_Fortran_MODULE_DIRECTORY ${sigma_BINARY_DIR}/include)
 set(LIBRARY_OUTPUT_PATH ${sigma_BINARY_DIR}/lib)
 
