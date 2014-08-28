@@ -155,8 +155,8 @@ contains
 subroutine random_matrix(A, m, n)                                          !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    real(dp), intent(inout) :: A(m, n)
     integer, intent(in) :: m, n
+    real(dp), intent(inout) :: A(m, n)
     ! local variables
     integer :: i, j, k
     real(dp) :: p, z, w

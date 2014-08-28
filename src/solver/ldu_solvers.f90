@@ -298,7 +298,7 @@ subroutine sparse_static_pattern_ldu_factorization(A, L, D, U)             !
     real(dp) :: Lik, Uki, Uik, Ukj
     ! graph edge iterators
     type(graph_edge_cursor) :: cursor
-    integer :: num_batches, num_returned, edges(2, batch_size), ord(2)
+    integer :: num_batches, num_returned, edges(2, batch_size)
     real(dp) :: entries(batch_size)
 
     nn = A%nrow

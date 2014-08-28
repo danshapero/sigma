@@ -188,9 +188,9 @@ abstract interface                                                         !
                                                 & num_edges, num_returned)
         import :: sparse_matrix_interface, graph_edge_cursor
         class(sparse_matrix_interface), intent(in) :: A
+        integer, intent(in) :: num_edges
         integer, intent(out) :: edges(2, num_edges)
         type(graph_edge_cursor), intent(inout) :: cursor
-        integer, intent(in) :: num_edges
         integer, intent(out) :: num_returned
     end subroutine sparse_mat_get_edges_ifc
 
@@ -198,10 +198,10 @@ abstract interface                                                         !
                                                 & num_edges, num_returned)
         import :: sparse_matrix_interface, dp, graph_edge_cursor
         class(sparse_matrix_interface), intent(in) :: A
+        integer, intent(in) :: num_edges
         integer, intent(out) :: edges(2, num_edges)
         real(dp), intent(out) :: entries(num_edges)
         type(graph_edge_cursor), intent(inout) :: cursor
-        integer, intent(in) :: num_edges
         integer, intent(out) :: num_returned
     end subroutine sparse_mat_get_entries_ifc
 

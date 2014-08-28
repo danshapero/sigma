@@ -194,9 +194,9 @@ abstract interface                                                         !
     subroutine get_edges_ifc(g, edges, cursor, num_edges, num_returned)
         import :: graph_interface, graph_edge_cursor
         class(graph_interface), intent(in) :: g
+        integer, intent(in) :: num_edges
         integer, intent(out) :: edges(2, num_edges)
         type(graph_edge_cursor), intent(inout) :: cursor
-        integer, intent(in) :: num_edges
         integer, intent(out) :: num_returned
     end subroutine get_edges_ifc
 
@@ -291,7 +291,7 @@ end subroutine graph_remove_reference
 
 
 !--------------------------------------------------------------------------!
-subroutine to_dense_graph(g,A,trans)                                       !
+subroutine to_dense_graph(g, A, trans)                                     !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(graph_interface), intent(in) :: g
@@ -299,7 +299,7 @@ subroutine to_dense_graph(g,A,trans)                                       !
     logical, intent(in), optional :: trans
     ! local variables
     integer :: i, j, k, ord(2)
-    integer :: n, num_batches, num_returned, edges(2,batch_size)
+    integer :: n, num_batches, num_returned, edges(2, batch_size)
     type(graph_edge_cursor) :: cursor
 
     ord = [1,2]
@@ -330,7 +330,7 @@ end subroutine to_dense_graph
 
 
 !--------------------------------------------------------------------------!
-subroutine write_graph_to_file(g,filename)                                 !
+subroutine write_graph_to_file(g, filename)                                !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(graph_interface), intent(in) :: g

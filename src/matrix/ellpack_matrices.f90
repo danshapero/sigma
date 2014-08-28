@@ -307,9 +307,9 @@ subroutine ellpack_matrix_get_edges(A, edges, cursor, &                    !
                                                 & num_edges, num_returned) !
 !--------------------------------------------------------------------------!
     class(ellpack_matrix), intent(in) :: A
+    integer, intent(in) :: num_edges
     integer, intent(out) :: edges(2, num_edges)
     type(graph_edge_cursor), intent(inout) :: cursor
-    integer, intent(in) :: num_edges
     integer, intent(out) :: num_returned
 
     call A%g%get_edges(edges, cursor, num_edges, num_returned)
@@ -324,10 +324,10 @@ subroutine ellpack_matrix_get_entries(A, edges, entries, cursor, &         !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(ellpack_matrix), intent(in) :: A
+    integer, intent(in) :: num_edges
     integer, intent(out) :: edges(2, num_edges)
     real(dp), intent(out) :: entries(num_edges)
     type(graph_edge_cursor), intent(inout) :: cursor
-    integer, intent(in) :: num_edges
     integer, intent(out) :: num_returned
     ! local variables
     integer :: i, i1, i2, num_added, num_from_this_row, indx

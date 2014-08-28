@@ -355,9 +355,9 @@ subroutine default_matrix_get_edges(A, edges, cursor, &                    !
                                                 & num_edges, num_returned) !
 !--------------------------------------------------------------------------!
     class(default_matrix), intent(in) :: A
+    integer, intent(in) :: num_edges
     integer, intent(out) :: edges(2, num_edges)
     type(graph_edge_cursor), intent(inout) :: cursor
-    integer, intent(in) :: num_edges
     integer, intent(out) :: num_returned
 
     ! Get a batch of edges from the connectivity graph of A
@@ -378,10 +378,10 @@ subroutine default_matrix_get_entries(A, edges, entries, cursor, &         !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(default_matrix), intent(in) :: A
+    integer, intent(in) :: num_edges
     integer, intent(out) :: edges(2, num_edges)
     real(dp), intent(out) :: entries(num_edges)
     type(graph_edge_cursor), intent(inout) :: cursor
-    integer, intent(in) :: num_edges
     integer, intent(out) :: num_returned
     ! local variables
     integer :: indx

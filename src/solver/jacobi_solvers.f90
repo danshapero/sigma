@@ -34,7 +34,7 @@ end function jacobi
 
 
 !--------------------------------------------------------------------------!
-subroutine jacobi_setup(solver,A)                                          !
+subroutine jacobi_setup(solver, A)                                         !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(jacobi_solver), intent(inout) :: solver
@@ -44,20 +44,20 @@ subroutine jacobi_setup(solver,A)                                          !
 
     solver%nn = A%nrow
 
-    if (A%ncol/=A%nrow) then
+    if (A%ncol /= A%nrow) then
         print *, 'Cannot make a Jacobi solver for a non-square matrix'
         print *, 'Terminating.'
         call exit(1)
     endif
 
-    if (.not.solver%initialized) then
+    if (.not. solver%initialized) then
         allocate(solver%idiag(solver%nn))
 
         solver%initialized = .true.
     endif
 
-    do i=1,A%nrow
-        solver%idiag(i) = 1.0_dp/A%get_value(i,i)
+    do i = 1, A%nrow
+        solver%idiag(i) = 1.0_dp / A%get_value(i, i)
     enddo
 
 end subroutine jacobi_setup
@@ -65,7 +65,7 @@ end subroutine jacobi_setup
 
 
 !--------------------------------------------------------------------------!
-subroutine jacobi_solve(solver,A,x,b)                                      !
+subroutine jacobi_solve(solver, A, x, b)                                   !
 !--------------------------------------------------------------------------!
     class(jacobi_solver), intent(inout) :: solver
     class(linear_operator), intent(in)  :: A
@@ -74,7 +74,7 @@ subroutine jacobi_solve(solver,A,x,b)                                      !
 
     associate(idiag => solver%idiag)
 
-    x = idiag*b
+    x = idiag * b
 
     end associate
 

@@ -60,7 +60,8 @@ implicit none
     enddo
 
     write(*,10) nn, d
-10  format('Generated a regular ring graph with 'i5,' vertices, degree ',i3,'.')
+10  format('Generated a regular ring graph with ',i5, &
+                                            & ' vertices, degree ',i3,'.')
 
 
 

@@ -327,9 +327,9 @@ subroutine cs_get_edges(g, edges, cursor, num_edges, num_returned)         !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_graph), intent(in) :: g
-    integer, intent(out) :: edges(2,num_edges)
-    type(graph_edge_cursor), intent(inout) :: cursor
     integer, intent(in) :: num_edges
+    integer, intent(out) :: edges(2, num_edges)
+    type(graph_edge_cursor), intent(inout) :: cursor
     integer, intent(out) :: num_returned
     ! local variables
     integer :: i, k

@@ -320,9 +320,9 @@ end function coo_make_cursor
 subroutine coo_get_edges(g, edges, cursor, num_edges, num_returned)        !
 !--------------------------------------------------------------------------!
     class(coo_graph), intent(in) :: g
+    integer, intent(in) :: num_edges
     integer, intent(out) :: edges(2, num_edges)
     type(graph_edge_cursor), intent(inout) :: cursor
-    integer, intent(in) :: num_edges
     integer, intent(out) :: num_returned
 
     associate(current => cursor%current)

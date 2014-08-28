@@ -311,9 +311,9 @@ end subroutine sparse_matrix_product_graph
 
 
 
-!--------------------------------------------------------------
-subroutine sparse_matrix_product_fill_entries(A, B, C)
-!-----------------------------------------------------------------
+!--------------------------------------------------------------------------!
+subroutine sparse_matrix_product_fill_entries(A, B, C)                     !
+!--------------------------------------------------------------------------!
     ! input/output variables
     class(sparse_matrix_interface), intent(inout) :: A
     class(sparse_matrix_interface), intent(in) :: B, C
@@ -352,7 +352,8 @@ subroutine sparse_matrix_product_fill_entries(A, B, C)
             k = edges(2, l)
             Bik = vals(l)
 
-            ! Find all edges (k, j) in `C` and add B(i, k) * C(k, j) to A(i, j)
+            ! Find all edges (k, j) in `C` and add B(i, k) * C(k, j) 
+            ! to A(i, j)
             call C%get_row(nodes, slice, k)
             d = C%get_row_degree(k)
             do m = 1, d

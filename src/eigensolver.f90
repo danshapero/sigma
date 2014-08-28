@@ -31,10 +31,10 @@ subroutine lanczos(A,T,Q,n)                                                !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(sparse_matrix_interface), intent(in) :: A
-    real(dp), intent(out) :: T(3,n), Q(A%nrow,n)
     integer, intent(in) :: n
+    real(dp), intent(out) :: T(3, n), Q(A%nrow, n)
     ! local variables
-    integer :: i,k
+    integer :: i, k
     real(dp) :: w(A%nrow), alpha, beta
 
     T = 0.0_dp
@@ -47,15 +47,15 @@ subroutine lanczos(A,T,Q,n)                                                !
 
     ! Make a random unit vector
     call random_number(Q(:,1))
-    Q(:,1) = 2*Q(:,1)-1
-    Q(:,1) = Q(:,1)/dsqrt(sum(Q(:,1)*Q(:,1)))
+    Q(:,1) = 2 * Q(:,1) - 1
+    Q(:,1) = Q(:,1) / dsqrt(sum(Q(:,1) * Q(:,1)))
 
     ! Fill out the entries in T, Q
-    call A%matvec(Q(:,1),w)
-    alpha = sum(Q(:,1)*w)
-    w = w-alpha*Q(:,1)
-    beta = dsqrt(sum(w*w))
-    Q(:,2) = w/beta
+    call A%matvec(Q(:,1), w)
+    alpha = sum(Q(:,1) * w)
+    w = w - alpha*Q(:,1)
+    beta = dsqrt(sum(w * w))
+    Q(:,2) = w / beta
     T(2,1) = alpha
     T(3,1) = beta
     T(1,1) = beta
@@ -64,15 +64,15 @@ subroutine lanczos(A,T,Q,n)                                                !
     !-----------------------------------------
     ! Subsequent steps of the Lanczos process
     do i=2,n-1
-        call A%matvec(Q(:,i),w)
-        alpha = sum(Q(:,i)*w)
-        w = w-alpha*Q(:,i)-beta*Q(:,i-1)
-        do k=1,i-2
-            w = w-sum(Q(:,k)*w)*Q(:,k)
+        call A%matvec(Q(:,i), w)
+        alpha = sum(Q(:,i) * w)
+        w = w - alpha * Q(:,i) - beta * Q(:,i - 1)
+        do k = 1, i - 2
+            w = w - sum(Q(:,k) * w) * Q(:,k)
         enddo
 
-        beta = dsqrt(sum(w*w))
-        Q(:,i+1) = w/beta
+        beta = dsqrt(sum(w * w))
+        Q(:,i+1) = w / beta
         T(2,i) = alpha
         T(3,i) = beta
         T(1,i) = beta
@@ -80,35 +80,35 @@ subroutine lanczos(A,T,Q,n)                                                !
 
     !---------------------------------------
     ! Last iteration of the Lanczos process
-    call A%matvec(Q(:,n),w)
-    T(2,n) = sum(Q(:,n)*w)
+    call A%matvec(Q(:,n) , w)
+    T(2, n) = sum(Q(:,n) * w)
 
 end subroutine lanczos
 
 
 
 !--------------------------------------------------------------------------!
-subroutine eigensolve(A,lambda,V,n)                                        !
+subroutine eigensolve(A, lambda, V, n)                                     !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(sparse_matrix_interface), intent(in) :: A
-    real(dp), intent(out) :: lambda(n), V(A%nrow,n)
     integer, intent(in) :: n
+    real(dp), intent(out) :: lambda(n), V(A%nrow, n)
     ! local variables
-    integer :: i,info
-    real(dp) :: T(3,n), Q(n,n), work(2*n-2)
+    integer :: i, info
+    real(dp) :: T(3,n), Q(n,n), work(2 * n - 2)
 
-    call lanczos(A,T,V,n)
+    call lanczos(A, T, V, n)
 
-    call dstev('V',n,T(2,1:n),T(3,1:n-1),Q,n,work,info)
+    call dstev('V', n, T(2, 1:n), T(3, 1:n-1), Q, n, work, info)
 
-    V = matmul(V,Q)
+    V = matmul(V, Q)
 
-    do i=1,n
-        V(:,i) = V(1,i)/dabs(V(1,i))*V(:,i)
+    do i = 1, n
+        V(:,i) = V(1,i) / dabs(V(1, i)) * V(:,i)
     enddo
 
-    lambda = T(2,1:n)
+    lambda = T(2, 1:n)
 
 end subroutine eigensolve
 

@@ -318,10 +318,10 @@ subroutine cs_matrix_get_entries(A, edges, entries, cursor, &              !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_matrix), intent(in) :: A
+    integer, intent(in) :: num_edges
     integer, intent(out) :: edges(2, num_edges)
     real(dp), intent(out) :: entries(num_edges)
     type(graph_edge_cursor), intent(inout) :: cursor
-    integer, intent(in) :: num_edges
     integer, intent(out) :: num_returned
     ! local variables
     integer :: indx
@@ -629,9 +629,9 @@ end function csc_matrix_get_value
 subroutine csr_matrix_get_edges(A, edges, cursor, num_edges, num_returned) !
 !--------------------------------------------------------------------------!
     class(csr_matrix), intent(in) :: A
+    integer, intent(in) :: num_edges
     integer, intent(out) :: edges(2, num_edges)
     type(graph_edge_cursor), intent(inout) :: cursor
-    integer, intent(in) :: num_edges
     integer, intent(out) :: num_returned
 
     call A%g%get_edges(edges, cursor, num_edges, num_returned)
@@ -644,9 +644,9 @@ end subroutine csr_matrix_get_edges
 subroutine csc_matrix_get_edges(A, edges, cursor, num_edges, num_returned) !
 !--------------------------------------------------------------------------!
     class(csc_matrix), intent(in) :: A
+    integer, intent(in) :: num_edges
     integer, intent(out) :: edges(2, num_edges)
     type(graph_edge_cursor), intent(inout) :: cursor
-    integer, intent(in) :: num_edges
     integer, intent(out) :: num_returned
 
     call A%g%get_edges(edges, cursor, num_edges, num_returned)
