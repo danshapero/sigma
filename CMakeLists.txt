@@ -6,9 +6,9 @@ enable_language(CXX)
 enable_testing()
 
 if ("${CMAKE_Fortran_COMPILER_ID}" MATCHES "GNU")
-    set(CMAKE_Fortran_FLAGS_DEBUG "-g -Wall -fbounds-check")
+    set(CMAKE_Fortran_FLAGS_DEBUG "-g -O0 -Wall -Wextra -pedantic -fimplicit-none -fbounds-check -fbacktrace")
 elseif("${CMAKE_Fortran_COMPILER_ID}" MATCHES "Intel")
-    set (CMAKE_Fortran_FLAGS_DEBUG "-g -Wall -check -fpe0")
+    set (CMAKE_Fortran_FLAGS_DEBUG "-g -O0 -warn all -check all -fpe0 -traceback")
 endif()
 
 set(CMAKE_Fortran_MODULE_DIRECTORY ${sigma_BINARY_DIR}/include)
