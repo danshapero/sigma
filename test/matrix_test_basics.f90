@@ -391,10 +391,10 @@ implicit none
         enddo
 
 
-        ! Destroy the matrix and graph so they're ready for the next test
+        ! Destroy the matrix so it's ready for the next test
         call A%destroy()
         deallocate(A)
-    enddo
+    enddo   ! End of loop over frmt
 
 
     call g%destroy()
