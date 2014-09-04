@@ -115,6 +115,28 @@ use sigma
         enddo
 
 
+        !------------------------------------------------
+        ! Check that `A` actually is the graph Laplacian
+        do i = 1, nn
+            call g%get_neighbors(nodes, i)
+            d = g%degree(i)
+
+            if (A%get_value(i, i) /= d - 1) then
+                call exit(1)
+            endif
+
+            do k = 1, d
+                j = nodes(k)
+
+                if (j /= i) then
+                    if (A%get_value(i, j) /= -1) then
+                        call exit(1)
+                    endif
+                endif
+            enddo
+        enddo
+
+
         ! Destroy the matrix so it's ready for the next test
         call A%destroy()
         deallocate(A)
