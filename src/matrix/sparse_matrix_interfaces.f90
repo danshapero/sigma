@@ -106,6 +106,10 @@ contains
     procedure(sparse_mat_set_value_ifc), deferred :: add_value
     ! Add a value to a matrix entry
 
+    procedure :: set_dense_submatrix => sparse_mat_set_dense_submatrix
+    procedure :: add_dense_submatrix => sparse_mat_add_dense_submatrix
+    ! Set/add values to dense submatrices
+
     procedure(sparse_mat_zero_ifc), deferred :: zero
     ! Zero out all matrix entries
 
@@ -270,6 +274,63 @@ subroutine set_sparse_matrix_dimensions(A, nrow, ncol)                     !
     call A%add_reference()
 
 end subroutine set_sparse_matrix_dimensions
+
+
+
+
+!==========================================================================!
+!==== Mutators                                                         ====!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
+subroutine sparse_mat_set_dense_submatrix(A, is, js, B)                    !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix_interface), intent(inout) :: A
+    integer, intent(in) :: is(:), js(:)
+    real(dp), intent(in) :: B(:,:)
+    ! local variables
+    integer :: i, j, k, l
+    real(dp) :: z
+
+    do l = 1, size(js)
+        j = js(l)
+
+        do k = 1, size(is)
+            i = is(k)
+            z = B(k, l)
+
+            call A%set_value(i, j, z)
+        enddo
+    enddo
+
+end subroutine sparse_mat_set_dense_submatrix
+
+
+
+!--------------------------------------------------------------------------!
+subroutine sparse_mat_add_dense_submatrix(A, is, js, B)                    !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix_interface), intent(inout) :: A
+    integer, intent(in) :: is(:), js(:)
+    real(dp), intent(in) :: B(:,:)
+    ! local variables
+    integer :: i, j, k, l
+    real(dp) :: z
+
+    do l = 1, size(js)
+        j = js(l)
+
+        do k = 1, size(is)
+            i = is(k)
+            z = B(k, l)
+
+            call A%add_value(i, j, z)
+        enddo
+    enddo
+
+end subroutine sparse_mat_add_dense_submatrix
 
 
 
