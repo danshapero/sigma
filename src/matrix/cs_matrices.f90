@@ -124,6 +124,8 @@ contains
     !----------
     procedure :: set_value => csr_matrix_set_value
     procedure :: add_value => csr_matrix_add_value
+    procedure :: set_dense_submatrix => csr_matrix_set_dense_submatrix
+    procedure :: add_dense_submatrix => csr_matrix_add_dense_submatrix
     procedure, nopass :: left_permute_impl  => graph_leftperm
     procedure, nopass :: right_permute_impl => graph_rightperm
 
@@ -164,6 +166,8 @@ contains
     !----------
     procedure :: set_value => csc_matrix_set_value
     procedure :: add_value => csc_matrix_add_value
+    procedure :: set_dense_submatrix => csc_matrix_set_dense_submatrix
+    procedure :: add_dense_submatrix => csc_matrix_add_dense_submatrix
     procedure, nopass :: left_permute_impl  => graph_rightperm
     procedure, nopass :: right_permute_impl => graph_leftperm
 
@@ -720,6 +724,66 @@ end subroutine csr_matrix_add_value
 
 
 !--------------------------------------------------------------------------!
+subroutine csr_matrix_set_dense_submatrix(A, is, js, B)                    !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(csr_matrix), intent(inout) :: A
+    integer, intent(in) :: is(:), js(:)
+    real(dp), intent(in) :: B(:,:)
+    ! local variables
+    integer :: i, j, k, l, m
+    real(dp) :: z
+
+    do k = 1, size(is)
+        i = is(k)
+
+        do l = 1, size(js)
+            j = js(l)
+            z = B(k, l)
+
+            do m = A%g%ptr(i), A%g%ptr(i + 1) - 1
+                if (A%g%node(m) == j) then
+                    A%val(m) = z
+                endif
+            enddo
+        enddo
+    enddo
+
+end subroutine csr_matrix_set_dense_submatrix
+
+
+
+!--------------------------------------------------------------------------!
+subroutine csr_matrix_add_dense_submatrix(A, is, js, B)                    !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(csr_matrix), intent(inout) :: A
+    integer, intent(in) :: is(:), js(:)
+    real(dp), intent(in) :: B(:,:)
+    ! local variables
+    integer :: i, j, k, l, m
+    real(dp) :: z
+
+    do k = 1, size(is)
+        i = is(k)
+
+        do l = 1, size(js)
+            j = js(l)
+            z = B(k, l)
+
+            do m = A%g%ptr(i), A%g%ptr(i + 1) - 1
+                if (A%g%node(m) == j) then
+                    A%val(m) = A%val(m) + z
+                endif
+            enddo
+        enddo
+    enddo
+
+end subroutine csr_matrix_add_dense_submatrix
+
+
+
+!--------------------------------------------------------------------------!
 subroutine csc_matrix_set_value(A, i, j, z)                                !
 !--------------------------------------------------------------------------!
     ! input/output variables
@@ -774,6 +838,66 @@ subroutine csc_matrix_add_value(A, i, j, z)                                !
     endif
 
 end subroutine csc_matrix_add_value
+
+
+
+!--------------------------------------------------------------------------!
+subroutine csc_matrix_set_dense_submatrix(A, is, js, B)                    !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(csc_matrix), intent(inout) :: A
+    integer, intent(in) :: is(:), js(:)
+    real(dp), intent(in) :: B(:,:)
+    ! local variables
+    integer :: i, j, k, l, m
+    real(dp) :: z
+
+    do l = 1, size(js)
+        j = js(l)
+
+        do k = 1, size(is)
+            i = is(k)
+            z = B(k, l)
+
+            do m = A%g%ptr(j), A%g%ptr(j + 1) - 1
+                if (A%g%node(m) == i) then
+                    A%val(m) = z
+                endif
+            enddo
+        enddo
+   enddo
+
+end subroutine csc_matrix_set_dense_submatrix
+
+
+
+!--------------------------------------------------------------------------!
+subroutine csc_matrix_add_dense_submatrix(A, is, js, B)                    !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(csc_matrix), intent(inout) :: A
+    integer, intent(in) :: is(:), js(:)
+    real(dp), intent(in) :: B(:,:)
+    ! local variables
+    integer :: i, j, k, l, m
+    real(dp) :: z
+
+    do l = 1, size(js)
+        j = js(l)
+
+        do k = 1, size(is)
+            i = is(k)
+            z = B(k, l)
+
+            do m = A%g%ptr(j), A%g%ptr(j + 1) - 1
+                if (A%g%node(m) == i) then
+                    A%val(m) = A%val(m) + z
+                endif
+            enddo
+        enddo
+   enddo
+
+end subroutine csc_matrix_add_dense_submatrix
 
 
 

@@ -429,6 +429,68 @@ end subroutine ellpack_matrix_add_value
 
 
 !--------------------------------------------------------------------------!
+subroutine ellpack_matrix_set_dense_submatrix(A, is, js, B)                !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(ellpack_matrix), intent(inout) :: A
+    integer, intent(in) :: is(:), js(:)
+    real(dp), intent(in) :: B(:,:)
+    ! local variables
+    integer :: i, j, k, l, m, d
+    real(dp) :: z
+
+    do k = 1, size(is)
+        i = is(k)
+        d = A%g%degrees(i)
+
+        do l = 1, size(js)
+            j = js(l)
+            z = B(k, l)
+
+            do m = 1, d
+                if (A%g%node(m, i) == j) then
+                    A%val(m, i) = z
+                endif
+            enddo
+        enddo
+    enddo
+
+end subroutine ellpack_matrix_set_dense_submatrix
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ellpack_matrix_add_dense_submatrix(A, is, js, B)                !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(ellpack_matrix), intent(inout) :: A
+    integer, intent(in) :: is(:), js(:)
+    real(dp), intent(in) :: B(:,:)
+    ! local variables
+    integer :: i, j, k, l, m, d
+    real(dp) :: z
+
+    do k = 1, size(is)
+        i = is(k)
+        d = A%g%degrees(i)
+
+        do l = 1, size(js)
+            j = js(l)
+            z = B(k, l)
+
+            do m = 1, d
+                if (A%g%node(m, i) == j) then
+                    A%val(m, i) = A%val(m, i) + z
+                endif
+            enddo
+        enddo
+    enddo
+
+end subroutine ellpack_matrix_add_dense_submatrix
+
+
+
+!--------------------------------------------------------------------------!
 subroutine ellpack_matrix_zero(A)                                          !
 !--------------------------------------------------------------------------!
     class(ellpack_matrix), intent(inout) :: A
