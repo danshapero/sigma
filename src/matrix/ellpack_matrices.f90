@@ -438,6 +438,7 @@ subroutine ellpack_matrix_set_dense_submatrix(A, is, js, B)                !
     ! local variables
     integer :: i, j, k, l, m, d
     real(dp) :: z
+    logical :: found
 
     do k = 1, size(is)
         i = is(k)
@@ -447,11 +448,19 @@ subroutine ellpack_matrix_set_dense_submatrix(A, is, js, B)                !
             j = js(l)
             z = B(k, l)
 
+            found = .false.
+
             do m = 1, d
                 if (A%g%node(m, i) == j) then
                     A%val(m, i) = z
+                    found = .true.
                 endif
             enddo
+
+            if (.not. found) then
+                call A%set_unallocated_matrix_value(i, j, z)
+                d = A%g%degrees(i)
+            endif
         enddo
     enddo
 
@@ -469,6 +478,7 @@ subroutine ellpack_matrix_add_dense_submatrix(A, is, js, B)                !
     ! local variables
     integer :: i, j, k, l, m, d
     real(dp) :: z
+    logical :: found
 
     do k = 1, size(is)
         i = is(k)
@@ -478,11 +488,19 @@ subroutine ellpack_matrix_add_dense_submatrix(A, is, js, B)                !
             j = js(l)
             z = B(k, l)
 
+            found = .false.
+
             do m = 1, d
                 if (A%g%node(m, i) == j) then
                     A%val(m, i) = A%val(m, i) + z
+                    found = .true.
                 endif
             enddo
+
+            if (.not. found) then
+                call A%set_unallocated_matrix_value(i, j, z)
+                d = A%g%degrees(i)
+            endif
         enddo
     enddo
 

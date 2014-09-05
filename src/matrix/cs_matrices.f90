@@ -20,8 +20,8 @@ module cs_matrices                                                         !
 use types, only: dp
 use graph_interfaces
 use cs_graphs
-use default_sparse_matrix_kernels
 use sparse_matrix_interfaces
+use default_sparse_matrix_kernels
 
 implicit none
 
@@ -733,6 +733,7 @@ subroutine csr_matrix_set_dense_submatrix(A, is, js, B)                    !
     ! local variables
     integer :: i, j, k, l, m
     real(dp) :: z
+    logical :: found
 
     do k = 1, size(is)
         i = is(k)
@@ -741,11 +742,19 @@ subroutine csr_matrix_set_dense_submatrix(A, is, js, B)                    !
             j = js(l)
             z = B(k, l)
 
+            found = .false.
+
             do m = A%g%ptr(i), A%g%ptr(i + 1) - 1
                 if (A%g%node(m) == j) then
                     A%val(m) = z
+                    found = .true.
                 endif
             enddo
+
+            if (.not. found) then
+                call set_matrix_value_with_reallocation(A%g, A%val, i, j, z)
+                A%nnz = A%nnz + 1
+            endif
         enddo
     enddo
 
@@ -763,6 +772,7 @@ subroutine csr_matrix_add_dense_submatrix(A, is, js, B)                    !
     ! local variables
     integer :: i, j, k, l, m
     real(dp) :: z
+    logical :: found
 
     do k = 1, size(is)
         i = is(k)
@@ -771,11 +781,19 @@ subroutine csr_matrix_add_dense_submatrix(A, is, js, B)                    !
             j = js(l)
             z = B(k, l)
 
+            found = .false.
+
             do m = A%g%ptr(i), A%g%ptr(i + 1) - 1
                 if (A%g%node(m) == j) then
                     A%val(m) = A%val(m) + z
+                    found = .true.
                 endif
             enddo
+
+            if (.not. found) then
+                call set_matrix_value_with_reallocation(A%g, A%val, i, j, z)
+                A%nnz = A%nnz + 1
+            endif
         enddo
     enddo
 
@@ -851,6 +869,7 @@ subroutine csc_matrix_set_dense_submatrix(A, is, js, B)                    !
     ! local variables
     integer :: i, j, k, l, m
     real(dp) :: z
+    logical :: found
 
     do l = 1, size(js)
         j = js(l)
@@ -859,11 +878,19 @@ subroutine csc_matrix_set_dense_submatrix(A, is, js, B)                    !
             i = is(k)
             z = B(k, l)
 
+            found = .false.
+
             do m = A%g%ptr(j), A%g%ptr(j + 1) - 1
                 if (A%g%node(m) == i) then
                     A%val(m) = z
+                    found = .true.
                 endif
             enddo
+
+            if (.not. found) then
+                call set_matrix_value_with_reallocation(A%g, A%val, j, i, z)
+                A%nnz = A%nnz + 1
+            endif
         enddo
    enddo
 
@@ -881,6 +908,7 @@ subroutine csc_matrix_add_dense_submatrix(A, is, js, B)                    !
     ! local variables
     integer :: i, j, k, l, m
     real(dp) :: z
+    logical :: found
 
     do l = 1, size(js)
         j = js(l)
@@ -889,11 +917,19 @@ subroutine csc_matrix_add_dense_submatrix(A, is, js, B)                    !
             i = is(k)
             z = B(k, l)
 
+            found = .false.
+
             do m = A%g%ptr(j), A%g%ptr(j + 1) - 1
                 if (A%g%node(m) == i) then
                     A%val(m) = A%val(m) + z
+                    found = .true.
                 endif
             enddo
+
+            if (.not. found) then
+                call set_matrix_value_with_reallocation(A%g, A%val, j, i, z)
+                A%nnz = A%nnz + 1
+            endif
         enddo
    enddo
 

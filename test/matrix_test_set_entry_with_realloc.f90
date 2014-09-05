@@ -15,9 +15,11 @@ implicit none
 
     ! sparse and dense matrices
     class(sparse_matrix_interface), pointer :: A
+    real(dp) :: B(2, 2)
 
     ! integer indices
     integer :: i, j, nn, frmt
+    integer :: is(2)
 
     ! command-line argument parsing
     character(len=16) :: arg
@@ -99,6 +101,19 @@ implicit none
                 call exit(1)
             endif
         enddo
+
+        !--------
+        ! Set multiple entries of `A` that have not been pre-allocated
+        is = [1, nn / 2]
+        B(:,1) = [ 1.0, -1.0]
+        B(:,2) = [-1.0,  1.0]
+        call A%add_dense_submatrix(is, is, B)
+
+        if (A%get_value(1, 1) /= 4 .or. A%get_value(1, nn/2) /= -1) then
+            print *, 'Setting multiple matrix entries with reallocation'
+            print *, 'failed. Terminating.'
+            call exit(1)
+        endif
 
 
         call A%destroy()
