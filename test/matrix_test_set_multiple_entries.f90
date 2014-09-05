@@ -118,18 +118,33 @@ use sigma
         !------------------------------------------------
         ! Check that `A` actually is the graph Laplacian
         do i = 1, nn
-            call g%get_neighbors(nodes, i)
-            d = g%degree(i)
+            d = g%degree(i) - 1
 
-            if (A%get_value(i, i) /= d - 1) then
-                call exit(1)
-            endif
-
-            do k = 1, d
-                j = nodes(k)
-
-                if (j /= i) then
+            do j = 1, nn
+                if (j == i) then
+                    if (A%get_value(i, i) /= d) then
+                        print *, 'Setting multiple matrix entries failed, '
+                        print *, 'should have diagonal entry of each row '
+                        print *, 'equal to its degree.'
+                        print *, 'Degree of', i,':',d
+                        print *, 'A(i, i) = ', A%get_value(i, i)
+                        call exit(1)
+                    endif
+                elseif (g%connected(i, j)) then
                     if (A%get_value(i, j) /= -1) then
+                        print *, 'Setting multiple matrix entries failed, '
+                        print *, 'should have all off-diagonal entries '
+                        print *, 'equal to -1.'
+                        print *, 'i, j:', i, j
+                        print *, 'A(i, j) = ', A%get_value(i, j)
+                        call exit(1)
+                    endif
+                else
+                    if (A%get_value(i, j) /= 0) then
+                        print *, 'Erroneously set entry ', i, j
+                        print *, 'of matrix which is not connected in the'
+                        print *, 'input graph.'
+                        print *, 'A(i, j) = ', A%get_value(i, j)
                         call exit(1)
                     endif
                 endif
