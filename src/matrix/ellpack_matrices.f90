@@ -60,6 +60,8 @@ contains
     !----------
     procedure :: set_value => ellpack_matrix_set_value
     procedure :: add_value => ellpack_matrix_add_value
+    procedure :: set_dense_submatrix => ellpack_matrix_set_dense_submatrix
+    procedure :: add_dense_submatrix => ellpack_matrix_add_dense_submatrix
     procedure :: zero => ellpack_matrix_zero
     procedure :: left_permute  => ellpack_matrix_left_permute
     procedure :: right_permute => ellpack_matrix_right_permute
