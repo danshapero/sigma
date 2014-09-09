@@ -269,6 +269,8 @@ subroutine set_sparse_matrix_dimensions(A, nrow, ncol)                     !
     A%nrow = nrow
     A%ncol = ncol
 
+    A%nnz = 0
+
     A%dimensions_set = .true.
 
     call A%add_reference()

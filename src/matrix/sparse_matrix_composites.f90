@@ -31,7 +31,7 @@ contains
     procedure :: set_graph            => composite_mat_set_graph
 
     procedure :: set_block_structure => composite_mat_set_block_structure
-    procedure :: set_storage_format =>  composite_mat_set_storage_format
+    procedure :: set_storage_format  =>  composite_mat_set_storage_format
 
 
     !-----------
@@ -60,13 +60,13 @@ contains
     !----------
     procedure :: set_value           => composite_mat_set_value
     procedure :: add_value           => composite_mat_add_value
-    procedure :: set_dense_submatrix => composite_mat_set_dense_submatrix
-    procedure :: add_dense_submatrix => composite_mat_add_dense_submatrix
+    ! procedure :: set_dense_submatrix => composite_mat_set_dense_submatrix
+    ! procedure :: add_dense_submatrix => composite_mat_add_dense_submatrix
     procedure :: zero                => composite_mat_zero
     procedure :: left_permute        => composite_mat_left_permute
     procedure :: right_permute       => composite_mat_right_permute
 
-    procedure :: set_submatrix
+    procedure :: set_submatrix       => composite_mat_set_submatrix
 
 
     !------------------------------
@@ -143,7 +143,7 @@ function composite_mat_get_row_degree(A, k) result(d)                      !
     class(sparse_matrix_interface), pointer :: C
 
     it = A%get_owning_row_matrix(k)
-    ir = i - A%row_ptr(it) + 1
+    ir = k - A%row_ptr(it) + 1
 
     d = 0
     do jt = 1, num_col_mats
@@ -167,7 +167,7 @@ function composite_mat_get_column_degree(A, k) result(d)                   !
     class(sparse_matrix_interface), pointer :: C
 
     jt = A%get_owning_column_matrix(k)
-    jr = j - A%col_ptr(jt) + 1
+    jr = k - A%col_ptr(jt) + 1
 
     d = 0
     do it = 1, num_row_mats
@@ -176,6 +176,130 @@ function composite_mat_get_column_degree(A, k) result(d)                   !
     enddo
 
 end function composite_mat_get_column_degree
+
+
+
+!--------------------------------------------------------------------------!
+subroutine composite_mat_get_row(A, nodes, slice, k)                       !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(in) :: A
+    integer, intent(out) :: nodes(:)
+    real(dp), intent(out) :: slice(:)
+    integer, intent(in) :: k
+    ! local variables
+    integer :: ir, it, jt, l, d
+    class(sparse_matrix_interface), pointer :: C
+
+    it = A%get_owning_row_matrix(k)
+    ir = k - A%row_ptr(it) + 1
+
+    l = 0
+    d = 0
+
+    do jt = 1, A%num_col_mats
+        C => A%sub_mats(it, jt)%mat
+
+        d = C%get_row_degree(ir)
+        call C%get_row(nodes(l + 1 : l + d), slice(l + 1 : l + d), ir)
+
+        nodes(l + 1 : l + d) = nodes(l + 1 : l + d) + A%col_ptr(jt) - 1
+
+        l = l + d
+    enddo
+
+end subroutine composite_mat_get_row
+
+
+
+!--------------------------------------------------------------------------!
+subroutine composite_mat_get_column(A, nodes, slice, k)                    !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(in) :: A
+    integer, intent(out) :: nodes(:)
+    real(dp), intent(out) :: slice(:)
+    integer, intent(in) :: k
+    ! local variables
+    integer :: it, jt, jr, l, d
+    class(sparse_matrix_interface), pointer :: C
+
+    jt = A%get_owning_column_matrix(k)
+    jr = k - A%col_ptr(jt) + 1
+
+    l = 0
+    d = 0
+
+    do it = 1, A%num_row_mats
+        C => A%sub_mats(it, jt)%mat
+
+        d = C%get_column_degree(jr)
+        call C%get_row(nodes(l+1 : l+d), slice(l+1 : l+d), ir)
+
+        nodes(l+1 : l+d) = nodes(l+1 : l+d) + A%row_ptr(it) - 1
+
+        l = l + d
+    enddo
+
+end subroutine composite_mat_get_column
+
+
+
+!--------------------------------------------------------------------------!
+function composite_mat_is_leaf(A) result(leaf)                             !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(in) :: A
+    logical :: leaf
+
+    is_leaf = A%num_row_mats == 1 .and. A%num_col_mats == 1
+
+end function composite_mat_is_leaf
+
+
+
+!--------------------------------------------------------------------------!
+function composite_mat_get_submatrix(A, it, jt) result(C)                  !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(in) :: A
+    integer, intent(in) :: it, jt
+    type(sparse_matrix), pointer :: C
+    ! local variables
+    class(sparse_matrix_interface), pointer :: Aij
+
+    Aij => A%sub_mats(it, jt)%mat
+
+    ! Check whether the desired sub-matrix is a leaf or a composite matrix.
+    select class(Aij)
+        ! If it's a composite matrix, we can return a pointer to it
+        class is(sparse_matrix)
+            C => A%sub_mats(it, jt)%mat
+
+        ! Otherwise, make C a leaf matrix referring to the desired sub-
+        ! matrix and return a pointer to C.
+        class default
+            allocate(C)
+            call C%set_dimensions(A%row_ptr(it+1) - A%row_ptr(it), &
+                                & A%col_ptr(jt+1) - A%col_ptr(jt))
+
+            C%num_row_mats = 1
+            C%num_col_mats = 1
+
+            allocate(C%row_ptr(2), C%col_ptr(2))
+
+            C%row_ptr(1) = 1
+            C%row_ptr(2) = C%nrow + 1
+
+            C%col_ptr(1) = 1
+            C%col_ptr(2) = C%ncol + 1
+
+            allocate(C%sub_mats(1, 1))
+            C%sub_mats(1, 1)%mat => Aij
+
+            call Aij%add_reference()
+    end select
+
+end function composite_mat_get_submatrx
 
 
 
@@ -200,6 +324,17 @@ subroutine composite_mat_set_value(A, i, j, z)                             !
     real(dp) :: z
     ! local variables
     integer :: ir, jr, it, jt
+    class(sparse_matrix_interface), pointer :: C
+
+    it = A%get_owning_row_matrix(i)
+    jt = A%get_owning_column_matrix(j)
+
+    ir = i - A%row_ptr(it) + 1
+    jr = j - A%col_ptr(jt) + 1
+
+    C => A%sub_mats(it, jt)%mat
+
+    call C%set_value(ir, jr, z)
 
 end subroutine composite_mat_set_value
 
@@ -215,7 +350,85 @@ subroutine composite_mat_add_value(A, i, j, z)                             !
     ! local variables
     integer :: ir, jr, it, jt
 
+    it = A%get_owning_row_matrix(i)
+    jt = A%get_owning_column_matrix(j)
+
+    ir = i - A%row_ptr(it) + 1
+    jr = j - A%col_ptr(jt) + 1
+
+    C => A%sub_mats(it, jt)%mat
+
+    call C%add_value(ir, jr, z)
+
 end subroutine composite_mat_add_value
+
+
+
+!--------------------------------------------------------------------------!
+subroutine composite_mat_zero(A)                                           !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(inout) :: A
+    ! local variables
+    integer :: it, jt
+    class(sparse_matrix_interface), pointer :: C
+
+    do jt = 1, A%num_col_mats
+        do it = 1, A%num_row_mats
+            C => A%sub_mats(k, l)%mat
+            call C%zero()
+        enddo
+    enddo
+
+end subroutine composite_mat_zero
+
+
+
+!--------------------------------------------------------------------------!
+subroutine composite_mat_left_permute(A, p)                                !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(inout) :: A
+    integer, intent(in) :: p(:)
+
+    print *, 'Left-permuting composite matrices not implemented, my bad!'
+    call exit(1)
+
+end subroutine composite_mat_left_permute
+
+
+
+!--------------------------------------------------------------------------!
+subroutine composite_mat_right_permute(A, p)                               !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(inout) :: A
+    integer, intent(in) :: p(:)
+
+    print *, 'Right-permuting composite matrices not implemented, my bad!'
+    call exit(1)
+
+end subroutine composite_mat_right_permute
+
+
+
+!--------------------------------------------------------------------------!
+subroutine set_submatrix(A, it, jt, B)                                     !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(inout) :: A
+    integer, intent(in) :: it, jt
+    class(sparse_matrix_interface), target :: B
+
+    select class(B)
+        class is(sparse_matrix)
+            if (B%is_leaf()) then
+                A%sub_mats(it, jt)%mat => B%sub_mats(1, 1)%mat
+            endif
+        class default
+            A%sub_mats(it, jt)%mat => B
+    end select
+
+    call A%sub_mats(it, jt)%mat%add_reference()
+
+end subroutine set_submatrix
 
 
 
