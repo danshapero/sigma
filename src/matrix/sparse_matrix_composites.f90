@@ -4,6 +4,7 @@ module sparse_matrix_composites                                            !
 !==========================================================================!
 !==========================================================================!
 
+use graph_interfaces
 use sparse_matrix_interfaces
 
 implicit none
@@ -13,7 +14,7 @@ implicit none
 !--------------------------------------------------------------------------!
 type :: sparse_mat_pointer                                                 !
 !--------------------------------------------------------------------------!
-    class(sparse_matrix_interface), pointer :: mat
+    class(sparse_matrix_interface), pointer :: mat => null()
 end type sparse_mat_pointer
 
 
@@ -99,6 +100,101 @@ contains
 !==========================================================================!
 !==== Constructors                                                     ====!
 !==========================================================================!
+
+!--------------------------------------------------------------------------!
+subroutine composite_mat_copy_graph_structure(A, g)                        !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(inout) :: A
+    class(graph_interface), intent(in) :: g
+
+    if (.not. A%is_leaf()) call exit(1)
+
+    call A%sub_mats(1, 1)%mat%copy_graph_structure(g)
+
+end subroutine composite_mat_copy_graph_structure
+
+
+
+!--------------------------------------------------------------------------!
+subroutine composite_mat_set_graph(A, g)                                   !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(inout) :: A
+    class(graph_interface), target, intent(in) :: g
+
+    if (.not. A%is_leaf()) call exit(1)
+
+    call A%sub_mats(1, 1)%mat%set_graph(g)
+
+end subroutine composite_mat_set_graph
+
+
+
+!--------------------------------------------------------------------------!
+subroutine composite_mat_copy_graph_structure_submat(A, it, jt, g)         !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(inout) :: A
+    integer, intent(in) :: it, jt
+    class(graph_interface), intent(in) :: g
+
+    call A%sub_mats(it, jt)%mat%copy_graph_structure(g)
+
+end subroutine composite_mat_copy_graph_structure_submat
+
+
+
+!--------------------------------------------------------------------------!
+subroutine composite_mat_set_graph_submat(A, it, jt, g)                    !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(inout) :: A
+    integer, intent(in) :: it, jt
+    class(graph_interface), intent(in) :: g
+
+    call A%sub_mats(it, jt)%mat%set_graph(g)
+
+end subroutine composite_mat_set_graph_submat
+
+
+
+!--------------------------------------------------------------------------!
+subroutine composite_mat_set_block_structure(A, rows, cols)                !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(inout) :: A
+    integer, intent(in) :: rows(:), cols(:)
+    ! local variables
+    integer :: it, jt
+
+    A%num_row_mats = size(rows)
+    A%num_col_mats = size(cols)
+
+    allocate( A%row_ptr(A%num_row_mats + 1) )
+    allocate( A%col_ptr(A%num_col_mats + 1) )
+
+    A%row_ptr(1) = 1
+    A%col_ptr(1) = 1
+
+    do it = 1, A%num_row_mats
+        A%row_ptr(it + 1) = A%row_ptr(it) + rows(it)
+    enddo
+
+    do jt = 1, A%num_col_mats
+        A%col_ptr(jt + 1) = A%col_ptr(jt) + cols(jt)
+    enddo
+
+    allocate(A%sub_mats(it, jt))
+
+end subroutine composite_mat_set_block_structure
+
+
+
+!--------------------------------------------------------------------------!
+subroutine composite_mat_set_storage_format(A, frmt)                       !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(inout) :: A
+    character(len=*), intent(in) :: frmt
+
+end subroutine composite_mat_set_storage_format
+
 
 
 
@@ -307,6 +403,50 @@ end function composite_mat_get_submatrx
 !==========================================================================!
 !==== Edge, value iterators                                            ====!
 !==========================================================================!
+
+!--------------------------------------------------------------------------!
+function composite_mat_make_cursor(A) result(cursor)                       !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(in) :: A
+    type(graph_edge_cursor) :: cursor
+
+
+end function composite_mat_make_cursor
+
+
+
+!--------------------------------------------------------------------------!
+subroutine composite_mat_get_edges(A, edges, cursor, &                     !
+                                                & num_edges, num_returned) !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(in) :: A
+    integer, intent(in) :: num_edges
+    integer, intent(out) :: edges(2, num_edges)
+    type(graph_edge_cursor), intent(inout) :: cursor
+    integer, intent(out) :: num_returned
+    ! local variables
+
+
+end subroutine composite_mat_get_edges
+
+
+
+!--------------------------------------------------------------------------!
+subroutine composite_mat_get_entries(A, edges, entries, cursor, &          !
+                                                & num_edges, num_returned) !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(in) :: A
+    integer, intent(in) :: num_edges
+    integer, intent(out) :: edges(2, num_edges)
+    real(dp), intent(out) :: entries(num_edges)
+    type(graph_edge_cursor), intent(inout) :: cursor
+    integer, intent(out) :: num_returned
+    ! local variables
+
+
+end subroutine composite_mat_get_entries
 
 
 
