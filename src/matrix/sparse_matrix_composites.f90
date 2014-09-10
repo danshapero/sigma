@@ -546,8 +546,12 @@ subroutine composite_mat_left_permute(A, p)                                !
     class(sparse_matrix), intent(inout) :: A
     integer, intent(in) :: p(:)
 
-    print *, 'Left-permuting composite matrices not implemented, my bad!'
-    call exit(1)
+	if (A%is_leaf()) then
+		call A%sub_mats(1, 1)%mat%left_permute(p)
+	else
+		print *, 'Cannot permute a composite matrix.'
+		call exit(1)
+	endif
 
 end subroutine composite_mat_left_permute
 
@@ -559,8 +563,12 @@ subroutine composite_mat_right_permute(A, p)                               !
     class(sparse_matrix), intent(inout) :: A
     integer, intent(in) :: p(:)
 
-    print *, 'Right-permuting composite matrices not implemented, my bad!'
-    call exit(1)
+	if (A%is_leaf()) then
+		call A%sub_mats(1, 1)%mat%right_permute(p)
+	else
+		print *, 'Cannot permute a composite matrix.'
+		call exit(1)
+	endif
 
 end subroutine composite_mat_right_permute
 
