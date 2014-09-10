@@ -3,8 +3,8 @@
 module sparse_matrix_factory                                               !
 !==========================================================================!
 !==========================================================================!
-!====     This module contains routines for choosing the storage       ====!
-!==== format for a polymorphic sparse matrix object.                   ====!
+!==== This module contains routines for choosing the storage format    ====!
+!==== for a polymorphic sparse matrix object.                          ====!
 !==========================================================================!
 !==========================================================================!
 
