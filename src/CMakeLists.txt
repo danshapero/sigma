@@ -14,6 +14,7 @@ matrix/default_sparse_matrix_kernels.f90
 matrix/default_matrices.f90
 matrix/cs_matrices.f90
 matrix/ellpack_matrices.f90
+matrix/sparse_matrix_factory.f90
 matrix/sparse_matrices.f90
 )
 
