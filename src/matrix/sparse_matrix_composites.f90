@@ -50,6 +50,9 @@ contains
     !--------------
     ! Constructors
     !--------------
+    procedure :: set_dimensions => composite_mat_set_dimensions
+    ! Set the global dimension of a composite matrix
+
     procedure :: set_num_blocks  => composite_mat_set_num_blocks
     ! Set the number of sub-matrices that the composite will be made of
 
@@ -143,6 +146,30 @@ contains
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
+subroutine composite_mat_set_dimensions(A, nrow, ncol)                     !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(inout) :: A
+    integer, intent(in) :: nrow, ncol
+
+    A%nrow = nrow
+    A%ncol = ncol
+
+    A%nnz = 0
+
+    A%dimensions_set = .true.
+
+    call A%add_reference()
+
+    if (A%is_leaf()) then
+        call A%set_block_sizes([nrow], [ncol])
+        call A%sub_mats(1, 1)%mat%set_dimensions(nrow, ncol)
+    endif
+
+end subroutine composite_mat_set_dimensions
+
+
+
+!--------------------------------------------------------------------------!
 subroutine composite_mat_set_num_blocks(A, num_row_mats, num_col_mats)     !
 !--------------------------------------------------------------------------!
     class(sparse_matrix), intent(inout) :: A
@@ -213,6 +240,11 @@ subroutine composite_mat_set_mat_type_leaf(A, frmt)                        !
     if (.not. A%num_blocks_set) call A%set_num_blocks(1, 1)
 
     call choose_matrix_type(A%sub_mats(1, 1)%mat, frmt)
+
+    if (A%dimensions_set) then
+        call A%set_block_sizes([A%nrow], [A%ncol])
+        call A%sub_mats(1, 1)%mat%set_dimensions(A%nrow, A%ncol)
+    endif
 
 end subroutine composite_mat_set_mat_type_leaf
 
