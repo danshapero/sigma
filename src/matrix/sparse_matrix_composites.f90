@@ -43,16 +43,28 @@ type, extends(sparse_matrix_interface) :: sparse_matrix                    !
     integer :: num_row_mats, num_col_mats
     integer, allocatable :: row_ptr(:), col_ptr(:)
     type(sparse_mat_pointer), allocatable, private :: sub_mats(:, :)
+
+    logical, private :: block_structure_set = .false.
 contains
     !--------------
     ! Constructors
     !--------------
+    procedure :: set_block_structure => composite_mat_set_block_structure
+    ! Set the size of each sub-matrix of the composite matrix
+
+    procedure :: composite_mat_set_mat_type_leaf
+    procedure :: composite_mat_set_mat_type_submat
+    generic :: set_matrix_type => composite_mat_set_mat_type_leaf, &
+                                & composite_mat_set_mat_type_submat
+    ! Choose the sparse matrix format for each sub-matrix of the composite
+
     procedure :: copy_graph_structure => composite_mat_copy_graph_structure
     procedure :: set_graph            => composite_mat_set_graph
+    ! Create the connectivity structure of a leaf matrix
 
     procedure :: copy_graph_submat => composite_mat_copy_graph_submat
     procedure :: set_graph_submat  => composite_mat_set_graph_submat
-    procedure :: set_block_structure => composite_mat_set_block_structure
+    ! Create the connectivity structure of a sub-matrix of the composite
 
 
     !-----------
@@ -127,60 +139,6 @@ contains
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine composite_mat_copy_graph_structure(A, g)                        !
-!--------------------------------------------------------------------------!
-    class(sparse_matrix), intent(inout) :: A
-    class(graph_interface), intent(in) :: g
-
-    if (.not. A%is_leaf()) call exit(1)
-
-    call A%sub_mats(1, 1)%mat%copy_graph_structure(g)
-
-end subroutine composite_mat_copy_graph_structure
-
-
-
-!--------------------------------------------------------------------------!
-subroutine composite_mat_set_graph(A, g)                                   !
-!--------------------------------------------------------------------------!
-    class(sparse_matrix), intent(inout) :: A
-    class(graph_interface), target, intent(in) :: g
-
-    if (.not. A%is_leaf()) call exit(1)
-
-    call A%sub_mats(1, 1)%mat%set_graph(g)
-
-end subroutine composite_mat_set_graph
-
-
-
-!--------------------------------------------------------------------------!
-subroutine composite_mat_copy_graph_submat(A, it, jt, g)                   !
-!--------------------------------------------------------------------------!
-    class(sparse_matrix), intent(inout) :: A
-    integer, intent(in) :: it, jt
-    class(graph_interface), intent(in) :: g
-
-    call A%sub_mats(it, jt)%mat%copy_graph_structure(g)
-
-end subroutine composite_mat_copy_graph_submat
-
-
-
-!--------------------------------------------------------------------------!
-subroutine composite_mat_set_graph_submat(A, it, jt, g)                    !
-!--------------------------------------------------------------------------!
-    class(sparse_matrix), intent(inout) :: A
-    integer, intent(in) :: it, jt
-    class(graph_interface), intent(in) :: g
-
-    call A%sub_mats(it, jt)%mat%set_graph(g)
-
-end subroutine composite_mat_set_graph_submat
-
-
-
-!--------------------------------------------------------------------------!
 subroutine composite_mat_set_block_structure(A, rows, cols)                !
 !--------------------------------------------------------------------------!
     ! input/output variables
@@ -206,9 +164,139 @@ subroutine composite_mat_set_block_structure(A, rows, cols)                !
         A%col_ptr(jt + 1) = A%col_ptr(jt) + cols(jt)
     enddo
 
-    allocate(A%sub_mats(it, jt))
+    allocate(A%sub_mats(A%num_row_mats, A%num_col_mats))
 
 end subroutine composite_mat_set_block_structure
+
+
+
+!--------------------------------------------------------------------------!
+subroutine composite_mat_set_mat_type_leaf(A, frmt)                        !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(inout) :: A
+    character(len=*), intent(in) :: frmt
+
+    call choose_matrix_type(A%sub_mats(1, 1)%mat, frmt)
+
+end subroutine composite_mat_set_mat_type_leaf
+
+
+
+!--------------------------------------------------------------------------!
+subroutine composite_mat_set_mat_type_submat(A, it, jt, frmt)              !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(inout) :: A
+    integer, intent(in) :: it, jt
+    character(len=*), intent(in) :: frmt
+
+    call choose_matrix_type(A%sub_mats(it, jt)%mat, frmt)
+
+end subroutine composite_mat_set_mat_type_submat
+
+
+
+!--------------------------------------------------------------------------!
+subroutine composite_mat_copy_graph_structure(A, g)                        !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(inout) :: A
+    class(graph_interface), intent(in) :: g
+
+    ! The matrix dimensions must have been set before giving it a graph
+    ! structure
+    if (.not. A%dimensions_set) then
+        print *, "Attempted to copy a graph's structure to a composite "
+        print *, "matrix which has not had its dimensions set."
+        call exit(1)
+    endif
+
+    ! Ensure that we're not treating a composite matrix as if it were a leaf
+    if (A%block_structure_set .and. .not. A%is_leaf()) then
+        print *, "Attempted to copy a graph's structure to a composite "
+        print *, "matrix which is not a leaf."
+        call exit(1)
+    endif
+
+    ! If the block structure has not already been set, then set it to
+    ! reflect the fact that this matrix is a leaf
+    if (.not. A%block_structure_set) then
+        call A%set_block_structure( [A%nrow], [A%ncol] )
+    endif
+
+    ! Copy the structure of the graph `g` to the object that this matrix
+    ! is wrapping
+    call A%sub_mats(1, 1)%mat%copy_graph_structure(g)
+
+end subroutine composite_mat_copy_graph_structure
+
+
+
+!--------------------------------------------------------------------------!
+subroutine composite_mat_set_graph(A, g)                                   !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(inout) :: A
+    class(graph_interface), target, intent(in) :: g
+
+    if (.not. A%dimensions_set) then
+        print *, "Attempted to set the graph structure of a composite "
+        print *, "matrix which has not had its dimensions set."
+        call exit(1)
+    endif
+
+    if (A%block_structure_set .and. .not. A%is_leaf()) then
+        print *, "Attempted to set the graph structure of a composite "
+        print *, "matrix which is not a leaf."
+        call exit(1)
+    endif
+
+    if (.not. A%block_structure_set) then
+        call A%set_block_structure( [A%nrow], [A%ncol] )
+    endif
+
+    call A%sub_mats(1, 1)%mat%set_graph(g)
+
+end subroutine composite_mat_set_graph
+
+
+
+!--------------------------------------------------------------------------!
+subroutine composite_mat_copy_graph_submat(A, it, jt, g)                   !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(inout) :: A
+    integer, intent(in) :: it, jt
+    class(graph_interface), intent(in) :: g
+
+    ! Check that the sub-matrix indices are in bounds
+    if (it < 1 .or. it > A%num_row_mats &
+        & .or. jt < 1 .or. jt > A%num_col_mats) then
+        print *, "Sub-matrix indices", it, jt
+        print *, "are out of bounds", A%num_row_mats, A%num_col_mats
+        call exit(1)
+    endif
+
+    ! Copy the structure of `g` to the desired sub-matrix
+    call A%sub_mats(it, jt)%mat%copy_graph_structure(g)
+
+end subroutine composite_mat_copy_graph_submat
+
+
+
+!--------------------------------------------------------------------------!
+subroutine composite_mat_set_graph_submat(A, it, jt, g)                    !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(inout) :: A
+    integer, intent(in) :: it, jt
+    class(graph_interface), intent(in) :: g
+
+    if (it < 1 .or. it > A%num_row_mats &
+        & .or. jt < 1 .or. jt > A%num_col_mats) then
+        print *, "Sub-matrix indices", it, jt
+        print *, "are out of bounds", A%num_row_mats, A%num_col_mats
+        call exit(1)
+    endif
+
+    call A%sub_mats(it, jt)%mat%set_graph(g)
+
+end subroutine composite_mat_set_graph_submat
 
 
 
@@ -737,6 +825,7 @@ elemental function composite_mat_get_owning_colmat(A, j) result(jt)        !
     enddo
 
 end function composite_mat_get_owning_colmat
+
 
 
 
