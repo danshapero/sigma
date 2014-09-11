@@ -44,12 +44,16 @@ type, extends(sparse_matrix_interface) :: sparse_matrix                    !
     integer, allocatable :: row_ptr(:), col_ptr(:)
     type(sparse_mat_pointer), allocatable, private :: sub_mats(:, :)
 
-    logical, private :: block_structure_set = .false.
+    logical, private :: num_blocks_set  = .false.
+    logical, private :: block_sizes_set = .false.
 contains
     !--------------
     ! Constructors
     !--------------
-    procedure :: set_block_structure => composite_mat_set_block_structure
+    procedure :: set_num_blocks  => composite_mat_set_num_blocks
+    ! Set the number of sub-matrices that the composite will be made of
+
+    procedure :: set_block_sizes => composite_mat_set_block_sizes
     ! Set the size of each sub-matrix of the composite matrix
 
     procedure :: composite_mat_set_mat_type_leaf
@@ -139,7 +143,30 @@ contains
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine composite_mat_set_block_structure(A, rows, cols)                !
+subroutine composite_mat_set_num_blocks(A, num_row_mats, num_col_mats)     !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(inout) :: A
+    integer, intent(in) :: num_row_mats, num_col_mats
+
+    A%num_row_mats = num_row_mats
+    A%num_col_mats = num_col_mats
+
+    allocate( A%row_ptr(num_row_mats + 1) )
+    allocate( A%col_ptr(num_col_mats + 1) )
+
+    A%row_ptr = 0
+    A%col_ptr = 0
+
+    allocate(A%sub_mats(num_row_mats, num_col_mats))
+
+    A%num_blocks_set = .true.
+
+end subroutine composite_mat_set_num_blocks
+
+
+
+!--------------------------------------------------------------------------!
+subroutine composite_mat_set_block_sizes(A, rows, cols)                    !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(sparse_matrix), intent(inout) :: A
@@ -147,11 +174,20 @@ subroutine composite_mat_set_block_structure(A, rows, cols)                !
     ! local variables
     integer :: it, jt
 
-    A%num_row_mats = size(rows)
-    A%num_col_mats = size(cols)
-
-    allocate( A%row_ptr(A%num_row_mats + 1) )
-    allocate( A%col_ptr(A%num_col_mats + 1) )
+    if (.not. A%num_blocks_set) then
+        call A%set_num_blocks(size(rows), size(cols))
+    else
+        if (size(rows) /= A%num_row_mats .or. &
+            & size(cols) /= A%num_col_mats) then
+            print *, "Attempted to set block sizes of a sparse matrix, "
+            print *, "but arrays provided are of inconsistent dimensions"
+            print *, "with already-set number of sub-matrices."
+            print *, "Row, col array dimensions:", size(rows), size(cols)
+            print *, "Number of row/col submatrices:", A%num_row_mats, &
+                                                        & A%num_col_mats
+            call exit(1)
+        endif
+    endif
 
     A%row_ptr(1) = 1
     A%col_ptr(1) = 1
@@ -164,9 +200,7 @@ subroutine composite_mat_set_block_structure(A, rows, cols)                !
         A%col_ptr(jt + 1) = A%col_ptr(jt) + cols(jt)
     enddo
 
-    allocate(A%sub_mats(A%num_row_mats, A%num_col_mats))
-
-end subroutine composite_mat_set_block_structure
+end subroutine composite_mat_set_block_sizes
 
 
 
@@ -175,6 +209,8 @@ subroutine composite_mat_set_mat_type_leaf(A, frmt)                        !
 !--------------------------------------------------------------------------!
     class(sparse_matrix), intent(inout) :: A
     character(len=*), intent(in) :: frmt
+
+    if (.not. A%num_blocks_set) call A%set_num_blocks(1, 1)
 
     call choose_matrix_type(A%sub_mats(1, 1)%mat, frmt)
 
@@ -188,6 +224,13 @@ subroutine composite_mat_set_mat_type_submat(A, it, jt, frmt)              !
     class(sparse_matrix), intent(inout) :: A
     integer, intent(in) :: it, jt
     character(len=*), intent(in) :: frmt
+
+    if (.not. A%num_blocks_set) then
+        print *, "Attempted to set the storage format of a sub-matrix"
+        print *, "of a composite matrix which has not yet had the number"
+        print *, "of sub-matrices set."
+        call exit(1)
+    endif
 
     call choose_matrix_type(A%sub_mats(it, jt)%mat, frmt)
 
@@ -210,7 +253,7 @@ subroutine composite_mat_copy_graph_structure(A, g)                        !
     endif
 
     ! Ensure that we're not treating a composite matrix as if it were a leaf
-    if (A%block_structure_set .and. .not. A%is_leaf()) then
+    if (A%block_sizes_set .and. .not. A%is_leaf()) then
         print *, "Attempted to copy a graph's structure to a composite "
         print *, "matrix which is not a leaf."
         call exit(1)
@@ -218,8 +261,8 @@ subroutine composite_mat_copy_graph_structure(A, g)                        !
 
     ! If the block structure has not already been set, then set it to
     ! reflect the fact that this matrix is a leaf
-    if (.not. A%block_structure_set) then
-        call A%set_block_structure( [A%nrow], [A%ncol] )
+    if (.not. A%block_sizes_set) then
+        call A%set_block_sizes( [A%nrow], [A%ncol] )
     endif
 
     ! Copy the structure of the graph `g` to the object that this matrix
@@ -242,14 +285,14 @@ subroutine composite_mat_set_graph(A, g)                                   !
         call exit(1)
     endif
 
-    if (A%block_structure_set .and. .not. A%is_leaf()) then
+    if (A%block_sizes_set .and. .not. A%is_leaf()) then
         print *, "Attempted to set the graph structure of a composite "
         print *, "matrix which is not a leaf."
         call exit(1)
     endif
 
-    if (.not. A%block_structure_set) then
-        call A%set_block_structure( [A%nrow], [A%ncol] )
+    if (.not. A%block_sizes_set) then
+        call A%set_block_sizes( [A%nrow], [A%ncol] )
     endif
 
     call A%sub_mats(1, 1)%mat%set_graph(g)
