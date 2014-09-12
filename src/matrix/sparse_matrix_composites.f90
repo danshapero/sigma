@@ -84,7 +84,11 @@ contains
     procedure :: get_column        => composite_mat_get_column
 
     procedure :: is_leaf           => composite_mat_is_leaf
+    ! Returns true if the sparse_matrix is a leaf, i.e. it wraps a single
+    ! sparse matrix format and not a composite of several matrices
+
     procedure :: get_submatrix     => composite_mat_get_submatrix
+    ! Return one of the composite's sub-matrices, wrapped in a sparse_matrix
 
 
     !-----------------------

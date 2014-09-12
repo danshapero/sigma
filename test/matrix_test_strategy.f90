@@ -159,7 +159,35 @@ implicit none
     enddo
 
     if (verbose) then
-        print *, "o Done checking matrix entries."
+        print *, "o Getting / setting matrix entries works."
+    endif
+
+
+    do i = 1, nn
+        d = g%degree(i)
+        call A%get_row(nodes, slice, i)
+
+        do k = 1, d
+            j = nodes(k)
+            if (j /= i) then
+                if (slice(k) /= -1) then
+                    print *, "Getting matrix row failed."
+                    print *, "Entry ", i, j
+                    print *, "should be -1; value found:", slice(k)
+                    call exit(1)
+                endif
+            elseif (j == i) then
+                if (slice(k) /= d - 1) then
+                    print *, "Getting matrix row failed."
+                    print *, "Entry ", i, i
+                    print *, "should be", d - 1, "; value found:", slice(k)
+                endif
+            endif
+        enddo
+    enddo
+
+    if (verbose) then
+        print *, "o Getting matrix row / column works."
     endif
 
 
