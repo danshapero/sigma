@@ -186,6 +186,29 @@ implicit none
         enddo
     enddo
 
+    do j = 1, nn
+        d = g%degree(i)
+        call A%get_column(nodes, slice, j)
+
+        do k = 1, d
+            i = nodes(k)
+            if (j /= i) then
+                if (slice(k) /= -1) then
+                    print *, "Getting matrix column failed."
+                    print *, "Entry ", i, j
+                    print *, "should be -1; value found:", slice(k)
+                    call exit(1)
+                endif
+            elseif (j == i) then
+                if (slice(k) /= d - 1) then
+                    print *, "Getting matrix column failed."
+                    print *, "Entry ", j, j
+                    print *, "should be", d - 1, "; value found:", slice(k)
+                endif
+            endif
+        enddo
+    enddo
+
     if (verbose) then
         print *, "o Getting matrix row / column works."
     endif
