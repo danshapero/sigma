@@ -40,7 +40,7 @@ end type sparse_mat_pointer
 !--------------------------------------------------------------------------!
 type, extends(sparse_matrix_interface) :: sparse_matrix                    !
 !--------------------------------------------------------------------------!
-    integer :: num_row_mats, num_col_mats
+    integer :: num_row_mats = 0, num_col_mats = 0
     integer, allocatable :: row_ptr(:), col_ptr(:)
     type(sparse_mat_pointer), allocatable, private :: sub_mats(:, :)
 

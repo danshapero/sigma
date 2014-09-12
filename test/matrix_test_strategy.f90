@@ -71,7 +71,7 @@ implicit none
 
 
     !----------------------------------------------------------------------!
-    ! Make a random reference sparse matrix                                !
+    ! Make a random reference graph                                        !
     !----------------------------------------------------------------------!
     call g%init(nn)
 
@@ -88,13 +88,86 @@ implicit none
         enddo
     enddo
 
+    d = g%max_degree()
+    allocate(nodes(d), slice(d))
+
+    if (verbose) then
+        print *, "o Done generating Erdos-Renyi graph."
+        print *, "    Number of vertices: ", nn
+        print *, "    Number of edges:    ", g%ne
+        print *, "    Maximum degree:     ", d
+    endif
+
+
+
+    !----------------------------------------------------------------------!
+    ! Create a matrix in CSR format to represent the Laplacian of `g`      !
+    !----------------------------------------------------------------------!
     call A%set_matrix_type("csr")
     call A%set_dimensions(nn, nn)
     call A%copy_graph_structure(g)
+    call A%zero()
+
+    do i = 1, nn
+        d = g%degree(i)
+        call g%get_neighbors(nodes, i)
+        do k = 1, d
+            j = nodes(k)
+            call A%add_value(i, j, -1.0_dp)
+            call A%add_value(i, i, +1.0_dp)
+        enddo
+    enddo
+
+    if (verbose) then
+        print *, "o Done creating graph Laplacian."
+    endif
+
+
+
+    !----------------------------------------------------------------------!
+    ! Test all of the matrix operations for correctness                    !
+    !----------------------------------------------------------------------!
+
+    do i = 1, nn
+        d = g%degree(i) - 1
+        z = A%get_value(i, i)
+        if (z /= d) then
+            print *, "Setting or getting matrix entry failed."
+            print *, "Degree of node", i, ":", d
+            print *, "A(i, i) =", z
+            call exit(1)
+        endif
+
+        do j = i + 1, nn
+            z = A%get_value(i, j)
+            if (g%connected(i, j)) then
+                if (z /= -1) then
+                    print *, "Setting or getting matrix entry failed."
+                    print *, "Nodes", i, ",", j
+                    print *, "are connected in g but A(i, j) =", z
+                    call exit(1)
+                endif
+            else
+                if (z /= 0) then
+                    print *, "Setting or getting matrix entry failed."
+                    print *, "Nodes", i, ",", j
+                    print *, "are not connected in g but A(i, j) =", z
+                    call exit(1)
+                endif
+            endif
+        enddo
+    enddo
+
+    if (verbose) then
+        print *, "o Done checking matrix entries."
+    endif
 
 
     call g%destroy()
     call A%destroy()
+
+    deallocate(nodes)
+    deallocate(slice)
 
 
 end program matrix_test_strategy
