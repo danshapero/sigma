@@ -187,7 +187,7 @@ implicit none
     enddo
 
     do j = 1, nn
-        d = g%degree(i)
+        d = g%degree(j)
         call A%get_column(nodes, slice, j)
 
         do k = 1, d
