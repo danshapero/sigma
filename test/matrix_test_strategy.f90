@@ -22,7 +22,7 @@ implicit none
     type(sparse_matrix) :: A
 
     ! vectors
-    real(dp), allocatable :: x(:), y(:)
+    real(dp), allocatable :: x(:), y(:), w(:)
 
     ! integer indices
     integer :: i, j, k, d, nn
@@ -36,7 +36,7 @@ implicit none
     real(dp), allocatable :: slice(:)
 
     ! random numbers
-    real(dp) :: c, w, z
+    real(dp) :: c, z
 
     ! command-line argument parsing
     character(len=16) :: arg
@@ -127,7 +127,6 @@ implicit none
     !----------------------------------------------------------------------!
     ! Test all of the matrix operations for correctness                    !
     !----------------------------------------------------------------------!
-
     do i = 1, nn
         d = g%degree(i) - 1
         z = A%get_value(i, i)
@@ -212,6 +211,52 @@ implicit none
     if (verbose) then
         print *, "o Getting matrix row / column works."
     endif
+
+
+
+    !----------------------------------------------------------------------!
+    ! Test matrix-vector multiplication                                    !
+    !----------------------------------------------------------------------!
+    allocate( x(nn), y(nn), w(nn) )
+
+    x = 0.0_dp
+    y = 0.0_dp
+    w = 0.0_dp
+
+    ! Make a random vector x
+    call random_number(x)
+
+    ! Compute `y = L(g) * x` exactly
+    do i = 1, nn
+        d = g%degree(i)
+        call g%get_neighbors(nodes, i)
+
+        y(i) = d * x(i)
+
+        do k = 1, d
+            j = nodes(k)
+
+            y(i) = y(i) - x(j)
+        enddo
+    enddo
+
+    ! Compute the matrix-vector product using the composite matrx
+    call A%matvec(x, w)
+
+    ! Compare the two
+    z = dsqrt( dot_product(y - w, y - w) / dot_product(x, x) )
+
+    if (z > 1.0e-14) then
+        print *, "Matrix-vector multiplication failed."
+        print *, "Error in computing matrix-vector product relative to"
+        print *, "exact value:", z
+        call exit(1)
+    endif
+
+    if (verbose) then
+        print *, "o Matrix-vector product works."
+    endif
+
 
 
     call g%destroy()
