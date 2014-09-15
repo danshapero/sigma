@@ -145,6 +145,7 @@ contains
 
 
 
+
 !==========================================================================!
 !==== Constructors                                                     ====!
 !==========================================================================!
@@ -560,22 +561,13 @@ function composite_mat_get_submatrix(A, it, jt) result(C)                  !
             call C%set_dimensions(A%row_ptr(it+1) - A%row_ptr(it), &
                                 & A%col_ptr(jt+1) - A%col_ptr(jt))
 
-            C%num_row_mats = 1
-            C%num_col_mats = 1
+            call C%set_block_sizes([C%nrow], [C%ncol])
 
-            allocate(C%row_ptr(2), C%col_ptr(2))
-
-            C%row_ptr(1) = 1
-            C%row_ptr(2) = C%nrow + 1
-
-            C%col_ptr(1) = 1
-            C%col_ptr(2) = C%ncol + 1
-
-            allocate(C%sub_mats(1, 1))
             C%sub_mats(1, 1)%mat => Aij
 
-            call Aij%add_reference()
     end select
+
+    call Aij%add_reference()
 
 end function composite_mat_get_submatrix
 
@@ -843,11 +835,13 @@ subroutine composite_mat_destroy(A)                                        !
         do jt = 1, A%num_col_mats
             C => A%sub_mats(it, jt)%mat
 
-            call C%remove_reference()
+            if (associated(C)) then
+                call C%remove_reference()
 
-            if (C%reference_count <= 0) then
-                call C%destroy()
-                deallocate(C)
+                if (C%reference_count <= 0) then
+                    call C%destroy()
+                    deallocate(C)
+                endif
             endif
 
             nullify(A%sub_mats(it, jt)%mat)
@@ -868,6 +862,8 @@ subroutine composite_mat_destroy(A)                                        !
 
     A%dimensions_set = .false.
     A%graph_set = .false.
+    A%num_blocks_set = .false.
+    A%block_sizes_set = .false.
 
 end subroutine composite_mat_destroy
 
