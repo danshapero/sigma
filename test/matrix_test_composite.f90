@@ -80,71 +80,154 @@ implicit none
     !----------------------------------------------------------------------!
     ! Make a random Laplacian matrix                                       !
     !----------------------------------------------------------------------!
-    nn = 768
-    p = log(1.0_dp * nn) / log(2.0_dp) / nn
 
-    ! Make an Erdos-Renyi graph
-    call g%init(nn)
+    ! Make the graph for the (1, 1)-submatrix of `A`
+    p = log(1.0_dp * nn1) / log(2.0_dp) / nn1
 
-    do i = 1, nn
-        call g%add_edge(i, i)
-
-        do j = i + 1, nn
-            call random_number(q)
-
-            if (q < p) then
-                call g%add_edge(i, j)
-                call g%add_edge(j, i)
-            endif
-        enddo
-    enddo
-
+    call erdos_renyi_graph(g, nn1, nn1, p, symmetric = .true.)
     d = g%max_degree()
 
     if (verbose) then
-        print *, "o Done generating Erdos-Renyi graph."
-        print *, "    Number of vertices: ", nn
+        print *, "o Done generating first Erdos-Renyi graph."
+        print *, "    Number of vertices: ", nn1
         print *, "    Number of edges:    ", g%ne
         print *, "    Maximum degree:     ", d
     endif
 
-
-    allocate(nodes(d))
-
     ! Make a Laplacian matrix on the graph with random weights
     call choose_matrix_type(C, "csr")
-    call C%init(nn, nn, g)
-    call C%zero()
+    call erdos_renyi_matrix(C, g)
 
-    do i = 1, nn
+    if (verbose) then
+        print *, "o Done generating first random weighted Laplacian matrix."
+    endif
+
+    ! Set the (1, 1)-submatrix of `A` to be `C`
+    call A%set_submatrix(1, 1, C)
+
+    ! Nullify `C` so that we can use it to build another sub-matrix
+    call C%remove_reference()
+    nullify(C)
+    call g%destroy()
+
+
+    ! Do the same thing again for the (2, 2)-submatrix of `A`
+    p = log(1.0_dp * nn2) / log(2.0_dp) / nn2
+
+    call erdos_renyi_graph(g, nn2, nn2, p, symmetric = .true.)
+    d = g%max_degree()
+
+    if (verbose) then
+        print *, "o Done generating second Erdos-Renyi graph."
+        print *, "    Number of vertices: ", nn2
+        print *, "    Number of edges:    ", g%ne
+        print *, "    Maximum degree:     ", d
+    endif
+
+    call choose_matrix_type(C, "csr")
+    call erdos_renyi_matrix(C, g)
+
+    if (verbose) then
+        print *, "o Done generating second random weighted Laplacian matrix."
+    endif
+
+    call A%set_submatrix(2, 2, C)
+
+    call C%remove_reference()
+    nullify(C)
+    call g%destroy()
+
+
+    ! Now generate a graph for the (1, 2)-submatrix
+    p = 6.0 / nn1
+    call erdos_renyi_graph(g, nn1, nn2, p, symmetric = .false.)
+
+    call A%set_matrix_type(1, 2, "csr")
+    call A%copy_graph_submat(1, 2, g)
+
+    ! call A%set_matrix_type(2, 1, "csc")
+    ! call A%copy_graph_submat(2, 1, g)
+
+
+
+    ! Destroy any heap-allocated objects
+    call A%destroy()
+
+
+! Auxiliary subroutines
+contains
+
+
+!--------------------------------------------------------------------------!
+subroutine erdos_renyi_graph(g, m, n, p, symmetric)                        !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(graph_interface), intent(inout) :: g
+    integer, intent(in) :: m, n
+    real(dp), intent(in) :: p
+    logical, intent(in), optional :: symmetric
+    ! local variables
+    integer :: i, j
+    real(dp) :: q
+    logical :: sym
+
+    sym = .false.
+    if (present(symmetric)) sym = symmetric
+
+    call g%init(m, n)
+
+    do i = 1, m
+        if (sym) call g%add_edge(i, i)
+
+        do j = i + 1, n
+            call random_number(q)
+            if (q < p) then
+                call g%add_edge(i, j)
+                if (sym) call g%add_edge(j, i)
+            endif
+        enddo
+    enddo
+
+end subroutine erdos_renyi_graph
+
+
+
+!--------------------------------------------------------------------------!
+subroutine erdos_renyi_matrix(A, g)                                        !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix_interface), intent(inout) :: A
+    class(graph_interface), intent(in) :: g
+    ! local variables
+    integer :: i, j, k, d
+    integer, allocatable :: nodes(:)
+    real(dp) :: q
+
+    call A%init(g%m, g%n, g)
+
+    d = g%max_degree()
+    allocate(nodes(d))
+
+    do i = 1, g%m
         d = g%degree(i)
         call g%get_neighbors(nodes, i)
 
         do k = 1, d
             j = nodes(k)
+
             if (j > i) then
                 call random_number(q)
-                call C%add_value(i, i, +q)
-                call C%add_value(j, j, +q)
-                call C%add_value(i, j, -q)
-                call C%add_value(j, i, -q)
+                call A%add_value(i, j, -q)
+                call A%add_value(i, i, +q)
+                call A%add_value(j, i, -q)
+                call A%add_value(j, j, +q)
             endif
         enddo
     enddo
 
-    if (verbose) then
-        print *, "o Done generating random weighted Laplacian matrix."
-    endif
+end subroutine erdos_renyi_matrix
 
 
-    ! Set the (1, 1)-submatrix of `A` to be `C`
-    call A%set_submatrix(1, 1, C)
-
-
-
-    call A%destroy()
-    call C%destroy()
-    deallocate(C)
 
 end program matrix_test_composite
 

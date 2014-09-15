@@ -232,6 +232,8 @@ subroutine composite_mat_set_block_sizes(A, rows, cols)                    !
         A%col_ptr(jt + 1) = A%col_ptr(jt) + cols(jt)
     enddo
 
+    A%block_sizes_set = .true.
+
 end subroutine composite_mat_set_block_sizes
 
 
@@ -270,6 +272,12 @@ subroutine composite_mat_set_mat_type_submat(A, it, jt, frmt)              !
     endif
 
     call choose_matrix_type(A%sub_mats(it, jt)%mat, frmt)
+
+    if (A%block_sizes_set) then
+        call A%sub_mats(it, jt)%mat%set_dimensions( &
+                & A%row_ptr(it + 1) - A%row_ptr(it), &
+                & A%col_ptr(jt + 1) - A%col_ptr(jt))
+    endif
 
 end subroutine composite_mat_set_mat_type_submat
 
@@ -818,6 +826,7 @@ end subroutine composite_matvec_t_add
 
 
 
+
 !==========================================================================!
 !==== Destructors                                                      ====!
 !==========================================================================!
@@ -831,8 +840,8 @@ subroutine composite_mat_destroy(A)                                        !
     integer :: it, jt
     class(sparse_matrix_interface), pointer :: C
 
-    do it = 1, A%num_row_mats
-        do jt = 1, A%num_col_mats
+    do jt = 1, A%num_col_mats
+        do it = 1, A%num_row_mats
             C => A%sub_mats(it, jt)%mat
 
             if (associated(C)) then
