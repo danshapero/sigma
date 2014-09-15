@@ -65,8 +65,8 @@ contains
                                 & composite_mat_set_mat_type_submat
     ! Choose the sparse matrix format for each sub-matrix of the composite
 
-    procedure :: copy_graph_structure => composite_mat_copy_graph_structure
-    procedure :: set_graph            => composite_mat_set_graph
+    procedure :: copy_graph => composite_mat_copy_graph
+    procedure :: set_graph  => composite_mat_set_graph
     ! Create the connectivity structure of a leaf matrix
 
     procedure :: copy_graph_submat => composite_mat_copy_graph_submat
@@ -284,7 +284,7 @@ end subroutine composite_mat_set_mat_type_submat
 
 
 !--------------------------------------------------------------------------!
-subroutine composite_mat_copy_graph_structure(A, g)                        !
+subroutine composite_mat_copy_graph(A, g)                                  !
 !--------------------------------------------------------------------------!
     class(sparse_matrix), intent(inout) :: A
     class(graph_interface), intent(in) :: g
@@ -312,9 +312,9 @@ subroutine composite_mat_copy_graph_structure(A, g)                        !
 
     ! Copy the structure of the graph `g` to the object that this matrix
     ! is wrapping
-    call A%sub_mats(1, 1)%mat%copy_graph_structure(g)
+    call A%sub_mats(1, 1)%mat%copy_graph(g)
 
-end subroutine composite_mat_copy_graph_structure
+end subroutine composite_mat_copy_graph
 
 
 
@@ -362,7 +362,7 @@ subroutine composite_mat_copy_graph_submat(A, it, jt, g)                   !
     endif
 
     ! Copy the structure of `g` to the desired sub-matrix
-    call A%sub_mats(it, jt)%mat%copy_graph_structure(g)
+    call A%sub_mats(it, jt)%mat%copy_graph(g)
 
 end subroutine composite_mat_copy_graph_submat
 

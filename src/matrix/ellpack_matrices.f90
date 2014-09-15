@@ -33,7 +33,7 @@ contains
     !--------------
     ! Constructors
     !--------------
-    procedure :: copy_graph_structure => ellpack_matrix_copy_graph_structure
+    procedure :: copy_graph => ellpack_matrix_copy_graph
     procedure :: set_graph => ellpack_matrix_set_graph
 
 
@@ -106,7 +106,7 @@ contains
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine ellpack_matrix_copy_graph_structure(A, g)                       !
+subroutine ellpack_matrix_copy_graph(A, g)                                 !
 !--------------------------------------------------------------------------!
     class(ellpack_matrix), intent(inout) :: A
     class(graph_interface), intent(in) :: g
@@ -128,7 +128,7 @@ subroutine ellpack_matrix_copy_graph_structure(A, g)                       !
 
     A%graph_set = .true.
 
-end subroutine ellpack_matrix_copy_graph_structure
+end subroutine ellpack_matrix_copy_graph
 
 
 

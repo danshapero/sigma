@@ -44,7 +44,7 @@ subroutine sparse_matrix_sum(A, B, C)                                      !
 
     call A%set_dimensions(B%nrow, B%ncol)
     call sparse_matrix_sum_graph(g, B, C)
-    call A%copy_graph_structure(g)
+    call A%copy_graph(g)
     call sparse_matrix_sum_fill_entries(A, B, C)
 
 end subroutine sparse_matrix_sum
@@ -176,7 +176,7 @@ subroutine sparse_matrix_product(A, B, C)                                  !
 
     call A%set_dimensions(B%nrow, C%ncol)
     call sparse_matrix_product_graph(g, B, C)
-    call A%copy_graph_structure(g)
+    call A%copy_graph(g)
     call sparse_matrix_product_fill_entries(A, B, C)
 
 end subroutine sparse_matrix_product

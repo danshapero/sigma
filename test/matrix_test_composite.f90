@@ -15,7 +15,7 @@ use sigma
 implicit none
 
     ! graph used as the matrix substrate
-    type(ll_graph) :: g
+    class(graph_interface), pointer :: g
 
     ! sparse matrix objects
     type(sparse_matrix) :: A, B
@@ -83,6 +83,8 @@ implicit none
 
     ! Make the graph for the (1, 1)-submatrix of `A`
     p = log(1.0_dp * nn1) / log(2.0_dp) / nn1
+
+    call choose_graph_type(g, "ll")
 
     call erdos_renyi_graph(g, nn1, nn1, p, symmetric = .true.)
     d = g%max_degree()
@@ -152,6 +154,8 @@ implicit none
 
     ! Destroy any heap-allocated objects
     call A%destroy()
+    call g%destroy()
+    deallocate(g)
 
 
 ! Auxiliary subroutines

@@ -105,7 +105,7 @@ implicit none
     !----------------------------------------------------------------------!
     call A%set_matrix_type("csr")
     call A%set_dimensions(nn, nn)
-    call A%copy_graph_structure(g)
+    call A%copy_graph(g)
     call A%zero()
 
     do i = 1, nn

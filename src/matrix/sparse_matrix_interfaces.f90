@@ -53,8 +53,7 @@ contains
     ! Set the row and column dimension of a sparse matrix and copy the
     ! connectivity structure from another graph
 
-    procedure(sparse_mat_copy_graph_structure_ifc), deferred :: &
-                                                      & copy_graph_structure
+    procedure(sparse_mat_copy_graph_ifc), deferred :: copy_graph
     ! Initialize the matrix's connectivity structure as a copy of an
     ! input graph. The input graph need not be of the same format as the 
     ! matrix's graph
@@ -155,11 +154,11 @@ end type sparse_matrix_interface
 !--------------------------------------------------------------------------!
 abstract interface                                                         !
 !--------------------------------------------------------------------------!
-    subroutine sparse_mat_copy_graph_structure_ifc(A, g)
+    subroutine sparse_mat_copy_graph_ifc(A, g)
         import :: graph_interface, sparse_matrix_interface
         class(sparse_matrix_interface), intent(inout) :: A
         class(graph_interface), intent(in) :: g
-    end subroutine sparse_mat_copy_graph_structure_ifc
+    end subroutine sparse_mat_copy_graph_ifc
 
     subroutine sparse_mat_set_graph_ifc(A, g)
         import :: graph_interface, sparse_matrix_interface
@@ -254,7 +253,7 @@ subroutine sparse_matrix_setup(A, nrow, ncol, g)                           !
     class(graph_interface), intent(in) :: g
 
     call A%set_dimensions(nrow, ncol)
-    call A%copy_graph_structure(g)
+    call A%copy_graph(g)
 
 end subroutine sparse_matrix_setup
 

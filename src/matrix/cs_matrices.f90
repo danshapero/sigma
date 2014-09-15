@@ -103,7 +103,7 @@ contains
     !--------------
     ! Constructors
     !--------------
-    procedure :: copy_graph_structure => csr_matrix_copy_graph_structure
+    procedure :: copy_graph => csr_matrix_copy_graph
 
     !-----------
     ! Accessors
@@ -145,7 +145,7 @@ contains
     !--------------
     ! Constructors
     !--------------
-    procedure :: copy_graph_structure => csc_matrix_copy_graph_structure
+    procedure :: copy_graph => csc_matrix_copy_graph
 
     !-----------
     ! Accessors
@@ -526,7 +526,7 @@ end subroutine csc_matvec_add
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine csr_matrix_copy_graph_structure(A, g)                           !
+subroutine csr_matrix_copy_graph(A, g)                                     !
 !--------------------------------------------------------------------------!
     class(csr_matrix), intent(inout) :: A
     class(graph_interface), intent(in) :: g
@@ -548,12 +548,12 @@ subroutine csr_matrix_copy_graph_structure(A, g)                           !
 
     A%graph_set = .true.
 
-end subroutine csr_matrix_copy_graph_structure
+end subroutine csr_matrix_copy_graph
 
 
 
 !--------------------------------------------------------------------------!
-subroutine csc_matrix_copy_graph_structure(A, g)                           !
+subroutine csc_matrix_copy_graph(A, g)                                     !
 !--------------------------------------------------------------------------!
     class(csc_matrix), intent(inout) :: A
     class(graph_interface), intent(in) :: g
@@ -575,7 +575,7 @@ subroutine csc_matrix_copy_graph_structure(A, g)                           !
 
     A%graph_set = .true.
 
-end subroutine csc_matrix_copy_graph_structure
+end subroutine csc_matrix_copy_graph
 
 
 

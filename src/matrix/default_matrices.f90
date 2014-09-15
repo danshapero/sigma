@@ -33,7 +33,7 @@ contains
     !--------------
     ! Constructors
     !--------------
-    procedure :: copy_graph_structure => default_matrix_copy_graph_structure
+    procedure :: copy_graph => default_matrix_copy_graph
     procedure :: set_graph => default_matrix_set_graph
 
 
@@ -183,7 +183,7 @@ contains
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine default_matrix_copy_graph_structure(A, g)                       !
+subroutine default_matrix_copy_graph(A, g)                                 !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(default_matrix), intent(inout) :: A
@@ -220,7 +220,7 @@ subroutine default_matrix_copy_graph_structure(A, g)                       !
 
     A%graph_set = .true.
 
-end subroutine default_matrix_copy_graph_structure
+end subroutine default_matrix_copy_graph
 
 
 
