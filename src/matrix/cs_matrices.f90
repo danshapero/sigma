@@ -558,11 +558,11 @@ subroutine csc_matrix_copy_graph_structure(A, g)                           !
     class(csc_matrix), intent(inout) :: A
     class(graph_interface), intent(in) :: g
 
-    if (A%nrow /= g%m .or. A%ncol /= g%m) then
+    if (A%nrow /= g%n .or. A%ncol /= g%m) then
         print *, 'Attempted to set CSC matrix connectivity structure to'
         print *, 'graph with inconsistent dimensions.'
         print *, 'Dimensions of matrix:', A%nrow, A%ncol
-        print *, 'Dimensions of graph:', g%m, g%n
+        print *, 'Dimensions of graph:', g%n, g%m
         call exit(1)
     endif
 
