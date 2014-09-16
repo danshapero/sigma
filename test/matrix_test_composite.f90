@@ -171,6 +171,7 @@ implicit none
         print *, "    Number of references to g:", g%reference_count
     endif
 
+    ! Fill in all the matrix entries that couple the two fields
     d = g%max_degree()
     allocate(nodes(d))
 
@@ -188,6 +189,19 @@ implicit none
         enddo
     enddo
 
+
+
+    !----------------------------------------------------------------------!
+    ! Test matrix-vector multiplication                                    !
+    !----------------------------------------------------------------------!
+    allocate( x(nn), y(nn) )
+
+    x = 1.0_dp
+    y = 2.0_dp
+
+    call A%matvec_add(x, y)
+
+    print *, minval(y), maxval(y)
 
 
     ! Destroy any heap-allocated objects
