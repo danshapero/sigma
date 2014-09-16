@@ -144,11 +144,32 @@ implicit none
     p = 6.0 / nn1
     call erdos_renyi_graph(g, nn1, nn2, p, symmetric = .false.)
 
-    call A%set_matrix_type(1, 2, "csr")
-    call A%copy_graph_submat(1, 2, g)
+    ! Convert it to CS storage
+    call convert_graph_type(g, "cs")
 
-    ! call A%set_matrix_type(2, 1, "csc")
-    ! call A%copy_graph_submat(2, 1, g)
+    ! Make the (1, 2)-submatrix of `A` a CSR matrix,
+    call A%set_matrix_type(1, 2, "csr")
+
+    ! then *set* its graph to point to `g`.
+    call A%set_graph_submat(1, 2, g)
+
+    ! Now make the (2, 1)-submatrix of `A` a CSC matrix,
+    call A%set_matrix_type(2, 1, "csc")
+
+    ! and set its graph to point to `g` also.
+    call A%set_graph_submat(2, 1, g)
+
+    ! There are now 3 references to `g`: one from us having created it in
+    ! the first place, another from the (1, 2)-submatrix of `A`, and a
+    ! third from the (2, 1)-submatrix!
+    ! This sounds a little complicated, but it means that we've saved some
+    ! memory usage by having two matrices share an object -- the graph g --
+    ! rather than duplicate it.
+    if (verbose) then
+        print *, "o Done creating couplings between (1, 1)- and (2, 2)-"
+        print *, "  blocks of A via another random graph g."
+        print *, "    Number of references to g:", g%reference_count
+    endif
 
 
 
