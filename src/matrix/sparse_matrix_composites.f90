@@ -106,11 +106,17 @@ contains
     procedure :: add_value           => composite_mat_add_value
     ! procedure :: set_dense_submatrix => composite_mat_set_dense_submatrix
     ! procedure :: add_dense_submatrix => composite_mat_add_dense_submatrix
+    procedure :: set_submat_value    => composite_mat_set_submat_value
+    procedure :: add_submat_value    => composite_mat_add_submat_value
     procedure :: zero                => composite_mat_zero
     procedure :: left_permute        => composite_mat_left_permute
     procedure :: right_permute       => composite_mat_right_permute
 
     procedure :: set_submatrix       => composite_mat_set_submatrix
+
+    ! Additional generics for mutators
+    generic :: set => set_submat_value
+    generic :: add => add_submat_value
 
 
     !------------------------------
@@ -684,6 +690,32 @@ subroutine composite_mat_add_value(A, i, j, z)                             !
     call C%add_value(ir, jr, z)
 
 end subroutine composite_mat_add_value
+
+
+
+!--------------------------------------------------------------------------!
+subroutine composite_mat_set_submat_value(A, it, jt, i, j, z)              !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(inout) :: A
+    integer, intent(in) :: it, jt, i, j
+    real(dp), intent(in) :: z
+
+    call A%sub_mats(it, jt)%mat%set_value(i, j, z)
+
+end subroutine composite_mat_set_submat_value
+
+
+
+!--------------------------------------------------------------------------!
+subroutine composite_mat_add_submat_value(A, it, jt, i, j, z)              !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(inout) :: A
+    integer, intent(in) :: it, jt, i, j
+    real(dp), intent(in) :: z
+
+    call A%sub_mats(it, jt)%mat%add_value(i, j, z)
+
+end subroutine composite_mat_add_submat_value
 
 
 

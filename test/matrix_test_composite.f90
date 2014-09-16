@@ -171,6 +171,23 @@ implicit none
         print *, "    Number of references to g:", g%reference_count
     endif
 
+    d = g%max_degree()
+    allocate(nodes(d))
+
+    do i = 1, nn1
+        d = g%degree(i)
+        call g%get_neighbors(nodes, i)
+
+        do k = 1, d
+            j = nodes(k)
+
+            call A%set(1, 2, i, j, -1.0_dp)
+            call A%set(2, 1, j, i, -1.0_dp)
+            call A%add(1, 1, i, i, +1.0_dp)
+            call A%add(2, 2, j, j, +1.0_dp)
+        enddo
+    enddo
+
 
 
     ! Destroy any heap-allocated objects
@@ -242,10 +259,10 @@ subroutine erdos_renyi_matrix(A, g)                                        !
 
             if (j > i) then
                 call random_number(q)
-                call A%add_value(i, j, -q)
-                call A%add_value(i, i, +q)
-                call A%add_value(j, i, -q)
-                call A%add_value(j, j, +q)
+                call A%add(i, j, -q)
+                call A%add(i, i, +q)
+                call A%add(j, i, -q)
+                call A%add(j, j, +q)
             endif
         enddo
     enddo
