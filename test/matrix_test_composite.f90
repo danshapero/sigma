@@ -18,7 +18,7 @@ implicit none
     class(graph_interface), pointer :: g
 
     ! sparse matrix objects
-    type(sparse_matrix) :: A, B
+    type(sparse_matrix) :: A
     class(sparse_matrix_interface), pointer :: C
 
     ! vectors
@@ -63,6 +63,12 @@ implicit none
 
     nn = nn1 + nn2
 
+    allocate( x(nn), y(nn), z(nn) )
+
+    call random_number(x)
+    y = 0.0_dp
+    z = 0.0_dp
+
 
 
     !----------------------------------------------------------------------!
@@ -70,6 +76,13 @@ implicit none
     !----------------------------------------------------------------------!
     call A%set_dimensions(nn, nn)
     call A%set_block_sizes( [nn1, nn2], [nn1, nn2] )
+
+    if (A%num_row_mats /= 2 .or. A%num_col_mats /= 2) then
+        print *, "Setting number of blocks of sparse matrix failed, should"
+        print *, "have number of row & column blocks be 2 x 2."
+        print *, "Values found:", A%num_row_mats, A%num_col_mats
+        call exit(1)
+    endif
 
     if (verbose) then
         print *, "o Composite sparse matrix initialized."
@@ -83,10 +96,9 @@ implicit none
 
     ! Make the graph for the (1, 1)-submatrix of `A`
     p = log(1.0_dp * nn1) / log(2.0_dp) / nn1
-
     call choose_graph_type(g, "ll")
-
     call erdos_renyi_graph(g, nn1, nn1, p, symmetric = .true.)
+
     d = g%max_degree()
 
     if (verbose) then
@@ -106,6 +118,19 @@ implicit none
 
     ! Set the (1, 1)-submatrix of `A` to be `C`
     call A%set_submatrix(1, 1, C)
+
+    ! Check that the entries of `A` have been set properly
+    do i = 1, nn1
+        do j = 1, nn1
+            if (A%get(1, 1, i, j) /= C%get(i, j)) then
+                print *, "Setting (1, 1)-submatrix failed; entry", i, j
+                print *, "not set correctly."
+                print *, "Value in constructed matrix:", C%get(i, j)
+                print *, "Value in composite matrix:  ", A%get(1, 1, i, j)
+                call exit(1)
+            endif
+        enddo
+    enddo
 
     ! Nullify `C` so that we can use it to build another sub-matrix
     call C%remove_reference()
@@ -194,20 +219,14 @@ implicit none
     !----------------------------------------------------------------------!
     ! Test matrix-vector multiplication                                    !
     !----------------------------------------------------------------------!
-    allocate( x(nn), y(nn) )
-
-    x = 1.0_dp
-    y = 2.0_dp
-
     call A%matvec_add(x, y)
-
-    print *, minval(y), maxval(y)
 
 
     ! Destroy any heap-allocated objects
     call A%destroy()
     call g%destroy()
     deallocate(g)
+
 
 
 ! Auxiliary subroutines

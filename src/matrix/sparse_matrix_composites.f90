@@ -78,6 +78,7 @@ contains
     ! Accessors
     !-----------
     procedure :: get_value         => composite_mat_get_value
+    procedure :: get_submat_value  => composite_mat_get_submat_value
     procedure :: get_row_degree    => composite_mat_get_row_degree
     procedure :: get_column_degree => composite_mat_get_column_degree
     procedure :: get_row           => composite_mat_get_row
@@ -89,6 +90,8 @@ contains
 
     procedure :: get_submatrix     => composite_mat_get_submatrix
     ! Return one of the composite's sub-matrices, wrapped in a sparse_matrix
+
+    generic :: get => get_submat_value
 
 
     !-----------------------
@@ -421,6 +424,19 @@ function composite_mat_get_value(A, i, j) result(z)                        !
     z = C%get_value(ir, jr)
 
 end function composite_mat_get_value
+
+
+
+!--------------------------------------------------------------------------!
+function composite_mat_get_submat_value(A, it, jt, i, j) result(z)         !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(in) :: A
+    integer, intent(in) :: it, jt, i, j
+    real(dp) :: z
+
+    z = A%sub_mats(it, jt)%mat%get_value(i, j)
+
+end function composite_mat_get_submat_value
 
 
 

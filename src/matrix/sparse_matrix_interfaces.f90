@@ -79,6 +79,9 @@ contains
     ! Return all the row indices of the non-zero entries in a given column
     ! and all the corresponding matrix entries
 
+    generic :: get => get_value
+    ! Generics for each of the mutators
+
 
     !-----------------------
     ! Edge, value iterators
@@ -109,9 +112,9 @@ contains
     procedure :: add_dense_submatrix => sparse_mat_add_dense_submatrix
     ! Set/add values to dense submatrices
 
-    ! Generics for each of the mutators
     generic :: set => set_value, set_dense_submatrix
     generic :: add => add_value, add_dense_submatrix
+    ! Generics for each of the mutators
 
     procedure(sparse_mat_zero_ifc), deferred :: zero
     ! Zero out all matrix entries
