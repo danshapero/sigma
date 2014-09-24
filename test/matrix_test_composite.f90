@@ -43,6 +43,7 @@ implicit none
     !----------------------------------------------------------------------!
     ! Get command line arguments to see if we're running in verbose mode   !
     !----------------------------------------------------------------------!
+
     verbose = .false.
     call getarg(1,arg)
     select case(trim(arg))
@@ -61,6 +62,7 @@ implicit none
     !----------------------------------------------------------------------!
     ! Set the problem dimensions                                           !
     !----------------------------------------------------------------------!
+
     nn1 = 768
     nn2 = 512
 
@@ -281,6 +283,7 @@ implicit none
     !----------------------------------------------------------------------!
     ! Test matrix-vector multiplication                                    !
     !----------------------------------------------------------------------!
+
     ! Compute the product of the composite matrix and and a random vector
     call A%matvec(x, y)
 
@@ -371,7 +374,8 @@ implicit none
     call g1%destroy()
     call g2%destroy()
     call h%destroy()
-    deallocate(g1, g2, h)
+    call ht%destroy()
+    deallocate(g1, g2, h, ht)
 
 
 
