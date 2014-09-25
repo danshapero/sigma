@@ -26,13 +26,17 @@ implicit none
     real(dp) :: mse, correct_val
 
     ! integer indices
-    integer :: i, j, k, d, nn, nn1, nn2
+    integer :: i, j, k, d, d1, d2, nn, nn1, nn2
 
     ! variables for getting matrix rows / columns
-    integer, allocatable :: nodes(:)
+    integer, allocatable :: nodes(:), nodes1(:), nodes2(:)
+    real(dp), allocatable :: slice(:)
 
     ! random numbers
     real(dp) :: p, q
+
+    ! other junk
+    logical :: found
 
     ! command-line argument parsing
     character(len=16) :: arg
@@ -318,6 +322,64 @@ implicit none
             call exit(1)
         endif
     enddo
+
+    if (verbose) then
+        print *, "o Done checking the degrees of the rows/columns of A."
+    endif
+
+
+
+    !----------------------------------------------------------------------!
+    ! Test getting a matrix row / column                                   !
+    !----------------------------------------------------------------------!
+
+    d1 = g1%max_degree()
+    allocate(nodes1(d1))
+
+    d2 = h%max_degree()
+    allocate(nodes2(d2))
+
+    d = g1%max_degree() + h%max_degree()
+    allocate(nodes(d), slice(d))
+
+    do i = 1, nn1
+        call A%get_row(nodes, slice, i)
+
+        d1 = g1%degree(i)
+        call g1%get_neighbors(nodes1, i)
+
+        d2 = h%degree(i)
+        call h%get_neighbors(nodes2, i)
+
+        ! First, make sure that every neighbor of `i` in `g1` and `h` is
+        ! also found in the list of non-zero entries in row `i` of `A`
+        d = d1 + d2
+        do k = 1, d1
+            j = nodes1(k)
+            found = any(nodes == j)
+
+            if (.not. found) then
+                print *, i, j
+                call exit(1)
+            endif
+        enddo
+
+        do k = 1, d2
+            j = nodes2(k)
+            found = any(nodes == j + nn1)
+
+            if (.not. found) then
+                print *, i, j
+                call exit(1)
+            endif
+        enddo
+    enddo
+
+    deallocate(nodes, nodes1, nodes2, slice)
+
+    if (verbose) then
+        print *, "o Done checking row/column access."
+    endif
 
 
 
