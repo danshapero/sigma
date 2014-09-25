@@ -79,6 +79,7 @@ implicit none
     !----------------------------------------------------------------------!
     ! Initialize a sparse matrix composite                                 !
     !----------------------------------------------------------------------!
+
     call A%set_dimensions(nn, nn)
     call A%set_block_sizes( [nn1, nn2], [nn1, nn2] )
 
@@ -277,6 +278,46 @@ implicit none
     if (verbose) then
         print *, "o Done checking entries of A."
     endif
+
+
+
+    !----------------------------------------------------------------------!
+    ! Test getting the degrees of each row / column of the matrix          !
+    !----------------------------------------------------------------------!
+
+    do k = 1, nn1
+        d = A%get_row_degree(k)
+
+        if (d /= g1%degree(k) + h%degree(k)) then
+            print *, "Wrong row degree", k
+            call exit(1)
+        endif
+
+
+        d = A%get_column_degree(k)
+
+        if (d /= g1%degree(k) + h%degree(k)) then
+            print *, "Wrong column degree", k
+            call exit(1)
+        endif
+    enddo
+
+    do k = 1, nn2
+        d = A%get_row_degree(k + nn1)
+
+        if (d /= g2%degree(k) + ht%degree(k)) then
+            print *, "Wrong row degree", k + nn1
+            call exit(1)
+        endif
+
+
+        d = A%get_column_degree(k + nn1)
+
+        if (d /= g2%degree(k) + ht%degree(k)) then
+            print *, "Wrong column degree", k + nn1
+            call exit(1)
+        endif
+    enddo
 
 
 
