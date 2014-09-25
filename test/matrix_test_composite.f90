@@ -333,46 +333,65 @@ implicit none
     ! Test getting a matrix row / column                                   !
     !----------------------------------------------------------------------!
 
-    d1 = g1%max_degree()
+    d1 = max(g1%max_degree(), g2%max_degree())
     allocate(nodes1(d1))
 
-    d2 = h%max_degree()
+    d2 = max(h%max_degree(), ht%max_degree())
     allocate(nodes2(d2))
 
     d = g1%max_degree() + h%max_degree()
     allocate(nodes(d), slice(d))
 
-    do i = 1, nn1
-        call A%get_row(nodes, slice, i)
+    do k = 1, nn1
+        d1 = g1%degree(k)
+        call g1%get_neighbors(nodes1, k)
 
-        d1 = g1%degree(i)
-        call g1%get_neighbors(nodes1, i)
+        d2 = h%degree(k)
+        call h%get_neighbors(nodes2, k)
 
-        d2 = h%degree(i)
-        call h%get_neighbors(nodes2, i)
-
-        ! First, make sure that every neighbor of `i` in `g1` and `h` is
-        ! also found in the list of non-zero entries in row `i` of `A`
         d = d1 + d2
-        do k = 1, d1
-            j = nodes1(k)
-            found = any(nodes == j)
+        call A%get_row(nodes, slice, k)
 
-            if (.not. found) then
-                print *, i, j
-                call exit(1)
-            endif
-        enddo
+        if (.not. check_neighbors(d, d1, d2, &
+                                & nodes, nodes1, nodes2 + nn1)) then
+            print *, "Failed to get all non-zero entries in row", k
+            call exit(1)
+        endif
 
-        do k = 1, d2
-            j = nodes2(k)
-            found = any(nodes == j + nn1)
 
-            if (.not. found) then
-                print *, i, j
-                call exit(1)
-            endif
-        enddo
+        call A%get_column(nodes, slice, k)
+
+        if (.not. check_neighbors(d, d1, d2, &
+                                & nodes, nodes1, nodes2 + nn1)) then
+            print *, "Failed to get all non-zero entries in column", k
+            call exit(1)
+        endif
+    enddo
+
+    do k = 1, nn2
+        d1 = g2%degree(k)
+        call g2%get_neighbors(nodes1, k)
+
+        d2 = ht%degree(k)
+        call ht%get_neighbors(nodes2, k)
+
+        d = d1 + d2
+        call A%get_row(nodes, slice, k + nn1)
+
+        if (.not. check_neighbors(d, d1, d2, &
+                                & nodes, nodes1 + nn1, nodes2)) then
+            print *, "Failed to get all non-zero entries in row", k + nn1
+            call exit(1)
+        endif
+
+
+        call A%get_column(nodes, slice, k + nn1)
+
+        if (.not. check_neighbors(d, d1, d2, &
+                                & nodes, nodes1 + nn1, nodes)) then
+            print *, "Failed to get all non-zero entries in column", k + nn1
+            call exit(1)
+        endif
     enddo
 
     deallocate(nodes, nodes1, nodes2, slice)
@@ -569,6 +588,39 @@ subroutine wrong_matrix_entry_error(it, jt, i, j, correct_val, found_val)  !
     call exit(1)
 
 end subroutine
+
+
+
+!--------------------------------------------------------------------------!
+function check_neighbors(d, d1, d2, nodes, nodes1, nodes2) result(correct) !
+!--------------------------------------------------------------------------!
+! Check to see if every element of the arrays `nodes1`, `nodes2` appears   !
+! somewhere in the array `nodes`, and vice versa.                          !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    integer, intent(in) :: d, d1, d2, nodes(:), nodes1(:), nodes2(:)
+    logical :: correct
+    ! local variables
+    integer :: i, j, k
+
+    correct = .true.
+
+    do k = 1, d1
+        j = nodes1(k)
+        correct = correct .and. any(nodes == j)
+    enddo
+
+    do k = 1, d2
+        j = nodes2(k)
+        correct = correct .and. any(nodes == j)
+    enddo
+
+    do k = 1, d
+        j = nodes(k)
+        correct = correct .and. (any(nodes1 == j) .or. any(nodes2 == j))
+    enddo
+
+end function check_neighbors
 
 
 
