@@ -140,7 +140,7 @@ subroutine cs_graph_copy(g, h, trans)                                      !
 
     ! Get a cursor from h with which to iterate through its edges
     cursor = h%make_cursor()
-    num_batches = (cursor%last - cursor%start) / batch_size + 1
+    num_batches = (cursor%last - cursor%first) / batch_size + 1
 
     ! Fill out the ptr array
     g%ptr = 0
@@ -307,7 +307,7 @@ function cs_make_cursor(g) result(cursor)                                  !
     ! local variables
     integer :: k
 
-    cursor%start = 1
+    cursor%first = 1
     cursor%last = g%ne
     cursor%current = 0
 

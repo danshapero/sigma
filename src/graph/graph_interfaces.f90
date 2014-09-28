@@ -129,7 +129,7 @@ end type graph_interface
 !--------------------------------------------------------------------------!
 type :: graph_edge_cursor                                                  !
 !--------------------------------------------------------------------------!
-    integer :: start, last, indx, current, edge(2)
+    integer :: first, last, indx, current, edge(2)
 end type graph_edge_cursor
 
 
@@ -311,7 +311,7 @@ subroutine to_dense_graph(g, A, trans)                                     !
     A = 0
 
     cursor = g%make_cursor()
-    num_batches = (cursor%last - cursor%start) / batch_size + 1
+    num_batches = (cursor%last - cursor%first) / batch_size + 1
 
     ! Iterate through all the edges (i, j) of g
     do n = 1, num_batches
@@ -345,7 +345,7 @@ subroutine write_graph_to_file(g, filename)                                !
     write(10,*) g%n, g%m, g%ne
 
     cursor = g%make_cursor()
-    num_batches = (cursor%last - cursor%start) / batch_size + 1
+    num_batches = (cursor%last - cursor%first) / batch_size + 1
     do n=1,num_batches
         call g%get_edges(edges, cursor, batch_size, num_returned)
 

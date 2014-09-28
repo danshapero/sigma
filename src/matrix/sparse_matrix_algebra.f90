@@ -71,7 +71,7 @@ subroutine sparse_matrix_sum_graph(g, B, C)                                !
 
     ! Add all the edges from `B` into `g`
     cursor = B%make_cursor()
-    num_batches = (cursor%last - cursor%start) / batch_size + 1
+    num_batches = (cursor%last - cursor%first) / batch_size + 1
 
     do n = 1, num_batches
         call B%get_edges(edges, cursor, batch_size, num_returned)
@@ -87,7 +87,7 @@ subroutine sparse_matrix_sum_graph(g, B, C)                                !
 
     ! Now add all the edges from `C` into `g`
     cursor = C%make_cursor()
-    num_batches = (cursor%last - cursor%start) / batch_size + 1
+    num_batches = (cursor%last - cursor%first) / batch_size + 1
 
     do n = 1, num_batches
         call C%get_edges(edges, cursor, batch_size, num_returned)
@@ -119,7 +119,7 @@ subroutine sparse_matrix_sum_fill_entries(A, B, C)                         !
 
     ! Add up the contributions to `A` from `B`
     cursor = B%make_cursor()
-    num_batches = (cursor%last - cursor%start) / batch_size + 1
+    num_batches = (cursor%last - cursor%first) / batch_size + 1
 
     do n = 1, num_batches
         call B%get_entries(edges, entries, cursor, batch_size, num_returned)
@@ -135,7 +135,7 @@ subroutine sparse_matrix_sum_fill_entries(A, B, C)                         !
 
     ! Add up the contributions to `A` from `C`
     cursor = C%make_cursor()
-    num_batches = (cursor%last - cursor%start) / batch_size + 1
+    num_batches = (cursor%last - cursor%first) / batch_size + 1
 
     do n = 1, num_batches
         call C%get_entries(edges, entries, cursor, batch_size, num_returned)
@@ -211,7 +211,7 @@ subroutine sparse_matrix_product_graph(g, B, C)
 
     ! Iterate through all the edges of `B`
     cursor = B%make_cursor()
-    num_batches = (cursor%last - cursor%start) / batch_size + 1
+    num_batches = (cursor%last - cursor%first) / batch_size + 1
 
     do n = 1, num_batches
         call B%get_edges(edges, cursor, batch_size, num_returned)
@@ -268,7 +268,7 @@ subroutine sparse_matrix_product_fill_entries(A, B, C)                     !
 
     ! Iterate through all the edges of `B`
     cursor = B%make_cursor()
-    num_batches = (cursor%last - cursor%start) / batch_size + 1
+    num_batches = (cursor%last - cursor%first) / batch_size + 1
 
     do n = 1, num_batches
         call B%get_entries(edges, vals, cursor, batch_size, num_returned)

@@ -75,7 +75,7 @@ implicit none
 
     cursor = g_ring%make_cursor()
 
-    num_batches = (cursor%last - cursor%start) / batch_size + 1
+    num_batches = (cursor%last - cursor%first) / batch_size + 1
     do n = 1, num_batches
         ! Get a chunk of edges from the ring lattice
         call g_ring%get_edges(edges, cursor, batch_size, num_returned)

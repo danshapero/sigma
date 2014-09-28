@@ -197,7 +197,7 @@ subroutine set_matrix_value_with_reallocation(g, val, i, j, z)             !
     val_temp(indx) = z
 
     cursor = h%make_cursor()
-    num_batches = (cursor%last - cursor%start) / batch_size + 1
+    num_batches = (cursor%last - cursor%first) / batch_size + 1
 
     do n = 1, num_batches
         call h%get_edges(edges, cursor, batch_size, num_returned)

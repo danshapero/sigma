@@ -118,7 +118,7 @@ subroutine coo_graph_copy(g, h, trans)                                     !
 
     ! Make an edge iterator for the copied graph h
     cursor = h%make_cursor()
-    num_batches = (cursor%last - cursor%start) / batch_size + 1
+    num_batches = (cursor%last - cursor%first) / batch_size + 1
 
     ! Iterate through all the edges of h
     do n = 1, num_batches
@@ -307,7 +307,7 @@ function coo_make_cursor(g) result(cursor)                                 !
     class(coo_graph), intent(in) :: g
     type(graph_edge_cursor) :: cursor
 
-    cursor%start = 1
+    cursor%first = 1
     cursor%last = g%ne
     cursor%current = 0
     cursor%edge = [g%edges(1)%get_entry(1), g%edges(2)%get_entry(1)]
