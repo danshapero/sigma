@@ -118,7 +118,7 @@ subroutine coo_graph_copy(g, h, trans)                                     !
 
     ! Make an edge iterator for the copied graph h
     cursor = h%make_cursor()
-    num_batches = (cursor%final - cursor%start) / batch_size + 1
+    num_batches = (cursor%last - cursor%start) / batch_size + 1
 
     ! Iterate through all the edges of h
     do n = 1, num_batches
@@ -308,7 +308,7 @@ function coo_make_cursor(g) result(cursor)                                 !
     type(graph_edge_cursor) :: cursor
 
     cursor%start = 1
-    cursor%final = g%ne
+    cursor%last = g%ne
     cursor%current = 0
     cursor%edge = [g%edges(1)%get_entry(1), g%edges(2)%get_entry(1)]
 
@@ -334,7 +334,7 @@ subroutine coo_get_edges(g, edges, cursor, num_edges, num_returned)        !
     ! return how many edges the user asked for, or, if that amount would
     ! go beyond the final edge that the cursor is allowed to access, the
     ! all of the remaining edges
-    num_returned = min(num_edges, cursor%final - cursor%current)
+    num_returned = min(num_edges, cursor%last - cursor%current)
 
     ! Fill the edges array with the right slice from the graph's edges
     edges(1, 1 : num_returned) = &

@@ -270,7 +270,7 @@ implicit none
 
         ! Check that iterating through the graph's edges works
         cursor = g%make_cursor()
-        num_batches = (cursor%final - cursor%start) / batch_size + 1
+        num_batches = (cursor%last - cursor%start) / batch_size + 1
 
         do n = 1, num_batches
             call g%get_edges(edges, cursor, batch_size, num_returned)

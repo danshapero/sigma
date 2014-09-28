@@ -128,7 +128,7 @@ subroutine ll_graph_copy(g, h, trans)                                      !
     cursor = h%make_cursor()
 
     ! Find the number of chunks into which we're dividing the edges of h
-    num_batches = (cursor%final - cursor%start) / batch_size + 1
+    num_batches = (cursor%last - cursor%start) / batch_size + 1
 
     ! Iterate through all the chunks
     do n = 1, num_batches
@@ -262,7 +262,7 @@ function ll_make_cursor(g) result(cursor)                                  !
     integer :: k
 
     cursor%start = 1
-    cursor%final = g%ne
+    cursor%last = g%ne
     cursor%current = 0
 
     k = 1
@@ -293,7 +293,7 @@ subroutine ll_get_edges(g, edges, cursor, num_edges, num_returned)         !
     edges = 0
 
     ! Count how many edges we're actually going to return
-    num_returned = min(num_edges, cursor%final - cursor%current)
+    num_returned = min(num_edges, cursor%last - cursor%current)
 
     ! Find the last row we left off at
     i = cursor%edge(1)

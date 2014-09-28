@@ -141,7 +141,7 @@ subroutine ellpack_graph_copy(g, h, trans)                                 !
     if (tr) then
         ! Make an edge iterator for the copied graph `h`
         cursor = h%make_cursor()
-        num_batches = (cursor%final - cursor%start) / batch_size + 1
+        num_batches = (cursor%last - cursor%start) / batch_size + 1
 
         ! Iterate through all the edges of `h`
         do n = 1, num_batches
@@ -176,7 +176,7 @@ subroutine ellpack_graph_copy(g, h, trans)                                 !
 
     ! Iterate through the edges of `h`
     cursor = h%make_cursor()
-    num_batches = (cursor%final - cursor%start) / batch_size + 1
+    num_batches = (cursor%last - cursor%start) / batch_size + 1
 
     do n = 1, num_batches
         call h%get_edges(edges, cursor, batch_size, num_returned)
@@ -305,7 +305,7 @@ function ellpack_make_cursor(g) result(cursor)                             !
     type(graph_edge_cursor) :: cursor
 
     cursor%start = 1
-    cursor%final = g%max_d * g%n
+    cursor%last = g%max_d * g%n
     cursor%current = 0
     cursor%edge = [1, g%node(1, 1)]
     cursor%indx = 0
@@ -330,7 +330,7 @@ subroutine ellpack_get_edges(g, edges, cursor, num_edges, num_returned)    !
     edges = 0
 
     ! Find out how many nodes' edges the current request encompasses
-    num_returned = min(num_edges, cursor%final - cursor%current)
+    num_returned = min(num_edges, cursor%last - cursor%current)
 
     ! Find the vertices from which the edge iterator will start and end
     i1 = cursor%current / g%max_d + 1

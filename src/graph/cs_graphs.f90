@@ -140,7 +140,7 @@ subroutine cs_graph_copy(g, h, trans)                                      !
 
     ! Get a cursor from h with which to iterate through its edges
     cursor = h%make_cursor()
-    num_batches = (cursor%final - cursor%start) / batch_size + 1
+    num_batches = (cursor%last - cursor%start) / batch_size + 1
 
     ! Fill out the ptr array
     g%ptr = 0
@@ -308,7 +308,7 @@ function cs_make_cursor(g) result(cursor)                                  !
     integer :: k
 
     cursor%start = 1
-    cursor%final = g%ne
+    cursor%last = g%ne
     cursor%current = 0
 
     k = 1
@@ -343,7 +343,7 @@ subroutine cs_get_edges(g, edges, cursor, num_edges, num_returned)         !
     ! return how many edges the user asked for, or, if that amount would
     ! go beyond the final edge that the cursor is allowed to access, all
     ! of the remaining edges
-    num_returned = min(num_edges, cursor%final - current)
+    num_returned = min(num_edges, cursor%last - current)
 
     ! Fill the edges array's second row with the edge endpoints
     edges(2, 1 : num_returned) = g%node(current + 1 : current + num_returned)

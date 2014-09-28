@@ -309,7 +309,7 @@ subroutine sparse_static_pattern_ldu_factorization(A, L, D, U)             !
 
     ! Copy A into L, D, U
     cursor = A%make_cursor()
-    num_batches = (cursor%final - cursor%start) / batch_size + 1
+    num_batches = (cursor%last - cursor%start) / batch_size + 1
 
     do n = 1, num_batches
         call A%get_entries(edges, entries, cursor, batch_size, num_returned)
@@ -424,7 +424,7 @@ subroutine incomplete_ldu_sparsity_pattern(A, L, U, level)                 !
     call gu%init(nn)
 
     cursor = A%make_cursor()
-    num_batches = (cursor%final - cursor%start) / batch_size + 1
+    num_batches = (cursor%last - cursor%start) / batch_size + 1
 
     do n = 1, num_batches
         call A%get_edges(edges, cursor, batch_size, num_returned)

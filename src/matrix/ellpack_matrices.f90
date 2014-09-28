@@ -341,7 +341,7 @@ subroutine ellpack_matrix_get_entries(A, edges, entries, cursor, &         !
 
     entries = 0.0_dp
 
-    num_returned = min(num_edges, cursor%final - cursor%current)
+    num_returned = min(num_edges, cursor%last - cursor%current)
 
     indx = cursor%indx
     i1 = cursor%current / g%max_d + 1
