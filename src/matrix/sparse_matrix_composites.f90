@@ -727,6 +727,8 @@ subroutine composite_mat_get_entries(A, edges, entries, cursor, &          !
     cursor%edge(1) = it
     cursor%edge(2) = jt
 
+    if (cursor%current == cursor%last) deallocate(cursor%sub_cursor)
+
 end subroutine composite_mat_get_entries
 
 
