@@ -127,7 +127,7 @@ implicit none
 
     entropy = 0.0
     do i = 1, nn
-        if (x(i) /= 0) entropy = entropy - x(i) * log(x(i))
+        if (x(i) > 0) entropy = entropy - x(i) * log(x(i))
     enddo
 
     write(*,30) 100*entropy / log(1.0_dp * nn)
