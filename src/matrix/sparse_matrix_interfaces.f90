@@ -31,9 +31,6 @@ implicit none
 !--------------------------------------------------------------------------!
 type, extends(linear_operator), abstract :: sparse_matrix_interface        !
 !--------------------------------------------------------------------------!
-    ! number of non-zero entries
-    integer :: nnz
-
     ! variables to tell which phases of initializing the matrix have
     ! already occurred
     logical :: dimensions_set = .false.
@@ -67,16 +64,16 @@ contains
     !-----------
     ! Accessors
     !-----------
+    procedure(sparse_mat_get_nnz_ifc), deferred    :: get_nnz
+    ! Return the number of non-zero entries of the matrix
+
     procedure(sparse_mat_get_degree_ifc), deferred :: get_row_degree
     procedure(sparse_mat_get_degree_ifc), deferred :: get_column_degree
-    ! Return the number of non-zero entries in a given row or column
+    ! Return the number of non-zero entries in a given row/column
 
     procedure(sparse_mat_get_slice_ifc), deferred :: get_row
-    ! Return all the column indices of the non-zero entries in a given row
-    ! and all the corresponding matrix entries
-
     procedure(sparse_mat_get_slice_ifc), deferred :: get_column
-    ! Return all the row indices of the non-zero entries in a given column
+    ! Return all the indices of the non-zero entries in a given row/column
     ! and all the corresponding matrix entries
 
     generic :: get => get_value
@@ -172,6 +169,12 @@ abstract interface                                                         !
         class(sparse_matrix_interface), intent(inout) :: A
         class(graph_interface), target, intent(in) :: g
     end subroutine sparse_mat_set_graph_ifc
+
+    function sparse_mat_get_nnz_ifc(A) result(nnz)
+        import :: sparse_matrix_interface
+        class(sparse_matrix_interface), intent(in) :: A
+        integer :: nnz
+    end function sparse_mat_get_nnz_ifc
 
     function sparse_mat_get_degree_ifc(A, k) result(d)
         import :: sparse_matrix_interface
@@ -274,8 +277,6 @@ subroutine set_sparse_matrix_dimensions(A, nrow, ncol)                     !
 
     A%nrow = nrow
     A%ncol = ncol
-
-    A%nnz = 0
 
     A%dimensions_set = .true.
 
@@ -498,7 +499,7 @@ subroutine sparse_matrix_to_file(A, filename, trans)                       !
 
     ! Write out the dimensions of the matrix and the number of non-zero
     ! entries
-    write(10,*) nv(1), nv(2), A%nnz
+    write(10,*) nv(1), nv(2), A%get_nnz()
 
     ! Get a cursor for iterating through the matrix entries and find how
     ! many batches it will take

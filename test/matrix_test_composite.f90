@@ -35,9 +35,6 @@ implicit none
     ! random numbers
     real(dp) :: p, q
 
-    ! other junk
-    logical :: found
-
     ! command-line argument parsing
     character(len=16) :: arg
     logical :: verbose
@@ -339,7 +336,8 @@ implicit none
     d2 = max(h%max_degree(), ht%max_degree())
     allocate(nodes2(d2))
 
-    d = g1%max_degree() + h%max_degree()
+    d = max(g1%max_degree() + h%max_degree(), &
+                & g2%max_degree() + ht%max_degree())
     allocate(nodes(d), slice(d))
 
     do k = 1, nn1
@@ -601,23 +599,24 @@ function check_neighbors(d, d1, d2, nodes, nodes1, nodes2) result(correct) !
     integer, intent(in) :: d, d1, d2, nodes(:), nodes1(:), nodes2(:)
     logical :: correct
     ! local variables
-    integer :: i, j, k
+    integer :: j, k
 
     correct = .true.
 
     do k = 1, d1
         j = nodes1(k)
-        correct = correct .and. any(nodes == j)
+        correct = correct .and. any(nodes(1:d) == j)
     enddo
 
     do k = 1, d2
         j = nodes2(k)
-        correct = correct .and. any(nodes == j)
+        correct = correct .and. any(nodes(1:d) == j)
     enddo
 
     do k = 1, d
         j = nodes(k)
-        correct = correct .and. (any(nodes1 == j) .or. any(nodes2 == j))
+        correct = correct .and. &
+                    & (any(nodes1(1:d1) == j) .or. any(nodes2(1:d2) == j))
     enddo
 
 end function check_neighbors

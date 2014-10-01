@@ -43,6 +43,7 @@ contains
     !-----------
     ! Accessors
     !-----------
+    procedure :: get_nnz => cs_matrix_get_nnz
     procedure :: get_row_degree => cs_matrix_get_row_degree
     procedure :: get_column_degree => cs_matrix_get_column_degree
     procedure :: get_row => cs_matrix_get_row
@@ -230,8 +231,7 @@ subroutine cs_matrix_set_graph(A, g)                                       !
             call exit(1)
     end select
 
-    A%nnz = g%ne
-    allocate(A%val(A%nnz))
+    allocate(A%val(g%ne))
     A%val = 0.0_dp
 
     A%graph_set = .true.
@@ -244,6 +244,18 @@ end subroutine cs_matrix_set_graph
 !==========================================================================!
 !==== Accessors                                                        ====!
 !==========================================================================!
+
+!--------------------------------------------------------------------------!
+function cs_matrix_get_nnz(A) result(nnz)                                  !
+!--------------------------------------------------------------------------!
+    class(cs_matrix), intent(in) :: A
+    integer :: nnz
+
+    nnz = A%g%ne
+
+end function cs_matrix_get_nnz
+
+
 
 !--------------------------------------------------------------------------!
 function cs_matrix_get_row_degree(A, k) result(d)                          !
@@ -425,8 +437,6 @@ subroutine cs_matrix_destroy(A)                                            !
 !--------------------------------------------------------------------------!
     class(cs_matrix), intent(inout) :: A
 
-    A%nnz = 0
-
     ! Deallocate the array of A's matrix entries
     deallocate(A%val)
 
@@ -542,8 +552,7 @@ subroutine csr_matrix_copy_graph(A, g)                                     !
     if (.not. associated(A%g)) allocate(A%g)
     call A%g%copy(g)
 
-    A%nnz = g%ne
-    allocate(A%val(A%nnz))
+    allocate(A%val(g%ne))
     A%val = 0.0_dp
 
     A%graph_set = .true.
@@ -569,8 +578,7 @@ subroutine csc_matrix_copy_graph(A, g)                                     !
     if (.not. associated(A%g)) allocate(A%g)
     call A%g%copy(g, trans = .true.)
 
-    A%nnz = g%ne
-    allocate(A%val(A%nnz))
+    allocate(A%val(g%ne))
     A%val = 0.0_dp
 
     A%graph_set = .true.
@@ -687,7 +695,6 @@ subroutine csr_matrix_set_value(A, i, j, z)                                !
 
     if (.not. found) then
         call set_matrix_value_with_reallocation(A%g, A%val, i, j, z)
-        A%nnz = A%nnz + 1
     endif
 
 end subroutine csr_matrix_set_value
@@ -716,7 +723,6 @@ subroutine csr_matrix_add_value(A, i, j, z)                                !
 
     if (.not. found) then
         call set_matrix_value_with_reallocation(A%g, A%val, i, j, z)
-        A%nnz = A%nnz + 1
     endif
 
 end subroutine csr_matrix_add_value
@@ -753,7 +759,6 @@ subroutine csr_matrix_set_dense_submatrix(A, is, js, B)                    !
 
             if (.not. found) then
                 call set_matrix_value_with_reallocation(A%g, A%val, i, j, z)
-                A%nnz = A%nnz + 1
             endif
         enddo
     enddo
@@ -792,7 +797,6 @@ subroutine csr_matrix_add_dense_submatrix(A, is, js, B)                    !
 
             if (.not. found) then
                 call set_matrix_value_with_reallocation(A%g, A%val, i, j, z)
-                A%nnz = A%nnz + 1
             endif
         enddo
     enddo
@@ -823,7 +827,6 @@ subroutine csc_matrix_set_value(A, i, j, z)                                !
 
     if (.not. found) then
         call set_matrix_value_with_reallocation(A%g, A%val, j, i, z)
-        A%nnz = A%nnz + 1
     endif
 
 end subroutine csc_matrix_set_value
@@ -852,7 +855,6 @@ subroutine csc_matrix_add_value(A, i, j, z)                                !
 
     if (.not. found) then
         call set_matrix_value_with_reallocation(A%g, A%val, j, i, z)
-        A%nnz = A%nnz + 1
     endif
 
 end subroutine csc_matrix_add_value
@@ -889,7 +891,6 @@ subroutine csc_matrix_set_dense_submatrix(A, is, js, B)                    !
 
             if (.not. found) then
                 call set_matrix_value_with_reallocation(A%g, A%val, j, i, z)
-                A%nnz = A%nnz + 1
             endif
         enddo
    enddo
@@ -928,7 +929,6 @@ subroutine csc_matrix_add_dense_submatrix(A, is, js, B)                    !
 
             if (.not. found) then
                 call set_matrix_value_with_reallocation(A%g, A%val, j, i, z)
-                A%nnz = A%nnz + 1
             endif
         enddo
    enddo

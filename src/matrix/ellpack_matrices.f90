@@ -27,6 +27,7 @@ implicit none
 !--------------------------------------------------------------------------!
 type, extends(sparse_matrix_interface) :: ellpack_matrix                   !
 !--------------------------------------------------------------------------!
+    integer :: nnz
     class(ellpack_graph), pointer :: g => null()
     real(dp), allocatable :: val(:,:)
 contains
@@ -40,6 +41,7 @@ contains
     !-----------
     ! Accessors
     !-----------
+    procedure :: get_nnz => ellpack_matrix_get_nnz
     procedure :: get_value => ellpack_matrix_get_value
     procedure :: get_row_degree    => ellpack_matrix_get_row_degree
     procedure :: get_column_degree => ellpack_matrix_get_column_degree
@@ -170,6 +172,18 @@ end subroutine ellpack_matrix_set_graph
 !==========================================================================!
 !==== Accessors                                                        ====!
 !==========================================================================!
+
+!--------------------------------------------------------------------------!
+function ellpack_matrix_get_nnz(A) result(nnz)                             !
+!--------------------------------------------------------------------------!
+    class(ellpack_matrix), intent(in) :: A
+    integer :: nnz
+
+    nnz = A%nnz
+
+end function ellpack_matrix_get_nnz
+
+
 
 !--------------------------------------------------------------------------!
 function ellpack_matrix_get_value(A, i, j) result(z)                       !
