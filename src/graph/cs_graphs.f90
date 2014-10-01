@@ -133,7 +133,6 @@ subroutine cs_graph_copy(g, h, trans)                                      !
     g%n = nv(1)
     g%m = nv(2)
     g%ne = h%ne
-    g%max_d = h%max_degree()
 
     ! Allocate g's ptr and node arrays
     allocate(g%ptr(g%n+1), g%node(h%ne))
@@ -197,6 +196,11 @@ subroutine cs_graph_copy(g, h, trans)                                      !
     if (minval(g%node) == 0) then
         call g%prune_null_edges()
     endif
+
+    g%max_d = 0
+    do i = 1, g%n
+        g%max_d = max(g%max_d, g%ptr(i + 1) - g%ptr(i))
+    enddo
 
 end subroutine cs_graph_copy
 
