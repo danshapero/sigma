@@ -130,6 +130,7 @@ end type graph_interface
 type :: graph_edge_cursor                                                  !
 !--------------------------------------------------------------------------!
     integer :: first, last, current, idx, edge(2)
+    type(graph_edge_cursor), pointer :: sub_cursor(:,:)
 end type graph_edge_cursor
 
 

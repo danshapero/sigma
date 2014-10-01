@@ -77,6 +77,7 @@ contains
     !-----------
     ! Accessors
     !-----------
+    procedure :: get_nnz           => composite_mat_get_nnz
     procedure :: get_value         => composite_mat_get_value
     procedure :: get_submat_value  => composite_mat_get_submat_value
     procedure :: get_row_degree    => composite_mat_get_row_degree
@@ -167,8 +168,6 @@ subroutine composite_mat_set_dimensions(A, nrow, ncol)                     !
 
     A%nrow = nrow
     A%ncol = ncol
-
-    A%nnz = 0
 
     A%dimensions_set = .true.
 
@@ -403,6 +402,26 @@ end subroutine composite_mat_set_graph_submat
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
+function composite_mat_get_nnz(A) result(nnz)                              !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(in) :: A
+    integer :: nnz
+    ! local variables
+    integer :: it, jt
+
+    nnz = 0
+
+    do jt = 1, A%num_col_mats
+        do it = 1, A%num_row_mats
+            nnz = nnz + A%sub_mats(it, jt)%mat%get_nnz()
+        enddo
+    enddo
+
+end function composite_mat_get_nnz
+
+
+!--------------------------------------------------------------------------!
 function composite_mat_get_value(A, i, j) result(z)                        !
 !--------------------------------------------------------------------------!
     ! input/output variables
@@ -611,9 +630,24 @@ end function composite_mat_get_submatrix
 !--------------------------------------------------------------------------!
 function composite_mat_make_cursor(A) result(cursor)                       !
 !--------------------------------------------------------------------------!
+    ! input/output variables
     class(sparse_matrix), intent(in) :: A
     type(graph_edge_cursor) :: cursor
+    ! local variables
+    integer :: it, jt
 
+    cursor%first = 1
+    cursor%last = A%get_nnz()
+    cursor%current = 0
+    cursor%edge = [1, 1]
+
+    allocate(cursor%sub_cursor(A%num_row_mats, A%num_col_mats))
+
+    do jt = 1, A%num_col_mats
+        do it = 1, A%num_row_mats
+            cursor%sub_cursor(it, jt) = A%sub_mats(it, jt)%mat%make_cursor()
+        enddo
+    enddo
 
 end function composite_mat_make_cursor
 
@@ -630,7 +664,30 @@ subroutine composite_mat_get_edges(A, edges, cursor, &                     !
     type(graph_edge_cursor), intent(inout) :: cursor
     integer, intent(out) :: num_returned
     ! local variables
+    integer :: it, jt
+    class(sparse_matrix_interface), pointer :: C
 
+    it = cursor%edge(1)
+    jt = cursor%edge(2)
+
+    C => A%sub_mats(it, jt)%mat
+
+    call C%get_edges(edges, cursor%sub_cursor(it, jt), &
+                                                  & num_edges, num_returned)
+
+    cursor%current = cursor%current + num_returned
+
+    ! Some logic to increment it/jt if we've reached the end of that matrix
+    if (cursor%sub_cursor(it, jt)%current == &
+                                    & cursor%sub_cursor(it, jt)%last) then
+        it = mod(it, A%num_row_mats) + 1
+        if (it == A%num_row_mats) jt = jt + 1
+    endif
+
+    cursor%edge(1) = it
+    cursor%edge(2) = jt
+
+    if (cursor%current == cursor%last) deallocate(cursor%sub_cursor)
 
 end subroutine composite_mat_get_edges
 
@@ -648,7 +705,27 @@ subroutine composite_mat_get_entries(A, edges, entries, cursor, &          !
     type(graph_edge_cursor), intent(inout) :: cursor
     integer, intent(out) :: num_returned
     ! local variables
+    integer :: it, jt
+    class(sparse_matrix_interface), pointer :: C
 
+    it = cursor%edge(1)
+    jt = cursor%edge(2)
+
+    C => A%sub_mats(it, jt)%mat
+
+    call C%get_entries(edges, entries, cursor%sub_cursor(it, jt), &
+                                                & num_edges, num_returned)
+
+    cursor%current = cursor%current + num_returned
+
+    if (cursor%sub_cursor(it, jt)%current == &
+                                    & cursor%sub_cursor(it, jt)%last) then
+        it = mod(it, A%num_row_mats) + 1
+        if (it == A%num_row_mats) jt = jt + 1
+    endif
+
+    cursor%edge(1) = it
+    cursor%edge(2) = jt
 
 end subroutine composite_mat_get_entries
 
@@ -915,7 +992,6 @@ subroutine composite_mat_destroy(A)                                        !
 
     A%nrow = 0
     A%ncol = 0
-    A%nnz = 0
 
     A%dimensions_set = .false.
     A%graph_set = .false.
