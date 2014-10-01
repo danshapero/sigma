@@ -271,7 +271,7 @@ function ll_make_cursor(g) result(cursor)                                  !
     enddo
 
     cursor%edge = [k, g%lists(k)%get_entry(1)]
-    cursor%indx = 0
+    cursor%idx = 0
 
 end function ll_make_cursor
 
@@ -303,25 +303,22 @@ subroutine ll_get_edges(g, edges, cursor, num_edges, num_returned)         !
         ! Either we are returning all the edges for the current vertex `i`,
         ! or the current request doesn't call for so many edges and we are
         ! returning fewer
-        num_from_this_row = min(g%lists(i)%length - cursor%indx, &
+        num_from_this_row = min(g%lists(i)%length - cursor%idx, &
                                 & num_returned - num_added)
 
         do k = 1, num_from_this_row
             edges(1, num_added + k) = i
-            edges(2, num_added + k) = g%lists(i)%get_entry(cursor%indx + k)
+            edges(2, num_added + k) = g%lists(i)%get_entry(cursor%idx + k)
         enddo
-
-        !! Check that this is right
-        !cursor%indx = mod(cursor%indx+num_from_this_row,g%lists(i)%length)
 
         ! If we returned all nodes neighboring this vertex, increment
         ! the vertex
         !TODO replace this with bit-shifting magic
-        if (num_from_this_row == g%lists(i)%length - cursor%indx) then
+        if (num_from_this_row == g%lists(i)%length - cursor%idx) then
             i = i + 1
-            cursor%indx = 0
+            cursor%idx = 0
         else
-            cursor%indx = cursor%indx + num_from_this_row
+            cursor%idx = cursor%idx + num_from_this_row
         endif
 
         ! Increase the number of edges added

@@ -316,7 +316,7 @@ function cs_make_cursor(g) result(cursor)                                  !
         k = k + 1
     enddo
 
-    cursor%edge = [k, g%node(1)]
+    cursor%idx = k
 
 end function cs_make_cursor
 
@@ -349,7 +349,7 @@ subroutine cs_get_edges(g, edges, cursor, num_edges, num_returned)         !
     edges(2, 1 : num_returned) = g%node(current + 1 : current + num_returned)
 
     ! Fill in the edges array's first row with the edge start points
-    i = cursor%edge(1)
+    i = cursor%idx
 
     do k = 1, num_returned
         !! This is going to produce code that cannot be analyzed and
@@ -364,7 +364,7 @@ subroutine cs_get_edges(g, edges, cursor, num_edges, num_returned)         !
         current = current + 1
     enddo
 
-    cursor%edge = edges(:, num_returned)
+    cursor%idx = edges(1, num_returned)
 
     end associate
 

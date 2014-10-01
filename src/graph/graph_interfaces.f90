@@ -129,7 +129,7 @@ end type graph_interface
 !--------------------------------------------------------------------------!
 type :: graph_edge_cursor                                                  !
 !--------------------------------------------------------------------------!
-    integer :: first, last, indx, current, edge(2)
+    integer :: first, last, current, idx, edge(2)
 end type graph_edge_cursor
 
 
