@@ -106,18 +106,18 @@ subroutine ll_graph_copy(g, h, trans)                                      !
     class(graph_interface), intent(in) :: h
     logical, intent(in), optional :: trans
     ! local variables
-    integer :: ind(2), order(2), nv(2), k
-    integer :: n, num_returned, num_batches, edges(2,batch_size)
+    integer :: ind(2), ord(2), nv(2), k
+    integer :: num_returned, edges(2, batch_size)
     type(graph_edge_cursor) :: cursor
 
     ! Check if we're copying h or h with all directed edges reversed
     nv = [h%n, h%m]
-    order = [1, 2]
+    ord = [1, 2]
 
     if (present(trans)) then
         if (trans) then
             nv = [h%m, h%n]
-            order = [2,1]
+            ord = [2,1]
         endif
     endif
 
@@ -127,17 +127,14 @@ subroutine ll_graph_copy(g, h, trans)                                      !
     ! Get a cursor from h with which to iterate through its edges
     cursor = h%make_cursor()
 
-    ! Find the number of chunks into which we're dividing the edges of h
-    num_batches = (cursor%last - cursor%first) / batch_size + 1
-
     ! Iterate through all the chunks
-    do n = 1, num_batches
+    do while(.not. cursor%done())
         ! Get a chunk of edges from h
         call h%get_edges(edges, cursor, batch_size, num_returned)
 
         ! For each edge,
         do k = 1, num_returned
-            ind = edges(order, k)
+            ind = edges(ord, k)
 
             ! add it to g
             call g%add_edge(ind(1), ind(2))

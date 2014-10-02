@@ -141,10 +141,9 @@ subroutine ellpack_graph_copy(g, h, trans)                                 !
     if (tr) then
         ! Make an edge iterator for the copied graph `h`
         cursor = h%make_cursor()
-        num_batches = (cursor%last - cursor%first) / batch_size + 1
 
         ! Iterate through all the edges of `h`
-        do n = 1, num_batches
+        do while(.not. cursor%done())
             call h%get_edges(edges, cursor, batch_size, num_returned)
 
             ! For each edge, increment the degree of the starting vertex
@@ -176,9 +175,7 @@ subroutine ellpack_graph_copy(g, h, trans)                                 !
 
     ! Iterate through the edges of `h`
     cursor = h%make_cursor()
-    num_batches = (cursor%last - cursor%first) / batch_size + 1
-
-    do n = 1, num_batches
+    do while(.not. cursor%done())
         call h%get_edges(edges, cursor, batch_size, num_returned)
 
         ! Add each edge of `h` into `g`

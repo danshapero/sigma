@@ -113,7 +113,7 @@ subroutine cs_graph_copy(g, h, trans)                                      !
     logical, intent(in), optional :: trans
     ! local variables
     integer :: i, j, k, l, ord(2), nv(2)
-    integer :: n, num_batches, num_returned, edges(2,batch_size)
+    integer :: num_returned, edges(2,batch_size)
     type(graph_edge_cursor) :: cursor
 
     call g%add_reference()
@@ -137,20 +137,17 @@ subroutine cs_graph_copy(g, h, trans)                                      !
     ! Allocate g's ptr and node arrays
     allocate(g%ptr(g%n+1), g%node(h%ne))
 
-    ! Get a cursor from h with which to iterate through its edges
-    cursor = h%make_cursor()
-    num_batches = (cursor%last - cursor%first) / batch_size + 1
-
     ! Fill out the ptr array
     g%ptr = 0
 
     ! Iterate through the edges of h first to fill out the ptr array of g
-    do n = 1, num_batches
+    cursor = h%make_cursor()
+    do while(.not. cursor%done())
         ! Get a chunk of edges from h
         call h%get_edges(edges, cursor, batch_size, num_returned)
 
         ! For each edge,
-        do k=1,num_returned
+        do k = 1, num_returned
             i = edges(ord(1), k)
             j = edges(ord(2), k)
 
@@ -168,7 +165,7 @@ subroutine cs_graph_copy(g, h, trans)                                      !
 
     g%node = 0
 
-    do n = 1, num_batches
+    do while(.not. cursor%done())
         call h%get_edges(edges, cursor, batch_size, num_returned)
 
         do k = 1,num_returned

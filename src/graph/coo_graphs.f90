@@ -93,7 +93,7 @@ subroutine coo_graph_copy(g, h, trans)                                     !
     logical, intent(in), optional :: trans
     ! local variables
     integer :: ind(2), ord(2), nv(2), k
-    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    integer :: num_returned, edges(2, batch_size)
     type(graph_edge_cursor) :: cursor
 
     nv = [h%n, h%m]
@@ -118,10 +118,9 @@ subroutine coo_graph_copy(g, h, trans)                                     !
 
     ! Make an edge iterator for the copied graph h
     cursor = h%make_cursor()
-    num_batches = (cursor%last - cursor%first) / batch_size + 1
 
     ! Iterate through all the edges of h
-    do n = 1, num_batches
+    do while(.not. cursor%done())
         ! Get a chunk of edges of h
         call h%get_edges(edges, cursor, batch_size, num_returned)
 

@@ -131,6 +131,8 @@ type :: graph_edge_cursor                                                  !
 !--------------------------------------------------------------------------!
     integer :: first, last, current, idx, edge(2)
     type(graph_edge_cursor), pointer :: sub_cursor(:,:)
+contains
+    procedure :: done => graph_edge_cursor_is_done
 end type graph_edge_cursor
 
 
@@ -300,7 +302,7 @@ subroutine to_dense_graph(g, A, trans)                                     !
     logical, intent(in), optional :: trans
     ! local variables
     integer :: i, j, k, ord(2)
-    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    integer :: num_returned, edges(2, batch_size)
     type(graph_edge_cursor) :: cursor
 
     ord = [1,2]
@@ -312,10 +314,9 @@ subroutine to_dense_graph(g, A, trans)                                     !
     A = 0
 
     cursor = g%make_cursor()
-    num_batches = (cursor%last - cursor%first) / batch_size + 1
 
     ! Iterate through all the edges (i, j) of g
-    do n = 1, num_batches
+    do while(.not. cursor%done())
         call g%get_edges(edges, cursor, batch_size, num_returned)
 
         do k = 1, num_returned
@@ -339,15 +340,15 @@ subroutine write_graph_to_file(g, filename)                                !
     ! local variables
     integer :: i, j, k
     type(graph_edge_cursor) :: cursor
-    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    integer :: num_returned, edges(2, batch_size)
 
     !TODO make sure this unit number is safe
     open(unit=10,file=trim(filename))
     write(10,*) g%n, g%m, g%ne
 
     cursor = g%make_cursor()
-    num_batches = (cursor%last - cursor%first) / batch_size + 1
-    do n=1,num_batches
+
+    do while(.not. cursor%done())
         call g%get_edges(edges, cursor, batch_size, num_returned)
 
         do k = 1, num_returned
@@ -361,6 +362,18 @@ subroutine write_graph_to_file(g, filename)                                !
     close(10)
 
 end subroutine write_graph_to_file
+
+
+
+!--------------------------------------------------------------------------!
+pure function graph_edge_cursor_is_done(cursor) result(done)               !
+!--------------------------------------------------------------------------!
+    class(graph_edge_cursor), intent(in) :: cursor
+    logical :: done
+
+    done = cursor%current == cursor%last
+
+end function graph_edge_cursor_is_done
 
 
 
