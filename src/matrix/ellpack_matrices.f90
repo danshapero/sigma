@@ -27,19 +27,21 @@ implicit none
 !--------------------------------------------------------------------------!
 type, extends(sparse_matrix_interface) :: ellpack_matrix                   !
 !--------------------------------------------------------------------------!
+    integer :: nnz
     class(ellpack_graph), pointer :: g => null()
     real(dp), allocatable :: val(:,:)
 contains
     !--------------
     ! Constructors
     !--------------
-    procedure :: copy_graph_structure => ellpack_matrix_copy_graph_structure
+    procedure :: copy_graph => ellpack_matrix_copy_graph
     procedure :: set_graph => ellpack_matrix_set_graph
 
 
     !-----------
     ! Accessors
     !-----------
+    procedure :: get_nnz => ellpack_matrix_get_nnz
     procedure :: get_value => ellpack_matrix_get_value
     procedure :: get_row_degree    => ellpack_matrix_get_row_degree
     procedure :: get_column_degree => ellpack_matrix_get_column_degree
@@ -106,7 +108,7 @@ contains
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine ellpack_matrix_copy_graph_structure(A, g)                       !
+subroutine ellpack_matrix_copy_graph(A, g)                                 !
 !--------------------------------------------------------------------------!
     class(ellpack_matrix), intent(inout) :: A
     class(graph_interface), intent(in) :: g
@@ -128,7 +130,7 @@ subroutine ellpack_matrix_copy_graph_structure(A, g)                       !
 
     A%graph_set = .true.
 
-end subroutine ellpack_matrix_copy_graph_structure
+end subroutine ellpack_matrix_copy_graph
 
 
 
@@ -170,6 +172,18 @@ end subroutine ellpack_matrix_set_graph
 !==========================================================================!
 !==== Accessors                                                        ====!
 !==========================================================================!
+
+!--------------------------------------------------------------------------!
+function ellpack_matrix_get_nnz(A) result(nnz)                             !
+!--------------------------------------------------------------------------!
+    class(ellpack_matrix), intent(in) :: A
+    integer :: nnz
+
+    nnz = A%nnz
+
+end function ellpack_matrix_get_nnz
+
+
 
 !--------------------------------------------------------------------------!
 function ellpack_matrix_get_value(A, i, j) result(z)                       !
@@ -332,7 +346,7 @@ subroutine ellpack_matrix_get_entries(A, edges, entries, cursor, &         !
     type(graph_edge_cursor), intent(inout) :: cursor
     integer, intent(out) :: num_returned
     ! local variables
-    integer :: i, i1, i2, num_added, num_from_this_row, indx
+    integer :: i, i1, i2, num_added, num_from_this_row, idx
 
     associate(g => A%g)
 
@@ -341,22 +355,22 @@ subroutine ellpack_matrix_get_entries(A, edges, entries, cursor, &         !
 
     entries = 0.0_dp
 
-    num_returned = min(num_edges, cursor%final - cursor%current)
+    num_returned = min(num_edges, cursor%last - cursor%current)
 
-    indx = cursor%indx
+    idx = cursor%idx
     i1 = cursor%current / g%max_d + 1
     i2 = (cursor%current + num_returned - 1) / g%max_d + 1
 
     num_added = 0
 
     do i = i1, i2
-        num_from_this_row = min( g%max_d - indx, num_returned - num_added)
+        num_from_this_row = min( g%max_d - idx, num_returned - num_added)
 
         entries(num_added + 1 : num_added + num_from_this_row) &
-                        & = A%val( indx + 1 : indx + num_from_this_row, i)
+                        & = A%val( idx + 1 : idx + num_from_this_row, i)
         num_added = num_added + num_from_this_row
 
-        indx = mod(indx + num_from_this_row, g%max_d)
+        idx = mod(idx + num_from_this_row, g%max_d)
     enddo
 
 

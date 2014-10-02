@@ -20,6 +20,8 @@ use default_sparse_matrix_kernels
 use default_matrices
 use cs_matrices
 use ellpack_matrices
+use sparse_matrix_factory
+use sparse_matrix_composites
 use sparse_matrix_algebra
 use sparse_matrices
 

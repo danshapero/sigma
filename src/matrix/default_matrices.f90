@@ -33,13 +33,14 @@ contains
     !--------------
     ! Constructors
     !--------------
-    procedure :: copy_graph_structure => default_matrix_copy_graph_structure
+    procedure :: copy_graph => default_matrix_copy_graph
     procedure :: set_graph => default_matrix_set_graph
 
 
     !-----------
     ! Accessors
     !-----------
+    procedure :: get_nnz => default_matrix_get_nnz
     procedure :: get_value => default_matrix_get_value
     procedure :: get_row_degree => default_matrix_get_row_degree
     procedure :: get_column_degree => default_matrix_get_column_degree
@@ -183,7 +184,7 @@ contains
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine default_matrix_copy_graph_structure(A, g)                       !
+subroutine default_matrix_copy_graph(A, g)                                 !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(default_matrix), intent(inout) :: A
@@ -214,13 +215,12 @@ subroutine default_matrix_copy_graph_structure(A, g)                       !
     trans = A%ord(1) == 2
     call A%g%copy(g, trans)
 
-    A%nnz = g%ne
-    allocate(A%val(A%nnz))
+    allocate(A%val(g%ne))
     A%val = 0.0_dp
 
     A%graph_set = .true.
 
-end subroutine default_matrix_copy_graph_structure
+end subroutine default_matrix_copy_graph
 
 
 
@@ -235,8 +235,7 @@ subroutine default_matrix_set_graph(A, g)                                  !
     A%g => g
     call A%g%add_reference()
 
-    A%nnz = g%ne
-    allocate(A%val(A%nnz))
+    allocate(A%val(g%ne))
     A%val = 0.0_dp
 
     A%graph_set = .true.
@@ -249,6 +248,18 @@ end subroutine default_matrix_set_graph
 !==========================================================================!
 !==== Accessors                                                        ====!
 !==========================================================================!
+
+!--------------------------------------------------------------------------!
+function default_matrix_get_nnz(A) result(nnz)                             !
+!--------------------------------------------------------------------------!
+    class(default_matrix), intent(in) :: A
+    integer :: nnz
+
+    nnz = A%g%ne
+
+end function default_matrix_get_nnz
+
+
 
 !--------------------------------------------------------------------------!
 function default_matrix_get_value(A, i, j) result(z)                       !
@@ -426,7 +437,6 @@ subroutine default_matrix_set_value(A, i, j, z)                            !
     else
         call set_matrix_value_with_reallocation(A%g, A%val, &
                                                     & ind(1), ind(2), z)
-        A%nnz = A%nnz + 1
     endif
 
 end subroutine default_matrix_set_value
@@ -454,7 +464,6 @@ subroutine default_matrix_add_value(A, i, j, z)                            !
     else
         call set_matrix_value_with_reallocation(A%g, A%val, &
                                                         & ind(1), ind(2), z)
-        A%nnz = A%nnz + 1
     endif
 
 end subroutine default_matrix_add_value
@@ -543,8 +552,6 @@ end subroutine default_matrix_right_permute
 subroutine default_matrix_destroy(A)                                       !
 !--------------------------------------------------------------------------!
     class(default_matrix), intent(inout) :: A
-
-    A%nnz = 0
 
     ! Deallocate the array of A's matrix entries
     deallocate(A%val)

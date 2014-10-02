@@ -23,7 +23,7 @@ implicit none
     enddo
     A(5,5) = 2.0_dp
     det = determinant(A)
-    if (det/=6.0_dp) then
+    if (dabs(det - 6.0_dp) > 1.0e-16) then
         print *, 'Determinant of A should be = 6.0'
         print *, 'Value found: ',det
     endif

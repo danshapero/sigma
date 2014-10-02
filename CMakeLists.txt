@@ -14,10 +14,10 @@ endif()
 set(CMAKE_Fortran_MODULE_DIRECTORY ${sigma_BINARY_DIR}/include)
 set(LIBRARY_OUTPUT_PATH ${sigma_BINARY_DIR}/lib)
 
-find_package(OpenMP)
-if (OPENMP_FOUND)
-    set (CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${OpenMP_C_FLAGS}")
-endif()
+#find_package(OpenMP)
+#if (OPENMP_FOUND)
+#    set (CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${OpenMP_C_FLAGS}")
+#endif()
 
 include_directories("${PROJECT_SOURCE_DIR}/include")
 

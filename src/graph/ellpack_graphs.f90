@@ -106,7 +106,7 @@ subroutine ellpack_graph_copy(g, h, trans)                                 !
     logical, intent(in), optional :: trans
     ! local variables
     integer :: i, j, k, d, ord(2), nv(2)
-    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    integer :: num_returned, edges(2, batch_size)
     type(graph_edge_cursor) :: cursor
     logical :: tr
 
@@ -141,10 +141,9 @@ subroutine ellpack_graph_copy(g, h, trans)                                 !
     if (tr) then
         ! Make an edge iterator for the copied graph `h`
         cursor = h%make_cursor()
-        num_batches = (cursor%final - cursor%start) / batch_size + 1
 
         ! Iterate through all the edges of `h`
-        do n = 1, num_batches
+        do while(.not. cursor%done())
             call h%get_edges(edges, cursor, batch_size, num_returned)
 
             ! For each edge, increment the degree of the starting vertex
@@ -176,9 +175,7 @@ subroutine ellpack_graph_copy(g, h, trans)                                 !
 
     ! Iterate through the edges of `h`
     cursor = h%make_cursor()
-    num_batches = (cursor%final - cursor%start) / batch_size + 1
-
-    do n = 1, num_batches
+    do while(.not. cursor%done())
         call h%get_edges(edges, cursor, batch_size, num_returned)
 
         ! Add each edge of `h` into `g`
@@ -304,11 +301,11 @@ function ellpack_make_cursor(g) result(cursor)                             !
     class(ellpack_graph), intent(in) :: g
     type(graph_edge_cursor) :: cursor
 
-    cursor%start = 1
-    cursor%final = g%max_d * g%n
+    cursor%first = 1
+    cursor%last = g%max_d * g%n
     cursor%current = 0
     cursor%edge = [1, g%node(1, 1)]
-    cursor%indx = 0
+    cursor%idx = 0
 
 end function ellpack_make_cursor
 
@@ -330,7 +327,7 @@ subroutine ellpack_get_edges(g, edges, cursor, num_edges, num_returned)    !
     edges = 0
 
     ! Find out how many nodes' edges the current request encompasses
-    num_returned = min(num_edges, cursor%final - cursor%current)
+    num_returned = min(num_edges, cursor%last - cursor%current)
 
     ! Find the vertices from which the edge iterator will start and end
     i1 = cursor%current / g%max_d + 1
@@ -346,19 +343,19 @@ subroutine ellpack_get_edges(g, edges, cursor, num_edges, num_returned)    !
         !     o the current request for an edge batch calls for fewer edges
         !       than there are remaining in this row, so only return those
         !       asked for.
-        num_from_this_row = min( g%max_d - cursor%indx, &
+        num_from_this_row = min( g%max_d - cursor%idx, &
                                                 & num_returned - num_added)
 
         ! Fill in the return array
         edges(1, num_added + 1 : num_added + num_from_this_row) = i
         edges(2, num_added + 1 : num_added + num_from_this_row) = &
-            & g%node( cursor%indx + 1 : cursor%indx + num_from_this_row, i)
+            & g%node( cursor%idx + 1 : cursor%idx + num_from_this_row, i)
 
-        ! Increment the number of edges added
+        ! Increment the number o edges added
         num_added = num_added + num_from_this_row
 
         ! Update the index storing where we left off within the row
-        cursor%indx = mod(cursor%indx + num_from_this_row, g%max_d)
+        cursor%idx = mod(cursor%idx + num_from_this_row, g%max_d)
     enddo
 
     cursor%current = cursor%current + num_returned

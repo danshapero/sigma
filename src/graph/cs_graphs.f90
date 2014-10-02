@@ -113,7 +113,7 @@ subroutine cs_graph_copy(g, h, trans)                                      !
     logical, intent(in), optional :: trans
     ! local variables
     integer :: i, j, k, l, ord(2), nv(2)
-    integer :: n, num_batches, num_returned, edges(2,batch_size)
+    integer :: num_returned, edges(2,batch_size)
     type(graph_edge_cursor) :: cursor
 
     call g%add_reference()
@@ -137,20 +137,17 @@ subroutine cs_graph_copy(g, h, trans)                                      !
     ! Allocate g's ptr and node arrays
     allocate(g%ptr(g%n+1), g%node(h%ne))
 
-    ! Get a cursor from h with which to iterate through its edges
-    cursor = h%make_cursor()
-    num_batches = (cursor%final - cursor%start) / batch_size + 1
-
     ! Fill out the ptr array
     g%ptr = 0
 
     ! Iterate through the edges of h first to fill out the ptr array of g
-    do n = 1, num_batches
+    cursor = h%make_cursor()
+    do while(.not. cursor%done())
         ! Get a chunk of edges from h
         call h%get_edges(edges, cursor, batch_size, num_returned)
 
         ! For each edge,
-        do k=1,num_returned
+        do k = 1, num_returned
             i = edges(ord(1), k)
             j = edges(ord(2), k)
 
@@ -168,7 +165,7 @@ subroutine cs_graph_copy(g, h, trans)                                      !
 
     g%node = 0
 
-    do n = 1, num_batches
+    do while(.not. cursor%done())
         call h%get_edges(edges, cursor, batch_size, num_returned)
 
         do k = 1,num_returned
@@ -311,8 +308,8 @@ function cs_make_cursor(g) result(cursor)                                  !
     ! local variables
     integer :: k
 
-    cursor%start = 1
-    cursor%final = g%ne
+    cursor%first = 1
+    cursor%last = g%ne
     cursor%current = 0
 
     k = 1
@@ -320,7 +317,7 @@ function cs_make_cursor(g) result(cursor)                                  !
         k = k + 1
     enddo
 
-    cursor%edge = [k, g%node(1)]
+    cursor%idx = k
 
 end function cs_make_cursor
 
@@ -347,13 +344,13 @@ subroutine cs_get_edges(g, edges, cursor, num_edges, num_returned)         !
     ! return how many edges the user asked for, or, if that amount would
     ! go beyond the final edge that the cursor is allowed to access, all
     ! of the remaining edges
-    num_returned = min(num_edges, cursor%final - current)
+    num_returned = min(num_edges, cursor%last - current)
 
     ! Fill the edges array's second row with the edge endpoints
     edges(2, 1 : num_returned) = g%node(current + 1 : current + num_returned)
 
     ! Fill in the edges array's first row with the edge start points
-    i = cursor%edge(1)
+    i = cursor%idx
 
     do k = 1, num_returned
         !! This is going to produce code that cannot be analyzed and
@@ -368,7 +365,7 @@ subroutine cs_get_edges(g, edges, cursor, num_edges, num_returned)         !
         current = current + 1
     enddo
 
-    cursor%edge = edges(:, num_returned)
+    cursor%idx = edges(1, num_returned)
 
     end associate
 

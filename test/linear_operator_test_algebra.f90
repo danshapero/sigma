@@ -32,7 +32,7 @@ implicit none
 
     ! variables for iterating over matrix entries
     type(graph_edge_cursor) :: cursor
-    integer :: num_batches, num_returned, edges(2, batch_size)
+    integer :: num_returned, edges(2, batch_size)
 
     ! command-line argument parsing
     character(len=16) :: arg
@@ -101,9 +101,7 @@ implicit none
 
 
     cursor = g%make_cursor()
-    num_batches = (cursor%final - cursor%start) / batch_size + 1
-
-    do n = 1, num_batches
+    do while (.not. cursor%done())
         call g%get_edges(edges, cursor, batch_size, num_returned)
 
         do k = 1, num_returned
@@ -117,9 +115,7 @@ implicit none
 
 
     cursor = h%make_cursor()
-    num_batches = (cursor%final - cursor%start) / batch_size + 1
-
-    do n = 1, num_batches
+    do while (.not. cursor%done())
         call h%get_edges(edges, cursor, batch_size, num_returned)
 
         do k = 1, num_returned

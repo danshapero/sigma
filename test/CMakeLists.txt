@@ -8,6 +8,8 @@ matrix_test_set_multiple_entries.f90
 matrix_test_set_entry_with_realloc.f90
 matrix_test_sum.f90
 matrix_test_product.f90
+matrix_test_strategy.f90
+matrix_test_composite.f90
 linear_operator_test_algebra.f90
 solver_test_diffusion_1d.f90
 solver_test_advection_diffusion_1d.f90

@@ -31,9 +31,6 @@ implicit none
 !--------------------------------------------------------------------------!
 type, extends(linear_operator), abstract :: sparse_matrix_interface        !
 !--------------------------------------------------------------------------!
-    ! number of non-zero entries
-    integer :: nnz
-
     ! variables to tell which phases of initializing the matrix have
     ! already occurred
     logical :: dimensions_set = .false.
@@ -53,8 +50,7 @@ contains
     ! Set the row and column dimension of a sparse matrix and copy the
     ! connectivity structure from another graph
 
-    procedure(sparse_mat_copy_graph_structure_ifc), deferred :: &
-                                                      & copy_graph_structure
+    procedure(sparse_mat_copy_graph_ifc), deferred :: copy_graph
     ! Initialize the matrix's connectivity structure as a copy of an
     ! input graph. The input graph need not be of the same format as the 
     ! matrix's graph
@@ -68,17 +64,20 @@ contains
     !-----------
     ! Accessors
     !-----------
+    procedure(sparse_mat_get_nnz_ifc), deferred    :: get_nnz
+    ! Return the number of non-zero entries of the matrix
+
     procedure(sparse_mat_get_degree_ifc), deferred :: get_row_degree
     procedure(sparse_mat_get_degree_ifc), deferred :: get_column_degree
-    ! Return the number of non-zero entries in a given row or column
+    ! Return the number of non-zero entries in a given row/column
 
     procedure(sparse_mat_get_slice_ifc), deferred :: get_row
-    ! Return all the column indices of the non-zero entries in a given row
+    procedure(sparse_mat_get_slice_ifc), deferred :: get_column
+    ! Return all the indices of the non-zero entries in a given row/column
     ! and all the corresponding matrix entries
 
-    procedure(sparse_mat_get_slice_ifc), deferred :: get_column
-    ! Return all the row indices of the non-zero entries in a given column
-    ! and all the corresponding matrix entries
+    generic :: get => get_value
+    ! Generics for each of the mutators
 
 
     !-----------------------
@@ -109,6 +108,10 @@ contains
     procedure :: set_dense_submatrix => sparse_mat_set_dense_submatrix
     procedure :: add_dense_submatrix => sparse_mat_add_dense_submatrix
     ! Set/add values to dense submatrices
+
+    generic :: set => set_value, set_dense_submatrix
+    generic :: add => add_value, add_dense_submatrix
+    ! Generics for each of the mutators
 
     procedure(sparse_mat_zero_ifc), deferred :: zero
     ! Zero out all matrix entries
@@ -155,17 +158,23 @@ end type sparse_matrix_interface
 !--------------------------------------------------------------------------!
 abstract interface                                                         !
 !--------------------------------------------------------------------------!
-    subroutine sparse_mat_copy_graph_structure_ifc(A, g)
+    subroutine sparse_mat_copy_graph_ifc(A, g)
         import :: graph_interface, sparse_matrix_interface
         class(sparse_matrix_interface), intent(inout) :: A
         class(graph_interface), intent(in) :: g
-    end subroutine sparse_mat_copy_graph_structure_ifc
+    end subroutine sparse_mat_copy_graph_ifc
 
     subroutine sparse_mat_set_graph_ifc(A, g)
         import :: graph_interface, sparse_matrix_interface
         class(sparse_matrix_interface), intent(inout) :: A
         class(graph_interface), target, intent(in) :: g
     end subroutine sparse_mat_set_graph_ifc
+
+    function sparse_mat_get_nnz_ifc(A) result(nnz)
+        import :: sparse_matrix_interface
+        class(sparse_matrix_interface), intent(in) :: A
+        integer :: nnz
+    end function sparse_mat_get_nnz_ifc
 
     function sparse_mat_get_degree_ifc(A, k) result(d)
         import :: sparse_matrix_interface
@@ -254,7 +263,7 @@ subroutine sparse_matrix_setup(A, nrow, ncol, g)                           !
     class(graph_interface), intent(in) :: g
 
     call A%set_dimensions(nrow, ncol)
-    call A%copy_graph_structure(g)
+    call A%copy_graph(g)
 
 end subroutine sparse_matrix_setup
 
@@ -348,14 +357,12 @@ subroutine sparse_matrix_matvec_add(A, x, y)                               !
     real(dp), intent(inout) :: y(:)
     ! local variables
     integer :: i, j, k
-    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    integer :: num_returned, edges(2, batch_size)
     real(dp) :: vals(batch_size)
     type(graph_edge_cursor) :: cursor
 
     cursor = A%make_cursor()
-    num_batches = (cursor%final - cursor%start) / batch_size + 1
-
-    do n = 1, num_batches
+    do while (.not. cursor%done())
         call A%get_entries(edges, vals, cursor, batch_size, num_returned)
 
         do k = 1, num_returned
@@ -379,14 +386,12 @@ subroutine sparse_matrix_matvec_t_add(A, x, y)                             !
     real(dp), intent(inout) :: y(:)
     ! local variables
     integer :: i, j, k
-    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    integer :: num_returned, edges(2, batch_size)
     real(dp) :: vals(batch_size)
     type(graph_edge_cursor) :: cursor
 
     cursor = A%make_cursor()
-    num_batches = (cursor%final - cursor%start) / batch_size + 1
-
-    do n = 1, num_batches
+    do while (.not. cursor%done())
         call A%get_entries(edges, vals, cursor, batch_size, num_returned)
 
         do k = 1, num_returned
@@ -415,7 +420,7 @@ subroutine sparse_matrix_to_dense_matrix(A, B, trans)                      !
     logical, intent(in), optional :: trans
     ! local variables
     integer :: i, j, k, ord(2)
-    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    integer :: num_returned, edges(2, batch_size)
     type(graph_edge_cursor) :: cursor
     real(dp) :: vals(batch_size)
 
@@ -432,9 +437,7 @@ subroutine sparse_matrix_to_dense_matrix(A, B, trans)                      !
     ! Get a cursor for iterating through the matrix entries and find how
     ! many batches it will take
     cursor = A%make_cursor()
-    num_batches = (cursor%final - cursor%start) / batch_size + 1
-
-    do n = 1, num_batches
+    do while (.not. cursor%done())
         ! Get a batch of entries from A
         call A%get_entries(edges, vals, cursor, batch_size, num_returned)
 
@@ -468,7 +471,7 @@ subroutine sparse_matrix_to_file(A, filename, trans)                       !
     logical, intent(in), optional :: trans
     ! local variables
     integer :: i, j, k, ord(2), nv(2)
-    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    integer :: num_returned, edges(2, batch_size)
     type(graph_edge_cursor) :: cursor
     real(dp) :: vals(batch_size)
 
@@ -490,18 +493,16 @@ subroutine sparse_matrix_to_file(A, filename, trans)                       !
 
     ! Write out the dimensions of the matrix and the number of non-zero
     ! entries
-    write(10,*) nv(1), nv(2), A%nnz
+    write(10,*) nv(1), nv(2), A%get_nnz()
 
     ! Get a cursor for iterating through the matrix entries and find how
     ! many batches it will take
     cursor = A%make_cursor()
-    num_batches = (cursor%final - cursor%current) / batch_size + 1
-
-    do n=1,num_batches
+    do while (.not. cursor%done())
         ! Get a batch of entries from A
         call A%get_entries(edges, vals, cursor, batch_size, num_returned)
 
-        do k=1,num_returned
+        do k = 1, num_returned
             ! For each edge in the batch, 
             i = edges(ord(1), k)
             j = edges(ord(2), k)

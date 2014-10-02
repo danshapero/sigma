@@ -106,18 +106,18 @@ subroutine ll_graph_copy(g, h, trans)                                      !
     class(graph_interface), intent(in) :: h
     logical, intent(in), optional :: trans
     ! local variables
-    integer :: ind(2), order(2), nv(2), k
-    integer :: n, num_returned, num_batches, edges(2,batch_size)
+    integer :: ind(2), ord(2), nv(2), k
+    integer :: num_returned, edges(2, batch_size)
     type(graph_edge_cursor) :: cursor
 
     ! Check if we're copying h or h with all directed edges reversed
     nv = [h%n, h%m]
-    order = [1, 2]
+    ord = [1, 2]
 
     if (present(trans)) then
         if (trans) then
             nv = [h%m, h%n]
-            order = [2,1]
+            ord = [2,1]
         endif
     endif
 
@@ -127,17 +127,14 @@ subroutine ll_graph_copy(g, h, trans)                                      !
     ! Get a cursor from h with which to iterate through its edges
     cursor = h%make_cursor()
 
-    ! Find the number of chunks into which we're dividing the edges of h
-    num_batches = (cursor%final - cursor%start) / batch_size + 1
-
     ! Iterate through all the chunks
-    do n = 1, num_batches
+    do while(.not. cursor%done())
         ! Get a chunk of edges from h
         call h%get_edges(edges, cursor, batch_size, num_returned)
 
         ! For each edge,
         do k = 1, num_returned
-            ind = edges(order, k)
+            ind = edges(ord, k)
 
             ! add it to g
             call g%add_edge(ind(1), ind(2))
@@ -261,8 +258,8 @@ function ll_make_cursor(g) result(cursor)                                  !
     ! local variables
     integer :: k
 
-    cursor%start = 1
-    cursor%final = g%ne
+    cursor%first = 1
+    cursor%last = g%ne
     cursor%current = 0
 
     k = 1
@@ -271,7 +268,7 @@ function ll_make_cursor(g) result(cursor)                                  !
     enddo
 
     cursor%edge = [k, g%lists(k)%get_entry(1)]
-    cursor%indx = 0
+    cursor%idx = 0
 
 end function ll_make_cursor
 
@@ -293,7 +290,7 @@ subroutine ll_get_edges(g, edges, cursor, num_edges, num_returned)         !
     edges = 0
 
     ! Count how many edges we're actually going to return
-    num_returned = min(num_edges, cursor%final - cursor%current)
+    num_returned = min(num_edges, cursor%last - cursor%current)
 
     ! Find the last row we left off at
     i = cursor%edge(1)
@@ -303,25 +300,22 @@ subroutine ll_get_edges(g, edges, cursor, num_edges, num_returned)         !
         ! Either we are returning all the edges for the current vertex `i`,
         ! or the current request doesn't call for so many edges and we are
         ! returning fewer
-        num_from_this_row = min(g%lists(i)%length - cursor%indx, &
+        num_from_this_row = min(g%lists(i)%length - cursor%idx, &
                                 & num_returned - num_added)
 
         do k = 1, num_from_this_row
             edges(1, num_added + k) = i
-            edges(2, num_added + k) = g%lists(i)%get_entry(cursor%indx + k)
+            edges(2, num_added + k) = g%lists(i)%get_entry(cursor%idx + k)
         enddo
-
-        !! Check that this is right
-        !cursor%indx = mod(cursor%indx+num_from_this_row,g%lists(i)%length)
 
         ! If we returned all nodes neighboring this vertex, increment
         ! the vertex
         !TODO replace this with bit-shifting magic
-        if (num_from_this_row == g%lists(i)%length - cursor%indx) then
+        if (num_from_this_row == g%lists(i)%length - cursor%idx) then
             i = i + 1
-            cursor%indx = 0
+            cursor%idx = 0
         else
-            cursor%indx = cursor%indx + num_from_this_row
+            cursor%idx = cursor%idx + num_from_this_row
         endif
 
         ! Increase the number of edges added
