@@ -32,6 +32,11 @@ implicit none
     integer, allocatable :: nodes(:), nodes1(:), nodes2(:)
     real(dp), allocatable :: slice(:)
 
+    ! variables for testing matrix value iterators
+    type(graph_edge_cursor) :: cursor
+    integer :: num_returned, edges(2, batch_size)
+    real(dp) :: vals(batch_size)
+
     ! random numbers
     real(dp) :: p, q
 
@@ -487,6 +492,37 @@ implicit none
     if (verbose) then
         print *, "o Done checking matrix-vector multiplication."
     endif
+
+
+
+    !----------------------------------------------------------------------!
+    ! Test iterating over the matrix entries                               !
+    !----------------------------------------------------------------------!
+    y = 0.0_dp
+
+    cursor = A%make_cursor()
+    do while (.not. cursor%done())
+        call A%get_entries(edges, vals, cursor, batch_size, num_returned)
+
+        do k = 1, num_returned
+            i = edges(1, k)
+            j = edges(2, k)
+
+            y(i) = y(i) + vals(k) * x(j)
+        enddo
+    enddo
+
+    mse = dsqrt( dot_product(y - z, y - z) / dot_product(x, x) )
+
+    if (mse > 1.0e-14) then
+        print *, "Iterating over all matrix entries failed."
+        call exit(1)
+    endif
+
+    if (verbose) then
+        print *, "o Done checking matrix value iterator."
+    endif
+
 
 
     ! Destroy any heap-allocated objects

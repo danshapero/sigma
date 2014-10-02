@@ -675,11 +675,13 @@ subroutine composite_mat_get_edges(A, edges, cursor, &                     !
     call C%get_edges(edges, cursor%sub_cursor(it, jt), &
                                                   & num_edges, num_returned)
 
+    edges(1, 1:num_returned) = edges(1, 1:num_returned) + A%row_ptr(it) - 1
+    edges(2, 1:num_returned) = edges(2, 1:num_returned) + A%col_ptr(jt) - 1
+
     cursor%current = cursor%current + num_returned
 
     ! Some logic to increment it/jt if we've reached the end of that matrix
-    if (cursor%sub_cursor(it, jt)%current == &
-                                    & cursor%sub_cursor(it, jt)%last) then
+    if (cursor%sub_cursor(it, jt)%done()) then
         it = mod(it, A%num_row_mats) + 1
         if (it == A%num_row_mats) jt = jt + 1
     endif
@@ -687,7 +689,7 @@ subroutine composite_mat_get_edges(A, edges, cursor, &                     !
     cursor%edge(1) = it
     cursor%edge(2) = jt
 
-    if (cursor%current == cursor%last) deallocate(cursor%sub_cursor)
+    if (cursor%done()) deallocate(cursor%sub_cursor)
 
 end subroutine composite_mat_get_edges
 
@@ -716,18 +718,20 @@ subroutine composite_mat_get_entries(A, edges, entries, cursor, &          !
     call C%get_entries(edges, entries, cursor%sub_cursor(it, jt), &
                                                 & num_edges, num_returned)
 
+    edges(1, 1:num_returned) = edges(1, 1:num_returned) + A%row_ptr(it) - 1
+    edges(2, 1:num_returned) = edges(2, 1:num_returned) + A%col_ptr(jt) - 1
+
     cursor%current = cursor%current + num_returned
 
-    if (cursor%sub_cursor(it, jt)%current == &
-                                    & cursor%sub_cursor(it, jt)%last) then
-        it = mod(it, A%num_row_mats) + 1
+    if (cursor%sub_cursor(it, jt)%done()) then
         if (it == A%num_row_mats) jt = jt + 1
+        it = mod(it, A%num_row_mats) + 1
     endif
 
     cursor%edge(1) = it
     cursor%edge(2) = jt
 
-    if (cursor%current == cursor%last) deallocate(cursor%sub_cursor)
+    if (cursor%done()) deallocate(cursor%sub_cursor)
 
 end subroutine composite_mat_get_entries
 
