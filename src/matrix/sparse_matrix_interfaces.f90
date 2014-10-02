@@ -76,9 +76,6 @@ contains
     ! Return all the indices of the non-zero entries in a given row/column
     ! and all the corresponding matrix entries
 
-    generic :: get => get_value
-    ! Generics for each of the mutators
-
 
     !-----------------------
     ! Edge, value iterators

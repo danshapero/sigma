@@ -40,6 +40,8 @@ contains
     procedure :: add_reference => linear_operator_add_reference
     procedure :: remove_reference => linear_operator_remove_reference
     procedure(linear_operator_destroy_ifc), deferred :: destroy
+
+    generic :: get => get_value
 end type linear_operator
 
 
