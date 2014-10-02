@@ -63,7 +63,7 @@ subroutine sparse_matrix_sum_graph(g, B, C)                                !
     class(sparse_matrix_interface), intent(in) :: B, C
     ! local variables
     integer :: i, j, k
-    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    integer :: num_returned, edges(2, batch_size)
     type(graph_edge_cursor) :: cursor
 
     call g%init(B%nrow, B%ncol)
@@ -71,9 +71,7 @@ subroutine sparse_matrix_sum_graph(g, B, C)                                !
 
     ! Add all the edges from `B` into `g`
     cursor = B%make_cursor()
-    num_batches = (cursor%last - cursor%first) / batch_size + 1
-
-    do n = 1, num_batches
+    do while(.not. cursor%done())
         call B%get_edges(edges, cursor, batch_size, num_returned)
 
         do k = 1, num_returned
@@ -87,9 +85,7 @@ subroutine sparse_matrix_sum_graph(g, B, C)                                !
 
     ! Now add all the edges from `C` into `g`
     cursor = C%make_cursor()
-    num_batches = (cursor%last - cursor%first) / batch_size + 1
-
-    do n = 1, num_batches
+    do while(.not. cursor%done())
         call C%get_edges(edges, cursor, batch_size, num_returned)
 
         do k = 1, num_returned
@@ -113,15 +109,13 @@ subroutine sparse_matrix_sum_fill_entries(A, B, C)                         !
     ! local variables
     integer :: i, j, k
     real(dp) :: z
-    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    integer :: num_returned, edges(2, batch_size)
     real(dp) :: entries(batch_size)
     type(graph_edge_cursor) :: cursor
 
     ! Add up the contributions to `A` from `B`
     cursor = B%make_cursor()
-    num_batches = (cursor%last - cursor%first) / batch_size + 1
-
-    do n = 1, num_batches
+    do while(.not. cursor%done())
         call B%get_entries(edges, entries, cursor, batch_size, num_returned)
 
         do k = 1, num_returned
@@ -135,9 +129,7 @@ subroutine sparse_matrix_sum_fill_entries(A, B, C)                         !
 
     ! Add up the contributions to `A` from `C`
     cursor = C%make_cursor()
-    num_batches = (cursor%last - cursor%first) / batch_size + 1
-
-    do n = 1, num_batches
+    do while (.not. cursor%done())
         call C%get_entries(edges, entries, cursor, batch_size, num_returned)
 
         do k = 1, num_returned
@@ -195,7 +187,7 @@ subroutine sparse_matrix_product_graph(g, B, C)
     integer, allocatable :: nodes(:)
     real(dp), allocatable :: slice(:)
     ! variables for iterating through matrix entries
-    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    integer :: num_returned, edges(2, batch_size)
     type(graph_edge_cursor) :: cursor
 
     call g%init(B%nrow, C%ncol)
@@ -211,9 +203,7 @@ subroutine sparse_matrix_product_graph(g, B, C)
 
     ! Iterate through all the edges of `B`
     cursor = B%make_cursor()
-    num_batches = (cursor%last - cursor%first) / batch_size + 1
-
-    do n = 1, num_batches
+    do while(.not. cursor%done())
         call B%get_edges(edges, cursor, batch_size, num_returned)
 
         do l = 1, num_returned
@@ -251,7 +241,7 @@ subroutine sparse_matrix_product_fill_entries(A, B, C)                     !
     integer, allocatable :: nodes(:)
     real(dp), allocatable :: slice(:)
     ! variables for iterating through matrix entries
-    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    integer :: num_returned, edges(2, batch_size)
     real(dp) :: vals(batch_size)
     type(graph_edge_cursor) :: cursor
 
@@ -268,9 +258,7 @@ subroutine sparse_matrix_product_fill_entries(A, B, C)                     !
 
     ! Iterate through all the edges of `B`
     cursor = B%make_cursor()
-    num_batches = (cursor%last - cursor%first) / batch_size + 1
-
-    do n = 1, num_batches
+    do while(.not. cursor%done())
         call B%get_entries(edges, vals, cursor, batch_size, num_returned)
 
         do l = 1, num_returned

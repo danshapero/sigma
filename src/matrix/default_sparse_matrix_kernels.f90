@@ -182,35 +182,45 @@ subroutine set_matrix_value_with_reallocation(g, val, i, j, z)             !
     real(dp), intent(in) :: z
     ! local variables
     real(dp), allocatable :: val_temp(:)
-    integer :: k, l, m, indx
-    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    integer :: k, l, n, idx
+    integer :: current, num_returned, edges(2, batch_size)
     type(graph_edge_cursor) :: cursor
     class(graph_interface), allocatable :: h
 
+    ! Make a copy of the graph
     allocate(h, mold = g)
     call h%copy(g)
 
+    ! Add the desired edge to the input graph
     call g%add_edge(i, j)
 
+    ! Create a temporary array to store the matrix values
     allocate(val_temp(g%ne))
-    indx = g%find_edge(i, j)
-    val_temp(indx) = z
+    idx = g%find_edge(i, j)
+    val_temp(idx) = z
 
+    ! Iterate through all the edges of the old version of the graph and copy
+    ! the values from the old indexing to the new indexing
     cursor = h%make_cursor()
-    num_batches = (cursor%last - cursor%first) / batch_size + 1
+    do while(.not. cursor%done())
+        ! Store the current index in the edge set
+        current = cursor%current
 
-    do n = 1, num_batches
+        ! Get a batch of edges
         call h%get_edges(edges, cursor, batch_size, num_returned)
 
-        do m = 1, num_returned
-            k = edges(1, m)
-            l = edges(2, m)
+        ! For each value in the old indexing, put it in the right spot in the
+        ! temporary array with the new indexing
+        do n = 1, num_returned
+            k = edges(1, n)
+            l = edges(2, n)
 
-            indx = g%find_edge(k, l)
-            val_temp(indx) = val(batch_size * (n - 1) + m)
+            idx = g%find_edge(k, l)
+            val_temp(idx) = val(current + n)
         enddo
     enddo
 
+    ! Destroy the old copy
     call h%destroy()
     deallocate(h)
 
