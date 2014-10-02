@@ -357,14 +357,12 @@ subroutine sparse_matrix_matvec_add(A, x, y)                               !
     real(dp), intent(inout) :: y(:)
     ! local variables
     integer :: i, j, k
-    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    integer :: num_returned, edges(2, batch_size)
     real(dp) :: vals(batch_size)
     type(graph_edge_cursor) :: cursor
 
     cursor = A%make_cursor()
-    num_batches = (cursor%last - cursor%first) / batch_size + 1
-
-    do n = 1, num_batches
+    do while (.not. cursor%done())
         call A%get_entries(edges, vals, cursor, batch_size, num_returned)
 
         do k = 1, num_returned
@@ -388,14 +386,12 @@ subroutine sparse_matrix_matvec_t_add(A, x, y)                             !
     real(dp), intent(inout) :: y(:)
     ! local variables
     integer :: i, j, k
-    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    integer :: num_returned, edges(2, batch_size)
     real(dp) :: vals(batch_size)
     type(graph_edge_cursor) :: cursor
 
     cursor = A%make_cursor()
-    num_batches = (cursor%last - cursor%first) / batch_size + 1
-
-    do n = 1, num_batches
+    do while (.not. cursor%done())
         call A%get_entries(edges, vals, cursor, batch_size, num_returned)
 
         do k = 1, num_returned
@@ -424,7 +420,7 @@ subroutine sparse_matrix_to_dense_matrix(A, B, trans)                      !
     logical, intent(in), optional :: trans
     ! local variables
     integer :: i, j, k, ord(2)
-    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    integer :: num_returned, edges(2, batch_size)
     type(graph_edge_cursor) :: cursor
     real(dp) :: vals(batch_size)
 
@@ -441,9 +437,7 @@ subroutine sparse_matrix_to_dense_matrix(A, B, trans)                      !
     ! Get a cursor for iterating through the matrix entries and find how
     ! many batches it will take
     cursor = A%make_cursor()
-    num_batches = (cursor%last - cursor%first) / batch_size + 1
-
-    do n = 1, num_batches
+    do while (.not. cursor%done())
         ! Get a batch of entries from A
         call A%get_entries(edges, vals, cursor, batch_size, num_returned)
 
@@ -477,7 +471,7 @@ subroutine sparse_matrix_to_file(A, filename, trans)                       !
     logical, intent(in), optional :: trans
     ! local variables
     integer :: i, j, k, ord(2), nv(2)
-    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    integer :: num_returned, edges(2, batch_size)
     type(graph_edge_cursor) :: cursor
     real(dp) :: vals(batch_size)
 
@@ -504,13 +498,11 @@ subroutine sparse_matrix_to_file(A, filename, trans)                       !
     ! Get a cursor for iterating through the matrix entries and find how
     ! many batches it will take
     cursor = A%make_cursor()
-    num_batches = (cursor%last - cursor%current) / batch_size + 1
-
-    do n=1,num_batches
+    do while (.not. cursor%done())
         ! Get a batch of entries from A
         call A%get_entries(edges, vals, cursor, batch_size, num_returned)
 
-        do k=1,num_returned
+        do k = 1, num_returned
             ! For each edge in the batch, 
             i = edges(ord(1), k)
             j = edges(ord(2), k)

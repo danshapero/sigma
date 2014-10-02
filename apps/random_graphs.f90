@@ -57,11 +57,11 @@ subroutine watts_strogatz(g, nn, k, p)                                     !
     integer, intent(in) :: nn, k
     real(dp), intent(in) :: p
     ! local variables
-    integer :: i, j, l, m, n
+    integer :: i, j, l, n
     real(dp) :: z
     ! variables for graph edge iterator
     type(graph_edge_cursor) :: cursor
-    integer :: edges(2,batch_size), num_returned, num_batches
+    integer :: num_returned, edges(2, batch_size)
     ! ring graph
     type(ll_graph) :: g_ring
 
@@ -72,8 +72,8 @@ subroutine watts_strogatz(g, nn, k, p)                                     !
     call g_ring%init(nn)
 
     do i = 1, nn
-        do m = 1, k
-            j = mod(i + m - 1, nn) + 1
+        do n = 1, k
+            j = mod(i + n - 1, nn) + 1
             call g_ring%add_edge(i, j)
             call g_ring%add_edge(j, i)
         enddo
@@ -86,14 +86,13 @@ subroutine watts_strogatz(g, nn, k, p)                                     !
 
     cursor = g_ring%make_cursor()
 
-    num_batches = (cursor%last - cursor%first) / batch_size + 1
-    do n = 1, num_batches
+    do while (.not. cursor%done())
         call g_ring%get_edges(edges, cursor, batch_size, num_returned)
 
-        do m = 1, num_returned
+        do n = 1, num_returned
             ! Get the next edge (i,j) from the ring graph
-            i = edges(1, m)
-            j = edges(2, m)
+            i = edges(1, n)
+            j = edges(2, n)
 
             ! Set a vertex l to point to j
             l = j

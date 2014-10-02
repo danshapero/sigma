@@ -298,7 +298,7 @@ subroutine sparse_static_pattern_ldu_factorization(A, L, D, U)             !
     real(dp) :: Lik, Uki, Uik, Ukj
     ! graph edge iterators
     type(graph_edge_cursor) :: cursor
-    integer :: num_batches, num_returned, edges(2, batch_size)
+    integer :: num_returned, edges(2, batch_size)
     real(dp) :: entries(batch_size)
 
     nn = A%nrow
@@ -309,9 +309,7 @@ subroutine sparse_static_pattern_ldu_factorization(A, L, D, U)             !
 
     ! Copy A into L, D, U
     cursor = A%make_cursor()
-    num_batches = (cursor%last - cursor%first) / batch_size + 1
-
-    do n = 1, num_batches
+    do while (.not. cursor%done())
         call A%get_entries(edges, entries, cursor, batch_size, num_returned)
 
         do k = 1, num_returned
@@ -411,7 +409,7 @@ subroutine incomplete_ldu_sparsity_pattern(A, L, U, level)                 !
     type(ll_graph) :: gl, gu
     ! graph edge iterators
     type(graph_edge_cursor) :: cursor
-    integer :: n, num_batches, edges(2, batch_size), num_returned
+    integer :: edges(2, batch_size), num_returned
 
     if (level > 0) then
         print *, 'ILDU(k) for k > 0 not implemented yet! Sorry pal.'
@@ -424,9 +422,7 @@ subroutine incomplete_ldu_sparsity_pattern(A, L, U, level)                 !
     call gu%init(nn)
 
     cursor = A%make_cursor()
-    num_batches = (cursor%last - cursor%first) / batch_size + 1
-
-    do n = 1, num_batches
+    do while (.not. cursor%done())
         call A%get_edges(edges, cursor, batch_size, num_returned)
 
         do k = 1, num_returned

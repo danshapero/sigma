@@ -106,7 +106,7 @@ subroutine ellpack_graph_copy(g, h, trans)                                 !
     logical, intent(in), optional :: trans
     ! local variables
     integer :: i, j, k, d, ord(2), nv(2)
-    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    integer :: num_returned, edges(2, batch_size)
     type(graph_edge_cursor) :: cursor
     logical :: tr
 

@@ -31,7 +31,7 @@ implicit none
     integer, allocatable :: neighbors(:)
 
     ! variables for iterating over graph edges
-    integer :: n, num_batches, num_returned, edges(2, batch_size)
+    integer :: num_returned, edges(2, batch_size)
     type(graph_edge_cursor) :: cursor
 
     ! permutation
@@ -270,9 +270,7 @@ implicit none
 
         ! Check that iterating through the graph's edges works
         cursor = g%make_cursor()
-        num_batches = (cursor%last - cursor%first) / batch_size + 1
-
-        do n = 1, num_batches
+        do while (.not. cursor%done())
             call g%get_edges(edges, cursor, batch_size, num_returned)
 
             do k = 1, num_returned
