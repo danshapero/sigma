@@ -108,10 +108,18 @@ contains
     !----------
     procedure :: set_value           => composite_mat_set_value
     procedure :: add_value           => composite_mat_add_value
-    ! procedure :: set_multiple_values => composite_mat_set_multiple_values
-    ! procedure :: add_multiple_values => composite_mat_add_multiple_values
+    procedure :: set_multiple_values => composite_mat_set_multiple_values
+    procedure :: add_multiple_values => composite_mat_add_multiple_values
+
     procedure :: set_submat_value    => composite_mat_set_submat_value
     procedure :: add_submat_value    => composite_mat_add_submat_value
+    procedure :: set_multiple_submat_values => &
+                                & composite_mat_set_multiple_submat_values
+    procedure :: add_multiple_submat_values => &
+                                & composite_mat_add_multiple_submat_values
+    ! Set a sub-matrix value according to its local indexing rather than the
+    ! global indexing
+
     procedure :: zero                => composite_mat_zero
     procedure :: left_permute        => composite_mat_left_permute
     procedure :: right_permute       => composite_mat_right_permute
@@ -119,8 +127,8 @@ contains
     procedure :: set_submatrix       => composite_mat_set_submatrix
 
     ! Additional generics for mutators
-    generic :: set => set_submat_value
-    generic :: add => add_submat_value
+    generic :: set => set_submat_value, set_multiple_submat_values
+    generic :: add => add_submat_value, add_multiple_submat_values
 
 
     !------------------------------
@@ -793,6 +801,74 @@ end subroutine composite_mat_add_value
 
 
 !--------------------------------------------------------------------------!
+subroutine composite_mat_set_multiple_values(A, is, js, B)                 !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(inout) :: A
+    integer, intent(in) :: is(:), js(:)
+    real(dp), intent(in) :: B(:,:)
+    ! local variables
+    integer :: i, j, k, l, ir, jr, it, jt
+    real(dp) :: z
+    class(sparse_matrix_interface), pointer :: C
+
+    do k = 1, size(is)
+        i = is(k)
+        it = A%get_owning_row_matrix(i)
+        ir = i - A%row_ptr(it) + 1
+
+        do l = 1, size(js)
+            j = js(l)
+            z = B(k, l)
+
+            jt = A%get_owning_column_matrix(j)
+            jr = j - A%col_ptr(jt) + 1
+
+            C => A%sub_mats(it, jt)%mat
+
+            call C%set_value(ir, jr, z)
+        enddo
+    enddo
+
+end subroutine composite_mat_set_multiple_values
+
+
+
+!--------------------------------------------------------------------------!
+subroutine composite_mat_add_multiple_values(A, is, js, B)                 !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(inout) :: A
+    integer, intent(in) :: is(:), js(:)
+    real(dp), intent(in) :: B(:,:)
+    ! local variables
+    integer :: i, j, k, l, ir, jr, it, jt
+    real(dp) :: z
+    class(sparse_matrix_interface), pointer :: C
+
+    do k = 1, size(is)
+        i = is(k)
+        it = A%get_owning_row_matrix(i)
+        ir = i - A%row_ptr(it) + 1
+
+        do l = 1, size(js)
+            j = js(l)
+            z = B(k, l)
+
+            jt = A%get_owning_column_matrix(j)
+            jr = j - A%col_ptr(jt) + 1
+
+            C => A%sub_mats(it, jt)%mat
+
+            call C%add_value(ir, jr, z)
+        enddo
+    enddo
+
+end subroutine composite_mat_add_multiple_values
+
+
+
+!--------------------------------------------------------------------------!
 subroutine composite_mat_set_submat_value(A, it, jt, i, j, z)              !
 !--------------------------------------------------------------------------!
     class(sparse_matrix), intent(inout) :: A
@@ -815,6 +891,32 @@ subroutine composite_mat_add_submat_value(A, it, jt, i, j, z)              !
     call A%sub_mats(it, jt)%mat%add_value(i, j, z)
 
 end subroutine composite_mat_add_submat_value
+
+
+
+!--------------------------------------------------------------------------!
+subroutine composite_mat_set_multiple_submat_values(A, it, jt, is, js, B)  !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(inout) :: A
+    integer, intent(in) :: it, jt, is(:), js(:)
+    real(dp), intent(in) :: B(:,:)
+
+    call A%sub_mats(it, jt)%mat%set_multiple_values(is, js, B)
+
+end subroutine composite_mat_set_multiple_submat_values
+
+
+
+!--------------------------------------------------------------------------!
+subroutine composite_mat_add_multiple_submat_values(A, it, jt, is, js, B)  !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(inout) :: A
+    integer, intent(in) :: it, jt, is(:), js(:)
+    real(dp), intent(in) :: B(:,:)
+
+    call A%sub_mats(it, jt)%mat%add_multiple_values(is, js, B)
+
+end subroutine composite_mat_add_multiple_submat_values
 
 
 
