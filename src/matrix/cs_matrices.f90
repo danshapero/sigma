@@ -125,8 +125,8 @@ contains
     !----------
     procedure :: set_value => csr_matrix_set_value
     procedure :: add_value => csr_matrix_add_value
-    procedure :: set_dense_submatrix => csr_matrix_set_dense_submatrix
-    procedure :: add_dense_submatrix => csr_matrix_add_dense_submatrix
+    procedure :: set_multiple_values => csr_matrix_set_multiple_values
+    procedure :: add_multiple_values => csr_matrix_add_multiple_values
     procedure, nopass :: left_permute_impl  => graph_leftperm
     procedure, nopass :: right_permute_impl => graph_rightperm
 
@@ -167,8 +167,8 @@ contains
     !----------
     procedure :: set_value => csc_matrix_set_value
     procedure :: add_value => csc_matrix_add_value
-    procedure :: set_dense_submatrix => csc_matrix_set_dense_submatrix
-    procedure :: add_dense_submatrix => csc_matrix_add_dense_submatrix
+    procedure :: set_multiple_values => csc_matrix_set_multiple_values
+    procedure :: add_multiple_values => csc_matrix_add_multiple_values
     procedure, nopass :: left_permute_impl  => graph_rightperm
     procedure, nopass :: right_permute_impl => graph_leftperm
 
@@ -730,7 +730,7 @@ end subroutine csr_matrix_add_value
 
 
 !--------------------------------------------------------------------------!
-subroutine csr_matrix_set_dense_submatrix(A, is, js, B)                    !
+subroutine csr_matrix_set_multiple_values(A, is, js, B)                    !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(csr_matrix), intent(inout) :: A
@@ -763,12 +763,12 @@ subroutine csr_matrix_set_dense_submatrix(A, is, js, B)                    !
         enddo
     enddo
 
-end subroutine csr_matrix_set_dense_submatrix
+end subroutine csr_matrix_set_multiple_values
 
 
 
 !--------------------------------------------------------------------------!
-subroutine csr_matrix_add_dense_submatrix(A, is, js, B)                    !
+subroutine csr_matrix_add_multiple_values(A, is, js, B)                    !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(csr_matrix), intent(inout) :: A
@@ -801,7 +801,7 @@ subroutine csr_matrix_add_dense_submatrix(A, is, js, B)                    !
         enddo
     enddo
 
-end subroutine csr_matrix_add_dense_submatrix
+end subroutine csr_matrix_add_multiple_values
 
 
 
@@ -862,7 +862,7 @@ end subroutine csc_matrix_add_value
 
 
 !--------------------------------------------------------------------------!
-subroutine csc_matrix_set_dense_submatrix(A, is, js, B)                    !
+subroutine csc_matrix_set_multiple_values(A, is, js, B)                    !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(csc_matrix), intent(inout) :: A
@@ -895,12 +895,12 @@ subroutine csc_matrix_set_dense_submatrix(A, is, js, B)                    !
         enddo
    enddo
 
-end subroutine csc_matrix_set_dense_submatrix
+end subroutine csc_matrix_set_multiple_values
 
 
 
 !--------------------------------------------------------------------------!
-subroutine csc_matrix_add_dense_submatrix(A, is, js, B)                    !
+subroutine csc_matrix_add_multiple_values(A, is, js, B)                    !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(csc_matrix), intent(inout) :: A
@@ -933,7 +933,7 @@ subroutine csc_matrix_add_dense_submatrix(A, is, js, B)                    !
         enddo
    enddo
 
-end subroutine csc_matrix_add_dense_submatrix
+end subroutine csc_matrix_add_multiple_values
 
 
 

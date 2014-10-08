@@ -500,6 +500,8 @@ implicit none
     !----------------------------------------------------------------------!
     y = 0.0_dp
 
+    ! Manually compute a matrix-vector product `y = A * x` by iterating
+    ! over all the matrix entries
     cursor = A%make_cursor()
     do while (.not. cursor%done())
         call A%get_entries(edges, vals, cursor, batch_size, num_returned)
@@ -512,6 +514,7 @@ implicit none
         enddo
     enddo
 
+    ! Compare the computed product `y` with the exact result `z`
     mse = dsqrt( dot_product(y - z, y - z) / dot_product(x, x) )
 
     if (mse > 1.0e-14) then

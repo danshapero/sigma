@@ -109,7 +109,7 @@ use sigma
                 if (j > i) then
                     is = [i, j]
 
-                    call A%add_dense_submatrix(is, is, B)
+                    call A%add_multiple_values(is, is, B)
                 endif
             enddo
         enddo

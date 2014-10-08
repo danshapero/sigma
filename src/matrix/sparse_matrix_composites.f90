@@ -108,8 +108,8 @@ contains
     !----------
     procedure :: set_value           => composite_mat_set_value
     procedure :: add_value           => composite_mat_add_value
-    ! procedure :: set_dense_submatrix => composite_mat_set_dense_submatrix
-    ! procedure :: add_dense_submatrix => composite_mat_add_dense_submatrix
+    ! procedure :: set_multiple_values => composite_mat_set_multiple_values
+    ! procedure :: add_multiple_values => composite_mat_add_multiple_values
     procedure :: set_submat_value    => composite_mat_set_submat_value
     procedure :: add_submat_value    => composite_mat_add_submat_value
     procedure :: zero                => composite_mat_zero

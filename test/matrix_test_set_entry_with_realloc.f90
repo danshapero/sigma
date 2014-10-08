@@ -107,7 +107,7 @@ implicit none
         is = [1, nn / 2]
         B(:,1) = [ 1.0, -1.0]
         B(:,2) = [-1.0,  1.0]
-        call A%add_dense_submatrix(is, is, B)
+        call A%add_multiple_values(is, is, B)
 
         if (A%get_value(1, 1) /= 4 .or. A%get_value(1, nn/2) /= -1) then
             print *, 'Setting multiple matrix entries with reallocation'

@@ -102,12 +102,12 @@ contains
     procedure(sparse_mat_set_value_ifc), deferred :: add_value
     ! Add a value to a matrix entry
 
-    procedure :: set_dense_submatrix => sparse_mat_set_dense_submatrix
-    procedure :: add_dense_submatrix => sparse_mat_add_dense_submatrix
+    procedure :: set_multiple_values => sparse_mat_set_multiple_values
+    procedure :: add_multiple_values => sparse_mat_add_multiple_values
     ! Set/add values to dense submatrices
 
-    generic :: set => set_value, set_dense_submatrix
-    generic :: add => add_value, add_dense_submatrix
+    generic :: set => set_value, set_multiple_values
+    generic :: add => add_value, add_multiple_values
     ! Generics for each of the mutators
 
     procedure(sparse_mat_zero_ifc), deferred :: zero
@@ -289,7 +289,7 @@ end subroutine set_sparse_matrix_dimensions
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-subroutine sparse_mat_set_dense_submatrix(A, is, js, B)                    !
+subroutine sparse_mat_set_multiple_values(A, is, js, B)                    !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(sparse_matrix_interface), intent(inout) :: A
@@ -310,12 +310,12 @@ subroutine sparse_mat_set_dense_submatrix(A, is, js, B)                    !
         enddo
     enddo
 
-end subroutine sparse_mat_set_dense_submatrix
+end subroutine sparse_mat_set_multiple_values
 
 
 
 !--------------------------------------------------------------------------!
-subroutine sparse_mat_add_dense_submatrix(A, is, js, B)                    !
+subroutine sparse_mat_add_multiple_values(A, is, js, B)                    !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(sparse_matrix_interface), intent(inout) :: A
@@ -336,7 +336,7 @@ subroutine sparse_mat_add_dense_submatrix(A, is, js, B)                    !
         enddo
     enddo
 
-end subroutine sparse_mat_add_dense_submatrix
+end subroutine sparse_mat_add_multiple_values
 
 
 
