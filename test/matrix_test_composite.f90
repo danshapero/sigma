@@ -421,8 +421,7 @@ implicit none
 
         do k = 1, d
             j = nodes(k)
-            z(i) = z(i) + x(i)
-            z(i) = z(i) - x(j)
+            z(i) = z(i) + x(i) - x(j)
         enddo
     enddo
 
@@ -437,8 +436,7 @@ implicit none
 
         do k = 1, d
             j = nodes(k)
-            z(i + nn1) = z(i + nn1) + x(i + nn1)
-            z(i + nn1) = z(i + nn1) - x(j + nn1)
+            z(i + nn1) = z(i + nn1) + x(i + nn1) - x(j + nn1)
         enddo
     enddo
 
@@ -461,8 +459,7 @@ implicit none
         call h%get_neighbors(nodes, i)
         do k = 1, d
             j = nodes(k)
-            z(i) = z(i) + x(i)
-            z(i) = z(i) - x(j + nn1)
+            z(i) = z(i) + x(i) - x(j + nn1)
         enddo
     enddo
 
@@ -471,8 +468,7 @@ implicit none
         call h%get_neighbors(nodes, j)
         do k = 1, d
             i = nodes(k)
-            z(i + nn1) = z(i + nn1) + x(i + nn1)
-            z(i + nn1) = z(i + nn1) - x(j)
+            z(i + nn1) = z(i + nn1) + x(i + nn1) - x(j)
         enddo
     enddo
 
