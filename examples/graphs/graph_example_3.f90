@@ -1,12 +1,10 @@
 !==========================================================================!
 program graph_example_3                                                    !
 !==========================================================================!
-!==== Example program demonstrating more graph operations:             ====!
-!====       o  deleting edges                                          ====!
-!====       o  compressing graph storage                               ====!
-!==== These are illustrated by way of *bond percolation*, a classic    ====!
-!==== problem of physics. One considers an integer lattice in d-       ====!
-!==== dimensional space, and every edge of the lattice is removed      ====!
+!==== Example program to demonstrate deleting graph edges.             ====!
+!==== This is illustrated by way of *bond percolation*, a classic      ====!
+!==== model in statistical physics. One considers an integer lattice   ====!
+!==== in d-dimensional space, and every edge of the lattice is removed ====!
 !==== with probability p. What is the probability that there is a      ====!
 !==== path through the lattice?                                        ====!
 !==========================================================================!

@@ -5,6 +5,7 @@ use ll_graphs
 use coo_graphs
 use cs_graphs
 use ellpack_graphs
+use permutations
 
 implicit none
 
