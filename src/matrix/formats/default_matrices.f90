@@ -215,7 +215,7 @@ subroutine default_matrix_copy_graph(A, g)                                 !
     trans = A%ord(1) == 2
     call A%g%copy(g, trans)
 
-    allocate(A%val(g%ne))
+    allocate(A%val(g%get_num_edges()))
     A%val = 0.0_dp
 
     A%graph_set = .true.
@@ -235,7 +235,7 @@ subroutine default_matrix_set_graph(A, g)                                  !
     A%g => g
     call A%g%add_reference()
 
-    allocate(A%val(g%ne))
+    allocate(A%val(g%get_num_edges()))
     A%val = 0.0_dp
 
     A%graph_set = .true.
@@ -255,7 +255,7 @@ function default_matrix_get_nnz(A) result(nnz)                             !
     class(default_matrix), intent(in) :: A
     integer :: nnz
 
-    nnz = A%g%ne
+    nnz = A%g%get_num_edges()
 
 end function default_matrix_get_nnz
 

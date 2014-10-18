@@ -114,7 +114,7 @@ implicit none
     nn = g%n
     call convert_graph_type(g, 'compressed sparse')
 
-    d = g%max_degree()
+    d = g%get_max_degree()
     allocate(neighbors(d))
 
 
@@ -144,7 +144,7 @@ implicit none
     do iter = 1, 100 * nn
         do i = 1, nn
             call g%get_neighbors(neighbors, i)
-            d = g%degree(i)
+            d = g%get_degree(i)
             do k = 1, d
                 j = neighbors(k)
 

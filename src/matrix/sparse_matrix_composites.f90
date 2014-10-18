@@ -63,7 +63,7 @@ contains
     procedure :: composite_mat_set_mat_type_submat
     generic :: set_matrix_type => composite_mat_set_mat_type_leaf, &
                                 & composite_mat_set_mat_type_submat
-    ! Choose the sparse matrix format for each sub-matrix of the composite
+    ! Choose the sparse matrix format for a sub-matrix of the composite
 
     procedure :: copy_graph => composite_mat_copy_graph
     procedure :: set_graph  => composite_mat_set_graph
@@ -1121,6 +1121,7 @@ elemental function composite_mat_get_owning_rowmat(A, i) result(it)        !
     integer, intent(in) :: i
     integer :: it
 
+    it = 0
     do it = 1, A%num_row_mats
         if (A%row_ptr(it) <= i .and. A%row_ptr(it + 1) > i) exit
     enddo
@@ -1136,6 +1137,7 @@ elemental function composite_mat_get_owning_colmat(A, j) result(jt)        !
     integer, intent(in) :: j
     integer :: jt
 
+    jt = 0
     do jt = 1, A%num_col_mats
         if (A%col_ptr(jt) <= j .and. A%col_ptr(jt + 1) > j) exit
     enddo
@@ -1146,4 +1148,5 @@ end function composite_mat_get_owning_colmat
 
 
 end module sparse_matrix_composites
+
 

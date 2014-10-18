@@ -124,7 +124,7 @@ subroutine ellpack_matrix_copy_graph(A, g)                                 !
     if (.not. associated(A%g)) allocate(A%g)
     call A%g%copy(g)
 
-    A%nnz = g%ne
+    A%nnz = g%get_num_edges()
     allocate(A%val(A%g%max_d, A%g%n))
     A%val = 0.0_dp
 
@@ -158,7 +158,7 @@ subroutine ellpack_matrix_set_graph(A, g)                                  !
             call exit(1)
     end select
 
-    A%nnz = g%ne
+    A%nnz = g%get_num_edges()
     allocate(A%val(A%g%max_d, A%g%n))
     A%val = 0.0_dp
 

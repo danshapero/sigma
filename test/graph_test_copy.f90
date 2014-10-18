@@ -110,8 +110,8 @@ implicit none
     if (verbose) then
         print *, 'Random graph generated.'
         print *, 'Number of vertices:', nn
-        print *, 'Number of edges:   ', h%ne
-        print *, 'Max vertex degree: ', h%max_degree()
+        print *, 'Number of edges:   ', h%get_num_edges()
+        print *, 'Max vertex degree: ', h%get_max_degree()
         print *, ' '
     endif
 

@@ -15,8 +15,8 @@ type, extends(graph_interface) :: cs_graph                                 !
     ! neighbors of each vertex
     integer, allocatable :: ptr(:), node(:)
 
-    ! Maximum degree of all vertices in the graph
-    integer, private :: max_d
+    ! Number of edges and maximum degree of all vertices of the graph
+    integer :: ne, max_d
 contains
     !--------------
     ! Constructors
@@ -25,8 +25,9 @@ contains
 
     !-----------
     ! Accessors
-    procedure :: degree => cs_degree
-    procedure :: max_degree => cs_max_degree
+    procedure :: get_num_edges => cs_get_num_edges
+    procedure :: get_degree => cs_get_degree
+    procedure :: get_max_degree => cs_get_max_degree
     procedure :: get_neighbors => cs_get_neighbors
     procedure :: connected => cs_connected
     procedure :: find_edge => cs_find_edge
@@ -132,10 +133,10 @@ subroutine cs_graph_copy(g, h, trans)                                      !
     ! Copy all of h's attributes to g
     g%n = nv(1)
     g%m = nv(2)
-    g%ne = h%ne
+    g%ne = h%get_num_edges()
 
     ! Allocate g's ptr and node arrays
-    allocate(g%ptr(g%n+1), g%node(h%ne))
+    allocate(g%ptr(g%n+1), g%node(g%ne))
 
     ! Fill out the ptr array
     g%ptr = 0
@@ -209,7 +210,19 @@ end subroutine cs_graph_copy
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-function cs_degree(g, i) result(d)                                         !
+function cs_get_num_edges(g) result(k)                                     !
+!--------------------------------------------------------------------------!
+    class(cs_graph), intent(in) :: g
+    integer :: k
+
+    k = g%ne
+
+end function cs_get_num_edges
+
+
+
+!--------------------------------------------------------------------------!
+function cs_get_degree(g, i) result(d)                                     !
 !--------------------------------------------------------------------------!
     class(cs_graph), intent(in) :: g
     integer, intent(in) :: i
@@ -217,19 +230,19 @@ function cs_degree(g, i) result(d)                                         !
 
     d = g%ptr(i + 1) - g%ptr(i)
 
-end function cs_degree
+end function cs_get_degree
 
 
 
 !--------------------------------------------------------------------------!
-function cs_max_degree(g) result(d)                                        !
+function cs_get_max_degree(g) result(k)                                    !
 !--------------------------------------------------------------------------!
     class(cs_graph), intent(in) :: g
-    integer :: d
+    integer :: k
 
-    d = g%max_d
+    k = g%max_d
 
-end function cs_max_degree
+end function cs_get_max_degree
 
 
 

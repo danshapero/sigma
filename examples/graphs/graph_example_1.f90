@@ -95,7 +95,7 @@ implicit none
     avg_degree = 0.0_dp
 
     do i = 1, nn
-        d = g%degree(i)
+        d = g%get_degree(i)
 
         min_degree = min(d, min_degree)
         max_degree = max(d, max_degree)

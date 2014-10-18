@@ -86,8 +86,10 @@ implicit none
     if (verbose) then
         print *, 'Done building random graphs.'
         print *, '    Number of vertices:', nn
-        print *, '    Number of edges:   ', g%ne, h%ne
-        print *, '    Max vertex degree: ', g%max_degree(), h%max_degree()
+        print *, '    Number of edges:   ', g%get_num_edges(), &
+                                                        & h%get_num_edges()
+        print *, '    Max vertex degree: ', g%get_max_degree(), &
+                                                        & h%get_max_degree()
     endif
 
 

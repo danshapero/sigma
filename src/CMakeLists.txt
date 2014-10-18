@@ -4,6 +4,7 @@ graph/formats/coo_graphs.f90
 graph/formats/cs_graphs.f90
 graph/formats/ellpack_graphs.f90
 graph/formats/ll_graphs.f90
+graph/graph_factory.f90
 graph/permutations.f90
 graph/graphs.f90
 )

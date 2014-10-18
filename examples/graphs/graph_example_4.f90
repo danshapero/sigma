@@ -117,7 +117,7 @@ implicit none
     !----------------------------------------------------------------------!
     ! Compute the clustering coefficient of the Watts-Strogatz graph       !
     !----------------------------------------------------------------------!
-    d = g%max_degree()
+    d = g%get_max_degree()
     allocate(neighbors(d), adj(d, d))
 
     clustering = 0.0_dp
@@ -125,7 +125,7 @@ implicit none
     ! For each vertex k,
     do k = 1, nn
         ! find all the neighbors of k
-        d = g%degree(k)
+        d = g%get_degree(k)
         call g%get_neighbors(neighbors, k)
 
         ! Fill the adjacency matrix of the sub-graph of g consisting of
@@ -153,7 +153,7 @@ implicit none
     ! The global clustering coefficient is the average of all the locals
     clustering = clustering / nn
 
-    d = g_ring%max_degree()
+    d = g_ring%get_max_degree()
     write(*,100) clustering, 3.0 * (d - 2) / (4.0 * (d - 1)), 1.0 * d / nn
 100 format('Clustering for WS, ring & ER graphs: ',f8.6,', ',f8.6,', ',f8.6)
 

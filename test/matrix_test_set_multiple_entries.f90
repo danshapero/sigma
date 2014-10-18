@@ -71,13 +71,13 @@ use sigma
         enddo
     enddo
 
-    d = g%max_degree()
+    d = g%get_max_degree()
     allocate(nodes(d))
 
     if (verbose) then
         print *, 'o Done generating random graph.'
         print *, '    Number of vertices:', nn
-        print *, '    Number of edges:   ', g%ne
+        print *, '    Number of edges:   ', g%get_num_edges()
         print *, '    Max vertex degree: ', d
     endif
 
@@ -102,7 +102,7 @@ use sigma
         ! Build the graph Laplacian
         do i = 1, nn
             call g%get_neighbors(nodes, i)
-            d = g%degree(i)
+            d = g%get_degree(i)
 
             do k = 1, d
                 j = nodes(k)
@@ -118,7 +118,7 @@ use sigma
         !------------------------------------------------
         ! Check that `A` actually is the graph Laplacian
         do i = 1, nn
-            d = g%degree(i) - 1
+            d = g%get_degree(i) - 1
 
             do j = 1, nn
                 if (j == i) then

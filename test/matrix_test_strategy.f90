@@ -88,13 +88,13 @@ implicit none
         enddo
     enddo
 
-    d = g%max_degree()
+    d = g%get_max_degree()
     allocate(nodes(d), slice(d))
 
     if (verbose) then
         print *, "o Done generating Erdos-Renyi graph."
         print *, "    Number of vertices: ", nn
-        print *, "    Number of edges:    ", g%ne
+        print *, "    Number of edges:    ", g%get_num_edges()
         print *, "    Maximum degree:     ", d
     endif
 
@@ -109,7 +109,7 @@ implicit none
     call A%zero()
 
     do i = 1, nn
-        d = g%degree(i)
+        d = g%get_degree(i)
         call g%get_neighbors(nodes, i)
         do k = 1, d
             j = nodes(k)
@@ -128,7 +128,7 @@ implicit none
     ! Test all of the matrix operations for correctness                    !
     !----------------------------------------------------------------------!
     do i = 1, nn
-        d = g%degree(i) - 1
+        d = g%get_degree(i) - 1
         z = A%get_value(i, i)
         if (z /= d) then
             print *, "Setting or getting matrix entry failed."
@@ -163,7 +163,7 @@ implicit none
 
 
     do i = 1, nn
-        d = g%degree(i)
+        d = g%get_degree(i)
         call A%get_row(nodes, slice, i)
 
         do k = 1, d
@@ -186,7 +186,7 @@ implicit none
     enddo
 
     do j = 1, nn
-        d = g%degree(j)
+        d = g%get_degree(j)
         call A%get_column(nodes, slice, j)
 
         do k = 1, d
@@ -228,7 +228,7 @@ implicit none
 
     ! Compute `y = L(g) * x` exactly
     do i = 1, nn
-        d = g%degree(i)
+        d = g%get_degree(i)
         call g%get_neighbors(nodes, i)
 
         y(i) = d * x(i)

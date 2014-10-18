@@ -111,7 +111,7 @@ implicit none
     nn = g%n
     call convert_graph_type(g, 'compressed sparse')
 
-    d = g%max_degree()
+    d = g%get_max_degree()
     allocate(neighbors(d), unvisited(d), s(nn))
 
 
@@ -132,7 +132,7 @@ implicit none
         s = 0
 
         ! Initialize a queue of visited vertices
-        d = g%max_degree()
+        d = g%get_max_degree()
         call q%init(capacity = d, min_capacity = 2)
 
         ! So long as there are unvisited neighbor vertices, keep walking
@@ -147,7 +147,7 @@ implicit none
             unvisited = .false.
 
             ! Check to see which neighbors of i have not been visited
-            d = g%degree(i)
+            d = g%get_degree(i)
             call g%get_neighbors(neighbors, i)
 
             do k = 1, d

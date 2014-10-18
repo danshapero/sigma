@@ -326,18 +326,18 @@ subroutine sparse_static_pattern_ldu_factorization(A, L, D, U)             !
         enddo
     enddo
 
-    dl = L%g%max_degree()
-    du = U%g%max_degree()
+    dl = L%g%get_max_degree()
+    du = U%g%get_max_degree()
 
     allocate(lneighbors(dl), uneighbors(du))
 
     do i = 1, nn
         ! Get the degree and neighbors of node `i` in `L` and `U`
         call L%g%get_neighbors(lneighbors, i)
-        dl = L%g%degree(i)
+        dl = L%g%get_degree(i)
 
         call U%g%get_neighbors(uneighbors, i)
-        du = U%g%degree(i)
+        du = U%g%get_degree(i)
 
         do ind1 = 1, dl
             k = lneighbors(ind1)

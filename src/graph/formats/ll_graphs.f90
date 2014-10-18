@@ -12,8 +12,8 @@ type, extends(graph_interface) :: ll_graph                                 !
     ! List of `n` lists, each of which stores the neighbors of vertex `i`
     type(dynamic_array), allocatable :: lists(:)
 
-    ! Maximum degree of all vertices of the graph
-    integer :: max_d
+    ! Total number of edges and maximum degree of all vertices of the graph
+    integer, private :: ne, max_d
 contains
     !--------------
     ! Constructors
@@ -22,8 +22,9 @@ contains
 
     !-----------
     ! Accessors
-    procedure :: degree => ll_degree
-    procedure :: max_degree => ll_max_degree
+    procedure :: get_num_edges => ll_get_num_edges
+    procedure :: get_degree => ll_get_degree
+    procedure :: get_max_degree => ll_get_max_degree
     procedure :: get_neighbors => ll_get_neighbors
     procedure :: connected => ll_connected
     procedure :: find_edge => ll_find_edge
@@ -151,7 +152,19 @@ end subroutine ll_graph_copy
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-function ll_degree(g, i) result(d)                                         !
+function ll_get_num_edges(g) result(k)                                     !
+!--------------------------------------------------------------------------!
+    class(ll_graph), intent(in) :: g
+    integer :: k
+
+    k = g%ne
+
+end function ll_get_num_edges
+
+
+
+!--------------------------------------------------------------------------!
+function ll_get_degree(g, i) result(d)                                     !
 !--------------------------------------------------------------------------!
     class(ll_graph), intent(in) :: g
     integer, intent(in) :: i
@@ -159,19 +172,19 @@ function ll_degree(g, i) result(d)                                         !
 
     d = g%lists(i)%length
 
-end function ll_degree
+end function ll_get_degree
 
 
 
 !--------------------------------------------------------------------------!
-function ll_max_degree(g) result(d)                                        !
+function ll_get_max_degree(g) result(k)                                    !
 !--------------------------------------------------------------------------!
     class(ll_graph), intent(in) :: g
-    integer :: d
+    integer :: k
 
-    d = g%max_d
+    k = g%max_d
 
-end function ll_max_degree
+end function ll_get_max_degree
 
 
 

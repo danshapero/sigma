@@ -81,7 +81,7 @@ implicit none
         call g%delete_edge(j, i)
     enddo
 
-    write(*,10) g%ne / 2
+    write(*,10) g%get_num_edges() / 2
 10  format('Done building initial graph;  ', i8, ' edges.')
 
 
@@ -114,7 +114,7 @@ implicit none
         enddo
     enddo
 
-    write(*,20) g%ne / 2
+    write(*,20) g%get_num_edges() / 2
 20  format('Done randomly removing edges; ', i8, ' edges remain.')
 
 
@@ -128,7 +128,7 @@ implicit none
 
     ! Make an array `components` which will indicate which connected
     ! component of the graph each node belongs to
-    d = g%max_degree()
+    d = g%get_max_degree()
     allocate(component(nx, ny), neighbors(d))
     component = 0
 
@@ -163,7 +163,7 @@ implicit none
             i = stack%pop()
 
             ! find the degree of that vertex
-            d = g%degree(i)
+            d = g%get_degree(i)
 
             ! find all the neighbors of vertex i
             call g%get_neighbors(neighbors, i)

@@ -231,7 +231,7 @@ subroutine cs_matrix_set_graph(A, g)                                       !
             call exit(1)
     end select
 
-    allocate(A%val(g%ne))
+    allocate(A%val(g%get_num_edges()))
     A%val = 0.0_dp
 
     A%graph_set = .true.
@@ -552,7 +552,7 @@ subroutine csr_matrix_copy_graph(A, g)                                     !
     if (.not. associated(A%g)) allocate(A%g)
     call A%g%copy(g)
 
-    allocate(A%val(g%ne))
+    allocate(A%val(g%get_num_edges()))
     A%val = 0.0_dp
 
     A%graph_set = .true.
@@ -578,7 +578,7 @@ subroutine csc_matrix_copy_graph(A, g)                                     !
     if (.not. associated(A%g)) allocate(A%g)
     call A%g%copy(g, trans = .true.)
 
-    allocate(A%val(g%ne))
+    allocate(A%val(g%get_num_edges()))
     A%val = 0.0_dp
 
     A%graph_set = .true.

@@ -64,10 +64,10 @@ implicit none
     enddo
 
     do i = 1, nn
-        if (g%degree(i) == 0) call g%add_edge(i, i)
+        if (g%get_degree(i) == 0) call g%add_edge(i, i)
     enddo
 
-    d = g%max_degree()
+    d = g%get_max_degree()
     write(*,10) d
 10  format('Done generating random graph; max degree: ',i4)
 
@@ -85,7 +85,7 @@ implicit none
     ! For each vertex i,
     do i = 1, nn
         ! compute the degree d of i
-        d = g%degree(i)
+        d = g%get_degree(i)
 
         ! Find all the neighbors of i.
         call g%get_neighbors(neighbors, i)

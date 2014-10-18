@@ -155,9 +155,9 @@ implicit none
             print *, '    Number found:', g%n
         endif
 
-        if (g%ne /= 0) then
+        if (g%get_num_edges() /= 0) then
             print *, '    Just-initialized graph should have 0 edges'
-            print *, '    Number of edges found:', g%ne
+            print *, '    Number of edges found:', g%get_num_edges()
             call exit(1)
         endif
 
@@ -173,9 +173,9 @@ implicit none
 
 
         ! Check that `g` has the right number of edges now
-        if (g%ne /= ne) then
+        if (g%get_num_edges() /= ne) then
             print *, '    After inserting edges, total number should be', ne
-            print *, '    Number of edges found:', g%ne
+            print *, '    Number of edges found:', g%get_num_edges()
             call exit(1)
         endif
 
@@ -196,9 +196,9 @@ implicit none
 
 
         ! Check that the graph's maximum degree is correct
-        if (g%max_degree() /= max_degree) then
+        if (g%get_max_degree() /= max_degree) then
             print *, '    Max degree of g should be:', max_degree
-            print *, '    Max degree found:', g%max_degree()
+            print *, '    Max degree found:', g%get_max_degree()
             call exit(1)
         endif
 
@@ -222,10 +222,10 @@ implicit none
         ! Check that finding the degree of a vertex works
         do i = 1, nn
             degree = count( A(i, :) /= 0 )
-            if (g%degree(i) /= degree) then
+            if (g%get_degree(i) /= degree) then
                 print *, '    Getting degree failed.'
                 print *, '    Degree of vertex', i ,'should be:', degree
-                print *, '    Degree found:', g%degree(i)
+                print *, '    Degree found:', g%get_degree(i)
                 call exit(1)
             endif
         enddo
@@ -327,7 +327,7 @@ implicit none
         ! Check that deleting edges works.
         do i = 1, nn
             ! First, find a vertex with degree greater than 2,
-            degree = g%degree(i)
+            degree = g%get_degree(i)
 
             if (degree > 2) then
                 ! then delete one of its neighbors

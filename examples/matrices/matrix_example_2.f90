@@ -66,7 +66,7 @@ implicit none
         enddo
     enddo
 
-    write(*,10) g%ne / 2
+    write(*,10) g%get_num_edges() / 2
 10  format('Done building initial graph;  ', i8, ' edges.')
 
 
@@ -99,7 +99,7 @@ implicit none
         enddo
     enddo
 
-    write(*,20) g%ne / 2
+    write(*,20) g%get_num_edges() / 2
 20  format('Done randomly removing edges; ',i8,' edges remain.')
 
     ! Convert `g` to a nicer format
@@ -112,16 +112,16 @@ implicit none
     !----------------------------------------------------------------------!
     call A%init(nx * ny, nx * ny, g)
 
-    d = g%max_degree()
+    d = g%get_max_degree()
     allocate(neighbors(d))
     do i = 1, A%nrow
-        di = g%degree(i) - 1
+        di = g%get_degree(i) - 1
         call A%set_value(i, i, 1.0_dp)
         call g%get_neighbors(neighbors, i)
         do k = 1, di + 1
             j = neighbors(k)
             if (j /= i) then
-                dj = g%degree(j) - 1
+                dj = g%get_degree(j) - 1
                 call A%set_value(i, j, -1.0_dp / dsqrt(1.0_dp * di * dj))
             endif
         enddo
@@ -149,7 +149,7 @@ implicit none
     write(20,*) nx * ny
     do i = 1, nx * ny
         call g%get_neighbors(neighbors, i)
-        d = g%degree(i)
+        d = g%get_degree(i)
         write(20,*) i, neighbors(1:d)
     enddo
     close(20)

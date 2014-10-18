@@ -66,7 +66,7 @@ function get_degree_contiguous(g, k) result(d)                             !
     integer, intent(in) :: k
     integer :: d
 
-    d = g%degree(k)
+    d = g%get_degree(k)
 
 end function get_degree_contiguous
 
@@ -108,7 +108,7 @@ subroutine get_slice_contiguous(g, val, nodes, slice, k)                   !
     slice = 0.0_dp
 
     ! Get the degree of node k
-    d = g%degree(k)
+    d = g%get_degree(k)
 
     ! Get all the neighbors of k and put them into the array `nodes`
     call g%get_neighbors(nodes, k)
@@ -195,7 +195,7 @@ subroutine set_matrix_value_with_reallocation(g, val, i, j, z)             !
     call g%add_edge(i, j)
 
     ! Create a temporary array to store the matrix values
-    allocate(val_temp(g%ne))
+    allocate(val_temp(g%get_num_edges()))
     idx = g%find_edge(i, j)
     val_temp(idx) = z
 

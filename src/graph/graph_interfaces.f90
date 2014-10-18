@@ -20,7 +20,7 @@ implicit none
 !--------------------------------------------------------------------------!
 type, abstract :: graph_interface                                          !
 !--------------------------------------------------------------------------!
-    integer :: n, m, ne, reference_count = 0
+    integer :: n, m, reference_count = 0
 contains
     !--------------
     ! Constructors
@@ -36,10 +36,13 @@ contains
     !-----------
     ! Accessors
     !-----------
-    procedure(degree_ifc), deferred :: degree
+    procedure(get_num_edges_ifc), deferred :: get_num_edges
+    ! Return the total number of edges of the graph
+
+    procedure(get_degree_ifc), deferred :: get_degree
     ! Return the degree of a given vertex
 
-    procedure(max_degree_ifc), deferred :: max_degree
+    procedure(get_num_edges_ifc), deferred :: get_max_degree
     ! Return the maximum degree among all vertices of the graph
 
     procedure(get_neighbors_ifc), deferred :: get_neighbors
@@ -154,18 +157,18 @@ abstract interface                                                         !
         logical, intent(in), optional :: trans
     end subroutine copy_graph_ifc
 
-    function degree_ifc(g, i) result(d)
+    function get_num_edges_ifc(g) result(k)
+        import :: graph_interface
+        class(graph_interface), intent(in) :: g
+        integer :: k
+    end function get_num_edges_ifc
+
+    function get_degree_ifc(g, i) result(d)
         import :: graph_interface
         class(graph_interface), intent(in) :: g
         integer, intent(in) :: i
         integer :: d
-    end function degree_ifc
-
-    function max_degree_ifc(g) result(d)
-        import :: graph_interface
-        class(graph_interface), intent(in) :: g
-        integer :: d
-    end function max_degree_ifc
+    end function get_degree_ifc
 
     subroutine get_neighbors_ifc(g, neighbors, i)
         import :: graph_interface
@@ -227,15 +230,6 @@ abstract interface                                                         !
         integer, intent(out) :: edges(:,:)
     end subroutine dump_edges_ifc
 end interface
-
-
-
-!--------------------------------------------------------------------------!
-type :: graph_pointer                                                      !
-!--------------------------------------------------------------------------!
-    class(graph_interface), pointer :: g => null()
-end type graph_pointer
-
 
 
 
@@ -344,7 +338,7 @@ subroutine write_graph_to_file(g, filename)                                !
 
     !TODO make sure this unit number is safe
     open(unit=10,file=trim(filename))
-    write(10,*) g%n, g%m, g%ne
+    write(10,*) g%n, g%m, g%get_num_edges()
 
     cursor = g%make_cursor()
 

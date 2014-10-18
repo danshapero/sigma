@@ -151,14 +151,14 @@ subroutine barabasi_albert(g, nn, k)                                       !
     do i = k + 1, nn
         ! Add k new connections
         do l = 1, k
-            d_sum = 2 * g%ne
+            d_sum = 2 * g%get_num_edges()
 
             ! Generate a random number z
             call random_number(z)
 
             d = 0
             do j = 1, i - 1
-                if (d <= z * d_sum .and. z * d_sum < d + g%degree(j)) then
+                if (d <= z*d_sum .and. z*d_sum < d + g%get_degree(j)) then
                     
                     call g%add_edge(i, j)
                     call g%add_edge(j, i)

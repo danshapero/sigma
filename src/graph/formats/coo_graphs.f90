@@ -11,6 +11,7 @@ implicit none
 type, extends(graph_interface) :: coo_graph                                !
 !--------------------------------------------------------------------------!
     type(dynamic_array) :: edges(2)
+    integer, private :: ne
 contains
     !--------------
     ! Constructors
@@ -19,8 +20,9 @@ contains
 
     !-----------
     ! Accessors
-    procedure :: degree => coo_degree
-    procedure :: max_degree => coo_max_degree
+    procedure :: get_num_edges => coo_get_num_edges
+    procedure :: get_degree => coo_get_degree
+    procedure :: get_max_degree => coo_get_max_degree
     procedure :: get_neighbors => coo_get_neighbors
     procedure :: connected => coo_connected
     procedure :: find_edge => coo_find_edge
@@ -110,7 +112,7 @@ subroutine coo_graph_copy(g, h, trans)                                     !
     ! Copy all the attributes of h to g
     g%n = nv(1)
     g%m = nv(2)
-    g%ne = h%ne
+    g%ne = h%get_num_edges()
 
     ! Allocate space in the two dynamic arrays for the edges of g
     call g%edges(1)%init(capacity = g%ne + 16)
@@ -143,7 +145,19 @@ end subroutine coo_graph_copy
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-function coo_degree(g, i) result(d)                                        !
+function coo_get_num_edges(g) result(k)                                    !
+!--------------------------------------------------------------------------!
+    class(coo_graph), intent(in) :: g
+    integer :: k
+
+    k = g%ne
+
+end function coo_get_num_edges
+
+
+
+!--------------------------------------------------------------------------!
+function coo_get_degree(g, i) result(d)                                    !
 !--------------------------------------------------------------------------!
 !    NOTE: This is an extremely inefficient procedure. In order to be able !
 ! have a COO graph require only O(ne) storage, and be able to add new      !
@@ -183,29 +197,29 @@ function coo_degree(g, i) result(d)                                        !
     ! Return the length of the neighbors array
     d = neighbors%length
 
-end function coo_degree
+end function coo_get_degree
 
 
 
 !--------------------------------------------------------------------------!
-function coo_max_degree(g) result(d)                                       !
+function coo_get_max_degree(g) result(k)                                    !
 !--------------------------------------------------------------------------!
 !     NOTE: This procedure is very inefficient, being an n-fold repetition !
 ! of the already very inefficient `degree` method.                         !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(coo_graph), intent(in) :: g
-    integer :: d
+    integer :: k
     ! local variables
     integer :: i
 
-    d = 0
+    k = 0
 
     do i = 1, g%n
-        d = max(d, g%degree(i))
+        k = max(k, g%get_degree(i))
     enddo
 
-end function coo_max_degree
+end function coo_get_max_degree
 
 
 

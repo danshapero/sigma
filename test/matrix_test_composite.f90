@@ -111,12 +111,12 @@ implicit none
     call choose_graph_type(g1, "ll")
     call erdos_renyi_graph(g1, nn1, nn1, p, symmetric = .true.)
 
-    d = g1%max_degree()
+    d = g1%get_max_degree()
 
     if (verbose) then
         print *, "o Done generating first Erdos-Renyi graph."
         print *, "    Number of vertices: ", nn1
-        print *, "    Number of edges:    ", g1%ne
+        print *, "    Number of edges:    ", g1%get_num_edges()
         print *, "    Maximum degree:     ", d
     endif
 
@@ -141,12 +141,12 @@ implicit none
     p = log(1.0_dp * nn2) / log(2.0_dp) / nn2
 
     call erdos_renyi_graph(g2, nn2, nn2, p, symmetric = .true.)
-    d = g2%max_degree()
+    d = g2%get_max_degree()
 
     if (verbose) then
         print *, "o Done generating second Erdos-Renyi graph."
         print *, "    Number of vertices: ", nn2
-        print *, "    Number of edges:    ", g2%ne
+        print *, "    Number of edges:    ", g2%get_num_edges()
         print *, "    Maximum degree:     ", d
     endif
 
@@ -196,12 +196,12 @@ implicit none
     endif
 
     ! Fill in all the matrix entries that couple the two fields
-    d = h%max_degree()
+    d = h%get_max_degree()
     allocate(nodes(d))
 
     do i = 1, nn1
 
-        d = h%degree(i)
+        d = h%get_degree(i)
         call h%get_neighbors(nodes, i)
 
         do k = 1, d
@@ -232,7 +232,7 @@ implicit none
             correct_val = 0.0_dp
 
             if (j == i) then
-                correct_val = g1%degree(i) + h%degree(i) - 1.0_dp
+                correct_val = g1%get_degree(i) + h%get_degree(i) - 1.0_dp
             else
                 if (g1%connected(i, j)) correct_val = -1.0_dp
             endif
@@ -270,7 +270,7 @@ implicit none
             correct_val = 0.0_dp
 
             if (j == i) then
-                correct_val = g2%degree(i) + ht%degree(i) - 1.0_dp
+                correct_val = g2%get_degree(i) + ht%get_degree(i) - 1.0_dp
             else
                 if (g2%connected(i, j)) correct_val = -1.0_dp
             endif
@@ -294,7 +294,7 @@ implicit none
     do k = 1, nn1
         d = A%get_row_degree(k)
 
-        if (d /= g1%degree(k) + h%degree(k)) then
+        if (d /= g1%get_degree(k) + h%get_degree(k)) then
             print *, "Wrong row degree", k
             call exit(1)
         endif
@@ -302,7 +302,7 @@ implicit none
 
         d = A%get_column_degree(k)
 
-        if (d /= g1%degree(k) + h%degree(k)) then
+        if (d /= g1%get_degree(k) + h%get_degree(k)) then
             print *, "Wrong column degree", k
             call exit(1)
         endif
@@ -311,7 +311,7 @@ implicit none
     do k = 1, nn2
         d = A%get_row_degree(k + nn1)
 
-        if (d /= g2%degree(k) + ht%degree(k)) then
+        if (d /= g2%get_degree(k) + ht%get_degree(k)) then
             print *, "Wrong row degree", k + nn1
             call exit(1)
         endif
@@ -319,7 +319,7 @@ implicit none
 
         d = A%get_column_degree(k + nn1)
 
-        if (d /= g2%degree(k) + ht%degree(k)) then
+        if (d /= g2%get_degree(k) + ht%get_degree(k)) then
             print *, "Wrong column degree", k + nn1
             call exit(1)
         endif
@@ -335,21 +335,21 @@ implicit none
     ! Test getting a matrix row / column                                   !
     !----------------------------------------------------------------------!
 
-    d1 = max(g1%max_degree(), g2%max_degree())
+    d1 = max(g1%get_max_degree(), g2%get_max_degree())
     allocate(nodes1(d1))
 
-    d2 = max(h%max_degree(), ht%max_degree())
+    d2 = max(h%get_max_degree(), ht%get_max_degree())
     allocate(nodes2(d2))
 
-    d = max(g1%max_degree() + h%max_degree(), &
-                & g2%max_degree() + ht%max_degree())
+    d = max(g1%get_max_degree() + h%get_max_degree(), &
+                & g2%get_max_degree() + ht%get_max_degree())
     allocate(nodes(d), slice(d))
 
     do k = 1, nn1
-        d1 = g1%degree(k)
+        d1 = g1%get_degree(k)
         call g1%get_neighbors(nodes1, k)
 
-        d2 = h%degree(k)
+        d2 = h%get_degree(k)
         call h%get_neighbors(nodes2, k)
 
         d = d1 + d2
@@ -372,10 +372,10 @@ implicit none
     enddo
 
     do k = 1, nn2
-        d1 = g2%degree(k)
+        d1 = g2%get_degree(k)
         call g2%get_neighbors(nodes1, k)
 
-        d2 = ht%degree(k)
+        d2 = ht%get_degree(k)
         call ht%get_neighbors(nodes2, k)
 
         d = d1 + d2
@@ -413,10 +413,10 @@ implicit none
     call A%matvec(x, y)
 
     ! Compute the product exactly from the underlying graphs
-    d = g1%max_degree()
+    d = g1%get_max_degree()
     allocate(nodes(d))
     do i = 1, nn1
-        d = g1%degree(i)
+        d = g1%get_degree(i)
         call g1%get_neighbors(nodes, i)
 
         do k = 1, d
@@ -428,10 +428,10 @@ implicit none
     deallocate(nodes)
 
 
-    d = g2%max_degree()
+    d = g2%get_max_degree()
     allocate(nodes(d))
     do i = 1, nn2
-        d = g2%degree(i)
+        d = g2%get_degree(i)
         call g2%get_neighbors(nodes, i)
 
         do k = 1, d
@@ -452,10 +452,10 @@ implicit none
     deallocate(nodes)
 
 
-    d = h%max_degree()
+    d = h%get_max_degree()
     allocate(nodes(d))
     do i = 1, nn1
-        d = h%degree(i)
+        d = h%get_degree(i)
         call h%get_neighbors(nodes, i)
         do k = 1, d
             j = nodes(k)
@@ -464,7 +464,7 @@ implicit none
     enddo
 
     do j = 1, nn1
-        d = h%degree(j)
+        d = h%get_degree(j)
         call h%get_neighbors(nodes, j)
         do k = 1, d
             i = nodes(k)
@@ -584,11 +584,11 @@ subroutine erdos_renyi_matrix(A, g)                                        !
 
     call A%init(g%m, g%n, g)
 
-    d = g%max_degree()
+    d = g%get_max_degree()
     allocate(nodes(d))
 
     do i = 1, g%m
-        d = g%degree(i)
+        d = g%get_degree(i)
         call g%get_neighbors(nodes, i)
 
         do k = 1, d

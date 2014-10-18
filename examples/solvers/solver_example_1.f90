@@ -78,7 +78,7 @@ implicit none
     call A%set_graph(g)
     call A%zero()
 
-    d = g%max_degree()
+    d = g%get_max_degree()
     allocate(neighbors(d))
 
     ! For each vertex of the graph,
@@ -86,7 +86,7 @@ implicit none
         ! set A[i,i] = 1.0.
         call A%set_value(i, i, 1.0_dp)
 
-        d = g%degree(i)
+        d = g%get_degree(i)
         call g%get_neighbors(neighbors, i)
 
         ! For each neighbor j of i,

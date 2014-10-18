@@ -16,6 +16,9 @@ type, extends(graph_interface) :: ellpack_graph                            !
     ! Degrees of every vertex and max degree of the graph
     integer, allocatable :: degrees(:)
     integer :: max_d
+
+    ! number of edges of the graph
+    integer, private :: ne
 contains
     !--------------
     ! Constructors
@@ -24,8 +27,9 @@ contains
 
     !-----------
     ! Accessors
-    procedure :: degree => ellpack_degree
-    procedure :: max_degree => ellpack_max_degree
+    procedure :: get_num_edges => ellpack_get_num_edges
+    procedure :: get_degree => ellpack_get_degree
+    procedure :: get_max_degree => ellpack_get_max_degree
     procedure :: get_neighbors => ellpack_get_neighbors
     procedure :: connected => ellpack_connected
     procedure :: find_edge => ellpack_find_edge
@@ -127,7 +131,7 @@ subroutine ellpack_graph_copy(g, h, trans)                                 !
     ! Copy the attributes of `g` from those of `h`
     g%n = nv(1)
     g%m = nv(2)
-    g%ne = h%ne
+    g%ne = h%get_num_edges()
 
     ! Initialize the array of vertex degrees of `g`
     allocate(g%degrees(g%n))
@@ -166,7 +170,7 @@ subroutine ellpack_graph_copy(g, h, trans)                                 !
     ! If we're not copying the transpose of `h`, then the max degree of
     ! `g` is the same as the max degree of `h`.
     else
-        g%max_d = h%max_degree()
+        g%max_d = h%get_max_degree()
     endif
 
     ! Knowing the max degree of `g`, allocate space for the `node` array 
@@ -202,7 +206,19 @@ end subroutine ellpack_graph_copy
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
-function ellpack_degree(g, i) result(d)                                    !
+function ellpack_get_num_edges(g) result(k)                                !
+!--------------------------------------------------------------------------!
+    class(ellpack_graph), intent(in) :: g
+    integer :: k
+
+    k = g%ne
+
+end function ellpack_get_num_edges
+
+
+
+!--------------------------------------------------------------------------!
+function ellpack_get_degree(g, i) result(d)                                !
 !--------------------------------------------------------------------------!
     class(ellpack_graph), intent(in) :: g
     integer, intent(in) :: i
@@ -210,19 +226,19 @@ function ellpack_degree(g, i) result(d)                                    !
 
     d = g%degrees(i)
 
-end function ellpack_degree
+end function ellpack_get_degree
 
 
 
 !--------------------------------------------------------------------------!
-function ellpack_max_degree(g) result(d)                                   !
+function ellpack_get_max_degree(g) result(k)                               !
 !--------------------------------------------------------------------------!
     class(ellpack_graph), intent(in) :: g
-    integer :: d
+    integer :: k
 
-    d = g%max_d
+    k = g%max_d
 
-end function ellpack_max_degree
+end function ellpack_get_max_degree
 
 
 

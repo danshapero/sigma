@@ -30,7 +30,7 @@ subroutine breadth_first_search(g, p)                                      !
     type(circular_array) :: queue
 
     ! Allocate the neighbors array
-    d = g%max_degree()
+    d = g%get_max_degree()
     allocate(neighbors(d))
 
     num = 0
@@ -53,7 +53,7 @@ subroutine breadth_first_search(g, p)                                      !
         p(i) = num
 
         ! Find the degree and all neighbors of node `i`
-        d = g%degree(i)
+        d = g%get_degree(i)
         call g%get_neighbors(neighbors, i)
 
         ! For each neighbor,
@@ -91,7 +91,7 @@ subroutine greedy_coloring(g, colors)                                      !
                                             & color_totals
     type(circular_array) :: queue
 
-    d = g%max_degree()
+    d = g%get_max_degree()
     allocate(neighbors(d), neighbor_colors(d + 1), color_totals(d + 1))
 
     ! Initialize a queue
@@ -116,7 +116,7 @@ subroutine greedy_coloring(g, colors)                                      !
         i = queue%pop()
 
         ! Find all the neighbors of node i
-        d = g%degree(i)
+        d = g%get_degree(i)
         call g%get_neighbors(neighbors, i)
 
         ! Tally up how many neighbors there are of each color
@@ -175,7 +175,7 @@ subroutine greedy_color_ordering(g, p, ptrs, num_colors)                   !
 
     ! Allocate an array to keep track of how many vertices of each color
     ! have been added to the permutation
-    d = g%max_degree()
+    d = g%get_max_degree()
     allocate(added(d + 1))
 
     ! Assign colors to all the nodes and put them in the array p

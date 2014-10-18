@@ -86,13 +86,13 @@ implicit none
         enddo
     enddo
 
-    d = g%max_degree()
+    d = g%get_max_degree()
     allocate(nodes(d))
 
     if (verbose) then
         print *, 'o Done generating random graph.'
         print *, '    Number of vertices:', nn
-        print *, '    Number of edges:   ', g%ne
+        print *, '    Number of edges:   ', g%get_num_edges()
         print *, '    Max vertex degree: ', d
     endif
 
@@ -111,7 +111,7 @@ implicit none
         call A%add_value(i, i, 1.0_dp)
 
         call g%get_neighbors(nodes, i)
-        d = g%degree(i)
+        d = g%get_degree(i)
         do k = 1, d
             j = nodes(k)
 
