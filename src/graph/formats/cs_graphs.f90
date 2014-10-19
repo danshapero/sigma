@@ -330,7 +330,7 @@ function cs_make_cursor(g) result(cursor)                                  !
         k = k + 1
     enddo
 
-    cursor%idx = k
+    cursor%edge(:) = [k, g%node(g%ptr(k))]
 
 end function cs_make_cursor
 
@@ -346,7 +346,7 @@ subroutine cs_get_edges(g, edges, cursor, num_edges, num_returned)         !
     type(graph_edge_cursor), intent(inout) :: cursor
     integer, intent(out) :: num_returned
     ! local variables
-    integer :: i, k
+    integer :: i, k, num, bt
 
     associate(current => cursor%current)
 
@@ -360,25 +360,36 @@ subroutine cs_get_edges(g, edges, cursor, num_edges, num_returned)         !
     num_returned = min(num_edges, cursor%last - current)
 
     ! Fill the edges array's second row with the edge endpoints
-    edges(2, 1 : num_returned) = g%node(current + 1 : current + num_returned)
+    edges(2, 1 : num_returned) = g%node(current+1 : current+num_returned)
 
-    ! Fill in the edges array's first row with the edge start points
-    i = cursor%idx
+    ! Find the last vertex that the edge iterator left off at
+    i = cursor%edge(1)
 
-    do k = 1, num_returned
-        !! This is going to produce code that cannot be analyzed and
-        !! optimized well by the compiler. Would be good to find something
-        !! more slick with a predictable access pattern.
-        ! TODO replace with bit-shifting magic
-        do while(current >= g%ptr(i + 1) - 1)
-            i = i + 1
-        enddo
+    ! Total number of edges from the current batch that we've fetched so far
+    k = 0
 
-        edges(1, k) = i
-        current = current + 1
+    ! Keep fetching more edges as long as we haven't got the whole batch
+    do while(k < num_returned)
+        ! Number of edges we'll return that neighbor vertex `i`
+        ! Either it's all the neighbors of `i`, or however many neighbors
+        ! are left to be returned from the current batch if `i` has more
+        ! more neighbors than that
+        num = min(g%ptr(i + 1) - 1 - current, num_returned - k)
+
+        edges(1, k+1 : k+num) = i
+
+        ! This is a spot of bit-shifting magic in order to avoid the
+        ! conditional expression
+        !     if (num == g%ptr(i + 1) - 1 - current) i = i + 1
+        ! The two are equivalent.
+        bt = (sign(1, num - (g%ptr(i+1) - 1 - current)) + 1) / 2
+        i = i + bt
+
+        current = current + num
+        k = k + num
     enddo
 
-    cursor%idx = edges(1, num_returned)
+    cursor%edge(1) = i
 
     end associate
 

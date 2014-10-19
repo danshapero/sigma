@@ -340,17 +340,17 @@ subroutine cs_matrix_get_entries(A, edges, entries, cursor, &              !
     type(graph_edge_cursor), intent(inout) :: cursor
     integer, intent(out) :: num_returned
     ! local variables
-    integer :: indx
+    integer :: idx
 
     ! Store the current position of the cursor
-    indx = cursor%current
+    idx = cursor%current
 
     ! Get the next batch of eges from A without the values
     call A%get_edges(edges, cursor, num_edges, num_returned)
 
     ! Get the entries from A
     entries = 0.0_dp
-    entries(1 : num_returned) = A%val(indx + 1 : indx + num_returned)
+    entries(1 : num_returned) = A%val(idx+1 : idx+num_returned)
 
 end subroutine cs_matrix_get_entries
 
@@ -655,14 +655,40 @@ end subroutine csr_matrix_get_edges
 !--------------------------------------------------------------------------!
 subroutine csc_matrix_get_edges(A, edges, cursor, num_edges, num_returned) !
 !--------------------------------------------------------------------------!
+    ! input/output variables
     class(csc_matrix), intent(in) :: A
     integer, intent(in) :: num_edges
     integer, intent(out) :: edges(2, num_edges)
     type(graph_edge_cursor), intent(inout) :: cursor
     integer, intent(out) :: num_returned
+    ! local variables
+    integer :: j, k, num, bt
 
-    call A%g%get_edges(edges, cursor, num_edges, num_returned)
-    edges = edges([2, 1], :)
+    associate(current => cursor%current, g => A%g)
+
+    edges = 0
+    num_returned = min(num_edges, cursor%last - current)
+
+    edges(1, 1 : num_returned) = g%node(current+1 : current+num_returned)
+
+    j = cursor%edge(1)
+
+    k = 0
+    do while(k < num_returned)
+        num = min(g%ptr(j + 1) - 1 - current, num_returned - k)
+
+        edges(2, k+1 : k+num) = j
+
+        bt = (sign(1, num - (g%ptr(j+1) - 1 - current)) + 1) / 2
+        j = j + bt
+
+        current = current + num
+        k = k + num
+    enddo
+
+    cursor%edge(1) = j
+
+    end associate
 
 end subroutine csc_matrix_get_edges
 

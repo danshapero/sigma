@@ -338,6 +338,9 @@ end subroutine ellpack_matrix_get_edges
 subroutine ellpack_matrix_get_entries(A, edges, entries, cursor, &         !
                                                 & num_edges, num_returned) !
 !--------------------------------------------------------------------------!
+! See ellpack_graphs module for explanation & comments on the following    !
+! code.                                                                    !
+!--------------------------------------------------------------------------!
     ! input/output variables
     class(ellpack_matrix), intent(in) :: A
     integer, intent(in) :: num_edges
@@ -346,38 +349,42 @@ subroutine ellpack_matrix_get_entries(A, edges, entries, cursor, &         !
     type(graph_edge_cursor), intent(inout) :: cursor
     integer, intent(out) :: num_returned
     ! local variables
-    integer :: i, i1, i2, num_added, num_from_this_row, idx
+    integer :: i, k, num, bt
 
-    associate(g => A%g)
-
-    !--------
-    ! Get a batch of values from `A` and store them in the array `entries`
+    associate(g => A%g, idx => cursor%idx)
 
     entries = 0.0_dp
 
     num_returned = min(num_edges, cursor%last - cursor%current)
+    i = cursor%edge(1)
+    k = 0
 
-    idx = cursor%idx
-    i1 = cursor%current / g%max_d + 1
-    i2 = (cursor%current + num_returned - 1) / g%max_d + 1
+    do while(k < num_returned)
+        num = min(g%degrees(i) - idx, num_returned - k)
 
-    num_added = 0
+        edges(1, k+1 : k+num) = i
+        edges(2, k+1 : k+num) = g%node(idx+1 : idx+num, i)
+        entries(k+1 : k+num) = A%val(idx+1 : idx+num, i)
 
-    do i = i1, i2
-        num_from_this_row = min( g%max_d - idx, num_returned - num_added)
+        ! The following statements are some bit-shifting magic in order to
+        ! avoid the conditional
+        !     if (num == g%degrees(i) - idx) then
+        !         i = i + 1
+        !         idx = 0
+        !     else
+        !         idx = idx + num
+        !     endif
+        ! The two are completely equivalent, but we'd like to avoid
+        ! branching where possible.
+        bt = (sign(1, num - (g%degrees(i) - idx)) + 1) / 2
+        i = i + bt
+        idx = (1 - bt) * (idx + num)
 
-        entries(num_added + 1 : num_added + num_from_this_row) &
-                        & = A%val( idx + 1 : idx + num_from_this_row, i)
-        num_added = num_added + num_from_this_row
-
-        idx = mod(idx + num_from_this_row, g%max_d)
+        k = k + num
     enddo
 
-
-    !--------
-    ! Get a batch of edges from the connectivity graph of `A`
-
-    call g%get_edges(edges, cursor, num_edges, num_returned)
+    cursor%current = cursor%current + num_returned
+    cursor%edge(1) = i
 
     end associate
 

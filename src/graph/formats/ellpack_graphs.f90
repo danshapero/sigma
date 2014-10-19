@@ -314,13 +314,21 @@ end function ellpack_find_edge
 !--------------------------------------------------------------------------!
 function ellpack_make_cursor(g) result(cursor)                             !
 !--------------------------------------------------------------------------!
+    ! input/output variables
     class(ellpack_graph), intent(in) :: g
     type(graph_edge_cursor) :: cursor
+    ! local variables
+    integer :: i
 
     cursor%first = 1
-    cursor%last = g%max_d * g%n
+    cursor%last = g%ne
     cursor%current = 0
-    cursor%edge = [1, g%node(1, 1)]
+
+    i = 1
+    do while(g%degrees(i) == 0)
+        i = i + 1
+    enddo
+    cursor%edge = [i, g%node(1, i)]
     cursor%idx = 0
 
 end function ellpack_make_cursor
@@ -337,7 +345,9 @@ subroutine ellpack_get_edges(g, edges, cursor, num_edges, num_returned)    !
     type(graph_edge_cursor), intent(inout) :: cursor
     integer, intent(out) :: num_returned
     ! local variables
-    integer :: i, i1, i2, num_added, num_from_this_row
+    integer :: i, k, num, bt
+
+    associate(idx => cursor%idx)
 
     ! Set up the returned edges to be 0
     edges = 0
@@ -345,36 +355,45 @@ subroutine ellpack_get_edges(g, edges, cursor, num_edges, num_returned)    !
     ! Find out how many nodes' edges the current request encompasses
     num_returned = min(num_edges, cursor%last - cursor%current)
 
-    ! Find the vertices from which the edge iterator will start and end
-    i1 = cursor%current / g%max_d + 1
-    i2 = (cursor%current + num_returned - 1) / g%max_d + 1
+    ! Find the last vertex that the edge iterator left off at
+    i = cursor%edge(1)
 
-    num_added = 0
+    ! Total number of edges from the current batch that we've fetched so far
+    k = 0
 
-    do i = i1, i2
-        ! Find how many edges we're retrieving from this row. Two cases:
-        !     o the current request for an edge batch calls for more edges
-        !       than there are remaining in this row, so we should get all
-        !       of those;
-        !     o the current request for an edge batch calls for fewer edges
-        !       than there are remaining in this row, so only return those
-        !       asked for.
-        num_from_this_row = min( g%max_d - cursor%idx, &
-                                                & num_returned - num_added)
+    ! Keep fetching more edges as long as we haven't got the whole batch
+    do while(k < num_returned)
+        ! Number of edges we'll return that neighbor vertex `i`.
+        ! Either we're returning the rest of the row, i.e.
+        !     g%degrees(i) - idx
+        ! edges, or the user hasn't asked for that many edges, so they get
+        !     num_returned - k.
+        num = min(g%degrees(i) - idx, num_returned - k)
 
-        ! Fill in the return array
-        edges(1, num_added + 1 : num_added + num_from_this_row) = i
-        edges(2, num_added + 1 : num_added + num_from_this_row) = &
-            & g%node( cursor%idx + 1 : cursor%idx + num_from_this_row, i)
+        edges(1, k+1 : k+num) = i
+        edges(2, k+1 : k+num) = g%node(idx+1 : idx+num, i)
 
-        ! Increment the number o edges added
-        num_added = num_added + num_from_this_row
+        ! The following statements are some bit-shifting magic in order to
+        ! avoid the conditional
+        !     if (num == g%degrees(i) - idx) then
+        !         i = i + 1
+        !         idx = 0
+        !     else
+        !         idx = idx + num
+        !     endif
+        ! The two are completely equivalent, but we'd like to avoid
+        ! branching where possible.
+        bt = (sign(1, num - (g%degrees(i) - idx)) + 1) / 2
+        i = i + bt
+        idx = (1 - bt) * (idx + num)
 
-        ! Update the index storing where we left off within the row
-        cursor%idx = mod(cursor%idx + num_from_this_row, g%max_d)
+        k = k + num
     enddo
 
     cursor%current = cursor%current + num_returned
+    cursor%edge(1) = i
+
+    end associate
 
 end subroutine ellpack_get_edges
 
