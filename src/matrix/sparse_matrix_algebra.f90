@@ -175,54 +175,126 @@ end subroutine sparse_matrix_product
 
 
 
-!-----------------------------------------------------------------------
-subroutine sparse_matrix_product_graph(g, B, C)
-!------------------------------------------------------------------------
-    ! input/output variables
+!--------------------------------------------------------------------------!
+subroutine sparse_matrix_product_graph(g, B, C)                            !
+!--------------------------------------------------------------------------!
     class(graph_interface), intent(inout) :: g
     class(sparse_matrix_interface), intent(in) :: B, C
-    ! local variables
-    integer :: i, j, k, l, m, d
-    ! variables for getting matrix slices
-    integer, allocatable :: nodes(:)
-    real(dp), allocatable :: slice(:)
-    ! variables for iterating through matrix entries
-    integer :: num_returned, edges(2, batch_size)
-    type(graph_edge_cursor) :: cursor
 
-    call g%init(B%nrow, C%ncol)
+    if (C%is_get_row_fast()) then
+        call product_graph_C(g, B, C)
+    elseif (B%is_get_column_fast()) then
+        call product_graph_B(g, B, C)
+    else
+        ! In this latter case, the first factor does not have fast column
+        ! access and the second factor does not have fast row access --
+        ! this is *very* bad and we should probably copy one of the matrices
+        ! to either CSR or CSC and compute the product using the copy.
+        call product_graph_C(g, B, C)
+    endif
 
-    ! Allocate arrays for getting slices from `C`
-!    d = C%max_row_degree() ! Haha this doesn't even exist dumbass
-    d = 0
-    do i = 1, C%nrow
-        d = max(d, C%get_row_degree(i))
-    enddo
-    allocate(nodes(d), slice(d))
+contains
+    ! These nested procedures do the actual work to compute the graph
+    ! representing the connectivity structure of the product matrix.
+
+    !-----------------------------------!
+    subroutine product_graph_C(g, B, C) !
+        ! input/output variables
+        class(graph_interface), intent(inout) :: g
+        class(sparse_matrix_interface), intent(in) :: B, C
+        ! local variables
+        integer :: i, j, k, l, m, d
+        ! variables for getting matrix slices
+        integer, allocatable :: nodes(:)
+        real(dp), allocatable :: slice(:)
+        ! variables for iterating through matrix entries
+        integer :: num_returned, edges(2, batch_size)
+        type(graph_edge_cursor) :: cursor
+
+        call g%init(B%nrow, C%ncol)
+
+        ! Allocate arrays for getting slices from `C`
+    !    d = C%max_row_degree() ! Haha this doesn't even exist dumbass
+        d = 0
+        do i = 1, C%nrow
+            d = max(d, C%get_row_degree(i))
+        enddo
+        allocate(nodes(d), slice(d))
 
 
-    ! Iterate through all the edges of `B`
-    cursor = B%make_cursor()
-    do while(.not. cursor%done())
-        call B%get_edges(edges, cursor, batch_size, num_returned)
+        ! Iterate through all the edges of `B`
+        cursor = B%make_cursor()
+        do while(.not. cursor%done())
+            call B%get_edges(edges, cursor, batch_size, num_returned)
 
-        do l = 1, num_returned
-            ! For each edge (i, k) in `B`
-            i = edges(1, l)
-            k = edges(2, l)
+            do l = 1, num_returned
+                ! For each edge (i, k) in `B`
+                i = edges(1, l)
+                k = edges(2, l)
 
-            ! Find all edges (k, j) in `C` and add (i, j) to `g`
-            call C%get_row(nodes, slice, k)
-            d = C%get_row_degree(k)
+                ! Find all edges (k, j) in `C` and add (i, j) to `g`
+                call C%get_row(nodes, slice, k)
+                d = C%get_row_degree(k)
 
-            do m = 1, d
-                j = nodes(m)
-                call g%add_edge(i, j)
+                do m = 1, d
+                    j = nodes(m)
+                    call g%add_edge(i, j)
+                enddo
             enddo
         enddo
-    enddo
 
-    deallocate(nodes, slice)
+        deallocate(nodes, slice)
+
+    end subroutine product_graph_C
+
+    !-----------------------------------!
+    subroutine product_graph_B(g, B, C) !
+        ! input/output variables
+        class(graph_interface), intent(inout) :: g
+        class(sparse_matrix_interface), intent(in) :: B, C
+        ! local variables
+        integer :: i, j, k, l, m, d
+        ! variables for getting matrix slices
+        integer, allocatable :: nodes(:)
+        real(dp), allocatable :: slice(:)
+        ! variables for iterating through matrix entries
+        integer :: num_returned, edges(2, batch_size)
+        type(graph_edge_cursor) :: cursor
+
+        call g%init(B%nrow, C%ncol)
+
+        ! Allocate arrays for getting slices from `B`
+    !    d = C%max_column_degree() ! Haha this doesn't even exist dumbass
+        d = 0
+        do j = 1, B%ncol
+            d = max(d, B%get_column_degree(j))
+        enddo
+        allocate(nodes(d), slice(d))
+
+        ! Iterate through all the edges of `B`
+        cursor = C%make_cursor()
+        do while(.not. cursor%done())
+            call C%get_edges(edges, cursor, batch_size, num_returned)
+
+            do l = 1, num_returned
+                ! For each edge (i, k) in `B`
+                k = edges(1, l)
+                j = edges(2, l)
+
+                ! Find all edges (k, j) in `C` and add (i, j) to `g`
+                call B%get_column(nodes, slice, k)
+                d = B%get_column_degree(k)
+
+                do m = 1, d
+                    i = nodes(m)
+                    call g%add_edge(i, j)
+                enddo
+            enddo
+        enddo
+
+        deallocate(nodes, slice)
+
+    end subroutine product_graph_B
 
 end subroutine sparse_matrix_product_graph
 

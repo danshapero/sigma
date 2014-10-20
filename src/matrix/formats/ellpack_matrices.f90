@@ -82,6 +82,12 @@ contains
     procedure :: destroy => ellpack_matrix_destroy
 
 
+    !--------------
+    ! Optimization
+    !--------------
+    procedure :: is_get_row_fast => ellpack_matrix_is_get_row_fast
+
+
     !-------------------------
     ! Testing, debugging, I/O
     !-------------------------
@@ -675,6 +681,23 @@ subroutine ellpack_matrix_destroy(A)                                       !
     A%reference_count = 0
 
 end subroutine ellpack_matrix_destroy
+
+
+
+
+!==========================================================================!
+!==== Optimization                                                     ====!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
+function ellpack_matrix_is_get_row_fast(A) result(fast)                    !
+!--------------------------------------------------------------------------!
+    class(ellpack_matrix), intent(in) :: A
+    logical :: fast
+
+    fast = .true.
+
+end function ellpack_matrix_is_get_row_fast
 
 
 

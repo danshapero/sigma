@@ -78,6 +78,13 @@ contains
     procedure :: destroy => default_matrix_destroy
 
 
+    !--------------
+    ! Optimization
+    !--------------
+    procedure :: is_get_row_fast => default_matrix_is_get_row_fast
+    procedure :: is_get_column_fast => default_matrix_is_get_column_fast
+
+
     !--------------------
     ! Auxiliary routines
     !--------------------
@@ -577,6 +584,35 @@ subroutine default_matrix_destroy(A)                                       !
     A%reference_count = 0
 
 end subroutine default_matrix_destroy
+
+
+
+
+!==========================================================================!
+!==== Optimization                                                     ====!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
+function default_matrix_is_get_row_fast(A) result(fast)                    !
+!--------------------------------------------------------------------------!
+    class(default_matrix), intent(in) :: A
+    logical :: fast
+
+    fast = A%ord(1) == 1 .and. A%g%is_get_neighbors_fast()
+
+end function default_matrix_is_get_row_fast
+
+
+
+!--------------------------------------------------------------------------!
+function default_matrix_is_get_column_fast(A) result(fast)                 !
+!--------------------------------------------------------------------------!
+    class(default_matrix), intent(in) :: A
+    logical :: fast
+
+    fast = A%ord(1) == 2 .and. A%g%is_get_neighbors_fast()
+
+end function default_matrix_is_get_column_fast
 
 
 

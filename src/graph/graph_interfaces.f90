@@ -20,7 +20,7 @@ implicit none
 !--------------------------------------------------------------------------!
 type, abstract :: graph_interface                                          !
 !--------------------------------------------------------------------------!
-    integer :: n, m, reference_count = 0
+    integer :: n = 0, m = 0, reference_count = 0
 contains
     !--------------
     ! Constructors

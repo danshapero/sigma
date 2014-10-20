@@ -33,6 +33,7 @@ type, abstract, extends(sparse_matrix_interface) :: cs_matrix              !
 !--------------------------------------------------------------------------!
     class(cs_graph), pointer :: g => null()
     real(dp), allocatable :: val(:)
+    logical, private :: get_row_is_fast, get_col_is_fast
 contains
     !--------------
     ! Constructors
@@ -78,6 +79,13 @@ contains
     procedure :: destroy => cs_matrix_destroy
 
 
+    !--------------
+    ! Optimization
+    !--------------
+    procedure :: is_get_row_fast => cs_matrix_is_get_row_fast
+    procedure :: is_get_column_fast => cs_matrix_is_get_column_fast
+
+
     !--------------------------------------
     ! Implementations of matrix operations
     !--------------------------------------
@@ -104,6 +112,7 @@ contains
     !--------------
     ! Constructors
     !--------------
+    procedure :: set_dimensions => csr_matrix_set_dimensions
     procedure :: copy_graph => csr_matrix_copy_graph
 
     !-----------
@@ -135,6 +144,7 @@ contains
     !------------------------------
     procedure, nopass :: matvec_add_impl   => csr_matvec_add
     procedure, nopass :: matvec_t_add_impl => csc_matvec_add
+
 end type csr_matrix
 
 
@@ -146,6 +156,7 @@ contains
     !--------------
     ! Constructors
     !--------------
+    procedure :: set_dimensions => csc_matrix_set_dimensions
     procedure :: copy_graph => csc_matrix_copy_graph
 
     !-----------
@@ -177,6 +188,7 @@ contains
     !------------------------------
     procedure, nopass :: matvec_add_impl   => csc_matvec_add
     procedure, nopass :: matvec_t_add_impl => csr_matvec_add
+
 end type csc_matrix
 
 
@@ -466,9 +478,39 @@ end subroutine cs_matrix_destroy
 
 
 !==========================================================================!
+!==== Optimization                                                     ====!
 !==========================================================================!
-!==== Matrix-vector multiplication kernels                             ====!
+
+!--------------------------------------------------------------------------!
+function cs_matrix_is_get_row_fast(A) result(fast)                         !
+!--------------------------------------------------------------------------!
+    class(cs_matrix), intent(in) :: A
+    logical :: fast
+
+    fast = A%get_row_is_fast
+
+end function cs_matrix_is_get_row_fast
+
+
+
+!--------------------------------------------------------------------------!
+function cs_matrix_is_get_column_fast(A) result(fast)                      !
+!--------------------------------------------------------------------------!
+    class(cs_matrix), intent(in) :: A
+    logical :: fast
+
+    fast = A%get_col_is_fast
+
+end function cs_matrix_is_get_column_fast
+
+
+
+
+
 !==========================================================================!
+!========                                                          ========!
+!====               Matrix-vector multiplication kernels               ====!
+!========                                                          ========!
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
@@ -536,6 +578,26 @@ end subroutine csc_matvec_add
 !==========================================================================!
 
 !--------------------------------------------------------------------------!
+subroutine csr_matrix_set_dimensions(A, nrow, ncol)                        !
+!--------------------------------------------------------------------------!
+    class(csr_matrix), intent(inout) :: A
+    integer, intent(in) :: nrow, ncol
+
+    A%nrow = nrow
+    A%ncol = ncol
+
+    A%dimensions_set = .true.
+
+    call A%add_reference()
+
+    A%get_row_is_fast = .true.
+    A%get_col_is_fast = .false.
+
+end subroutine csr_matrix_set_dimensions
+
+
+
+!--------------------------------------------------------------------------!
 subroutine csr_matrix_copy_graph(A, g)                                     !
 !--------------------------------------------------------------------------!
     class(csr_matrix), intent(inout) :: A
@@ -558,6 +620,26 @@ subroutine csr_matrix_copy_graph(A, g)                                     !
     A%graph_set = .true.
 
 end subroutine csr_matrix_copy_graph
+
+
+
+!--------------------------------------------------------------------------!
+subroutine csc_matrix_set_dimensions(A, nrow, ncol)                        !
+!--------------------------------------------------------------------------!
+    class(csc_matrix), intent(inout) :: A
+    integer, intent(in) :: nrow, ncol
+
+    A%nrow = nrow
+    A%ncol = ncol
+
+    A%dimensions_set = .true.
+
+    call A%add_reference()
+
+    A%get_row_is_fast = .false.
+    A%get_col_is_fast = .true.
+
+end subroutine csc_matrix_set_dimensions
 
 
 

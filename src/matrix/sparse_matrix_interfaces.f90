@@ -138,6 +138,21 @@ contains
     ! Deallocate the contents of the matrix and nullify any pointers
 
 
+    !--------------
+    ! Optimization
+    !--------------
+    procedure :: is_get_row_fast => get_slice_is_not_fast
+    procedure :: is_get_column_fast => get_slice_is_not_fast
+    ! Returns true if the matrix can return an entire row / column in O(d)
+    ! time/space, where `d` is the maximum degree of a row / column
+    ! respectively. By default it is assumed that getting a slice is not
+    ! fast, but implementations (e.g. ellpack, CSC) can override either
+    ! in case it is a fast operation.
+    ! The speed of getting a slice may well be state-dependent, e.g. a
+    ! default_matrix could be slow if the underlying graph is in COO format
+    ! but could become fast if its storage is converted to CSR.
+
+
     !-------------------------
     ! Testing, debugging, I/O
     !-------------------------
@@ -400,6 +415,23 @@ subroutine sparse_matrix_matvec_t_add(A, x, y)                             !
     enddo
 
 end subroutine sparse_matrix_matvec_t_add
+
+
+
+
+!==========================================================================!
+!==== Optimization                                                     ====!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
+function get_slice_is_not_fast(A) result(fast)                             !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix_interface), intent(in) :: A
+    logical :: fast
+
+    fast = .false.
+
+end function get_slice_is_not_fast
 
 
 
