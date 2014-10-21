@@ -6,6 +6,7 @@ graph_test_copy.f90
 matrix_test_basics.f90
 matrix_test_set_multiple_entries.f90
 matrix_test_set_entry_with_realloc.f90
+matrix_test_speed_query.f90
 matrix_test_sum.f90
 matrix_test_product.f90
 matrix_test_strategy.f90

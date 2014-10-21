@@ -144,6 +144,13 @@ contains
     procedure :: destroy => composite_mat_destroy
 
 
+    !--------------
+    ! Optimization
+    !--------------
+    procedure :: is_get_row_fast => composite_mat_is_get_row_fast
+    procedure :: is_get_column_fast => composite_mat_is_get_column_fast
+
+
     !----------------------
     ! Auxiliary procedures
     !----------------------
@@ -1107,6 +1114,54 @@ subroutine composite_mat_destroy(A)                                        !
     A%block_sizes_set = .false.
 
 end subroutine composite_mat_destroy
+
+
+
+
+!==========================================================================!
+!==== Optimization                                                     ====!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
+function composite_mat_is_get_row_fast(A) result(fast)                     !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(in) :: A
+    logical :: fast
+    ! local variables
+    integer :: it, jt
+
+    fast = .true.
+
+    do jt = 1, A%num_col_mats
+        do it = 1, A%num_row_mats
+            fast = fast .and. A%sub_mats(it, jt)%mat%is_get_row_fast()
+        enddo
+    enddo
+
+end function composite_mat_is_get_row_fast
+
+
+
+!--------------------------------------------------------------------------!
+function composite_mat_is_get_column_fast(A) result(fast)                  !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(in) :: A
+    logical :: fast
+    ! local variables
+    integer :: it, jt
+
+    fast = .true.
+
+    do jt = 1, A%num_col_mats
+        do it = 1, A%num_row_mats
+            fast = fast .and. A%sub_mats(it, jt)%mat%is_get_column_fast()
+        enddo
+    enddo
+
+end function composite_mat_is_get_column_fast
+
 
 
 
