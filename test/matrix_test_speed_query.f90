@@ -78,15 +78,8 @@ implicit none
     allocate(csr_matrix::A)
     call graph_laplacian(A, g)
 
-    if (.not. A%is_get_row_fast()) then
-        call error_message("row", "CSR", "fast")
-        call exit(1)
-    endif
-
-    if (A%is_get_column_fast()) then
-        call error_message("column", "CSR", "slow")
-        call exit(1)
-    endif
+    if (.not. A%is_get_row_fast()) call fail("row", "CSR", "fast")
+    if (A%is_get_column_fast()) call fail("column", "CSR", "slow")
 
     call A%destroy()
     deallocate(A)
@@ -95,15 +88,8 @@ implicit none
     allocate(csc_matrix::A)
     call graph_laplacian(A, g)
 
-    if (A%is_get_row_fast()) then
-        call error_message("row", "CSC", "slow")
-        call exit(1)
-    endif
-
-    if (.not. A%is_get_column_fast()) then
-        call error_message("column", "CSC", "fast")
-        call exit(1)
-    endif
+    if (A%is_get_row_fast()) call fail("row", "CSC", "slow")
+    if (.not. A%is_get_column_fast()) call fail("col", "CSC", "fast")
 
     call A%destroy()
     deallocate(A)
@@ -112,15 +98,8 @@ implicit none
     allocate(ellpack_matrix::A)
     call graph_laplacian(A, g)
 
-    if (.not. A%is_get_row_fast()) then
-        call error_message("row", "ellpack", "fast")
-        call exit(1)
-    endif
-
-    if (A%is_get_column_fast()) then
-        call error_message("column", "ellpack", "slow")
-        call exit(1)
-    endif
+    if (.not. A%is_get_row_fast()) call fail("row", "ellpack", "fast")
+    if (A%is_get_column_fast())    call fail("col", "ellpack", "slow")
 
     call A%destroy()
     deallocate(A)
@@ -129,15 +108,8 @@ implicit none
     allocate(default_row_matrix::A)
     call graph_laplacian(A, g)
 
-    if (.not. A%is_get_row_fast()) then
-        call error_message("row", "default row-oriented", "fast")
-        call exit(1)
-    endif
-
-    if (A%is_get_column_fast()) then
-        call error_message("column", "default row-oriented", "slow")
-        call exit(1)
-    endif
+    if (.not. A%is_get_row_fast()) call fail("row", "default row", "fast")
+    if (A%is_get_column_fast())    call fail("col", "default row", "slow")
 
     call A%destroy()
     deallocate(A)
@@ -146,15 +118,9 @@ implicit none
     allocate(default_column_matrix::A)
     call graph_laplacian(A, g)
 
-    if (A%is_get_row_fast()) then
-        call error_message("row", "default column-oriented", "slow")
-        call exit(1)
-    endif
-
-    if (.not. A%is_get_column_fast()) then
-        call error_message("column", "default column-oriented", "fast")
-        call exit(1)
-    endif
+    if (A%is_get_row_fast()) call fail("row", "default column", "slow")
+    if (.not. A%is_get_column_fast()) call fail("col", "default column", &
+                                                                    & "fast")
 
     call A%destroy()
     deallocate(A)
@@ -163,7 +129,7 @@ implicit none
 
     !----------------------------------------------------------------------!
     ! Test that the composite sparse matrix recognizes whether getting a   !
-    ! row or column is fast.                                               !
+    ! row or column is fast when used as a wrapper around a basic type.    !
     !----------------------------------------------------------------------!
 
     call L%set_matrix_type("csr")
@@ -171,18 +137,89 @@ implicit none
     call graph_laplacian(L, g)
 
     if (.not. L%is_get_row_fast()) then
-        call error_message("row", "wrapper around CSR", "fast")
+        call fail("row", "wrapper around CSR", "fast")
         call exit(1)
     endif
 
     if (L%is_get_column_fast()) then
-        call error_message("column", "wrapper around CSR", "slow")
+        call fail("column", "wrapper around CSR", "slow")
         call exit(1)
     endif
+
+    call L%destroy()
+    call g%destroy()
+
+
+
+    !----------------------------------------------------------------------!
+    ! Test that the composite sparse matrix recognizes whether getting a   !
+    ! row or column is fast when used as a composite of several matrices.  !
+    !----------------------------------------------------------------------!
+
+    call L%set_dimensions(nn, nn)
+    call L%set_block_sizes([nn/2, nn/2], [nn/2, nn/2])
+
+    call g%init(nn/2, nn/2)
+    probability = 2 * log(0.5_dp * nn) / log(2.0_dp) / nn
+    do i = 1, nn/2
+        call g%add_edge(i, i)
+        do j = i + 1, nn/2
+            call random_number(z)
+            if (z < probability) then
+                call g%add_edge(i, j)
+                call g%add_edge(j, i)
+            endif
+        enddo
+    enddo
+
+    allocate(csr_matrix::A)
+    call A%init(nn/2, nn/2, g)
+    call L%set_submatrix(1, 1, A)
+
+    call A%remove_reference()
+    nullify(A)
+
+    allocate(ellpack_matrix::A)
+    call A%init(nn/2, nn/2, g)
+    call L%set_submatrix(2, 2, A)
+
+    call A%remove_reference()
+    nullify(A)
+
+    allocate(csr_matrix::A)
+    call A%init(nn/2, nn/2, g)
+    call L%set_submatrix(1, 2, A)
+
+    call A%remove_reference()
+    nullify(A)
+
+    allocate(default_row_matrix::A)
+    call A%init(nn/2, nn/2, g)
+    call L%set_submatrix(2, 1, A)
+
+    call A%remove_reference()
+    nullify(A)
+
+
+    if (.not. L%is_get_row_fast()) call fail("row", "composite row", "fast")
+    if (L%is_get_column_fast()) call fail("col", "composite row", "slow")
+
+
+    allocate(csc_matrix::A)
+    call A%init(nn/2, nn/2, g)
+    call L%set_submatrix(2, 1, A)
+
+    call A%remove_reference()
+    nullify(A)
+
+
+    if (L%is_get_row_fast()) call fail("row", "mixed composite", "slow")
+    if (L%is_get_column_fast()) call fail("col", "mixed composite", "slow")
 
 
     call L%destroy()
     call g%destroy()
+    deallocate(g)
 
 contains
 
@@ -221,14 +258,15 @@ end subroutine graph_laplacian
 
 
 !--------------------------------------------------------------------------!
-subroutine error_message(row_or_col, matrix_type, fast_or_not)             !
+subroutine fail(row_or_col, matrix_type, fast_or_not)                      !
 !--------------------------------------------------------------------------!
     character(len=*), intent(in) :: row_or_col, matrix_type, fast_or_not
 
     print *, "Getting ", row_or_col, " of ", matrix_type, &
         & " matrix should be ", fast_or_not
+    call exit(1)
 
-end subroutine error_message
+end subroutine fail
 
 
 

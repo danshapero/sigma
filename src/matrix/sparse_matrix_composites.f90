@@ -984,10 +984,28 @@ end subroutine composite_mat_right_permute
 !--------------------------------------------------------------------------!
 subroutine composite_mat_set_submatrix(A, it, jt, B)                       !
 !--------------------------------------------------------------------------!
+    ! input/output variables
     class(sparse_matrix), intent(inout) :: A
     integer, intent(in) :: it, jt
     class(sparse_matrix_interface), target :: B
+    ! local variables
+    class(sparse_matrix_interface), pointer :: C
 
+    ! Check to see if we're re-setting sub-matrix (it, jt) and not setting
+    ! it for the first time. If that's the case, we need to decrement the
+    ! reference count for A(it, jt) and possibly destroy it if it has no
+    ! more references.
+    if (associated(A%sub_mats(it, jt)%mat)) then
+        C => A%sub_mats(it, jt)%mat
+        call C%remove_reference()
+        if (C%reference_count <= 0) call C%destroy()
+        deallocate(C)
+    endif
+
+    ! Check if the matrix we're setting is itself a composite matrix.
+    ! If it is, see if it's also a leaf; in that case, we can make A point
+    ! to the matrix wrapped by B instead of point to B. This way, we avoid
+    ! having a cascade of references from one sparse_matrix to another.
     select type(B)
         class is(sparse_matrix)
             if (B%is_leaf()) then
