@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------!
-program matrix_test_speed_query                                            !
+program matrix_test_query_slice_speed                                      !
 !--------------------------------------------------------------------------!
 
 use sigma
@@ -270,6 +270,6 @@ end subroutine fail
 
 
 
-end program matrix_test_speed_query
+end program matrix_test_query_slice_speed
 
 
