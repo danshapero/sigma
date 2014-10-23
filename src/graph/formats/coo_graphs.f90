@@ -15,8 +15,8 @@ type, extends(graph_interface) :: coo_graph                                !
 contains
     !--------------
     ! Constructors
-    procedure :: init => coo_graph_init
-    procedure :: copy => coo_graph_copy
+    procedure :: init_empty => coo_graph_init
+    procedure :: init_from_iterator => coo_graph_init_from_iterator
 
     !-----------
     ! Accessors
@@ -68,6 +68,8 @@ subroutine coo_graph_init(g, n, m)                                         !
     integer, intent(in) :: n
     integer, intent(in), optional :: m
 
+    call g%add_reference()
+
     g%n = n
 
     if (present(m)) then
@@ -87,55 +89,52 @@ end subroutine coo_graph_init
 
 
 !--------------------------------------------------------------------------!
-subroutine coo_graph_copy(g, h, trans)                                     !
+subroutine coo_graph_init_from_iterator(g, n, m, &                         !
+                                            & iterator, get_cursor, trans) !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(coo_graph), intent(inout)    :: g
-    class(graph_interface), intent(in) :: h
+    class(coo_graph), intent(inout) :: g
+    integer, intent(in) :: n, m
+    procedure(edge_iterator) :: iterator
+    procedure(new_cursor) :: get_cursor
     logical, intent(in), optional :: trans
     ! local variables
-    integer :: ind(2), ord(2), nv(2), k
+    integer :: ord(2)
+    integer :: i, j, k
     integer :: num_returned, edges(2, batch_size)
     type(graph_edge_cursor) :: cursor
 
-    nv = [h%n, h%m]
-    ord = [1, 2]
+    call g%add_reference()
 
-    ! Check if we're copying h, or h with all edges reversed
+    ord = [1, 2]
     if (present(trans)) then
-        if (trans) then
-            nv = [h%m, h%n]
-            ord = [2, 1]
-        endif
+        if (trans) ord = [2, 1]
     endif
 
-    ! Copy all the attributes of h to g
-    g%n = nv(1)
-    g%m = nv(2)
-    g%ne = h%get_num_edges()
+    g%n = n
+    g%m = m
 
-    ! Allocate space in the two dynamic arrays for the edges of g
+    cursor = get_cursor()
+
+    g%ne = cursor%last
+
     call g%edges(1)%init(capacity = g%ne + 16)
     call g%edges(2)%init(capacity = g%ne + 16)
 
-    ! Make an edge iterator for the copied graph h
-    cursor = h%make_cursor()
+    do while (.not. cursor%done())
+        call iterator(edges, cursor, batch_size, num_returned)
 
-    ! Iterate through all the edges of h
-    do while(.not. cursor%done())
-        ! Get a chunk of edges of h
-        call h%get_edges(edges, cursor, batch_size, num_returned)
-
-        ! Add each edge from the chunk into g
         do k = 1, num_returned
-            ind = edges(ord, k)
+            i = edges(ord(1), k)
+            j = edges(ord(2), k)
 
-            call g%edges(1)%push(ind(1))
-            call g%edges(2)%push(ind(2))
+            call g%edges(1)%push(i)
+            call g%edges(2)%push(j)
         enddo
     enddo
 
-end subroutine coo_graph_copy
+
+end subroutine coo_graph_init_from_iterator
 
 
 

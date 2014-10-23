@@ -25,12 +25,17 @@ contains
     !--------------
     ! Constructors
     !--------------
-    procedure(init_graph_ifc), deferred :: init
+    generic :: init => init_empty, init_from_iterator
+
+    procedure(init_graph_ifc), deferred :: init_empty
     ! Initialize an empty graph
 
-    procedure(copy_graph_ifc), deferred :: copy
-    ! Copy the connectivity structure of another graph, which may well
-    ! be of a different type.
+    procedure(init_graph_from_iterator_ifc), deferred :: init_from_iterator
+    ! Initialize a graph and fill its values from an iterator callback
+
+    procedure :: copy => copy_graph
+    ! Copy the connectivity structure of another graph, which can be of a
+    ! different storage format.
 
 
     !-----------
@@ -141,6 +146,29 @@ end type graph_edge_cursor
 
 
 !--------------------------------------------------------------------------!
+interface                                                                  !
+!--------------------------------------------------------------------------!
+! These interfaces are used to define edge iterator callbacks: a function  !
+! that can be called to get a batch of edges from somewhere. That could be !
+! another graph, a sparse matrix, a file, etc.                             !
+!--------------------------------------------------------------------------!
+    function new_cursor() result(cursor)
+        import :: graph_edge_cursor
+        type(graph_edge_cursor) :: cursor
+    end function
+
+    subroutine edge_iterator(edges, cursor, num_edges, num_returned)
+        import :: graph_edge_cursor
+        integer, intent(in) :: num_edges
+        integer, intent(out) :: edges(2, num_edges)
+        type(graph_edge_cursor), intent(inout) :: cursor
+        integer, intent(out) :: num_returned
+    end subroutine edge_iterator
+end interface
+
+
+
+!--------------------------------------------------------------------------!
 abstract interface                                                         !
 !--------------------------------------------------------------------------!
     subroutine init_graph_ifc(g, n, m)
@@ -150,12 +178,15 @@ abstract interface                                                         !
         integer, intent(in), optional :: m
     end subroutine init_graph_ifc
 
-    subroutine copy_graph_ifc(g, h, trans)
-        import :: graph_interface
+    subroutine init_graph_from_iterator_ifc(g, n, m, &
+                                            & iterator, get_cursor, trans)
+        import :: graph_interface, graph_edge_cursor
         class(graph_interface), intent(inout) :: g
-        class(graph_interface), intent(in)    :: h
+        integer, intent(in) :: n, m
+        procedure(edge_iterator) :: iterator
+        procedure(new_cursor) :: get_cursor
         logical, intent(in), optional :: trans
-    end subroutine copy_graph_ifc
+    end subroutine init_graph_from_iterator_ifc
 
     function get_num_edges_ifc(g) result(k)
         import :: graph_interface
@@ -239,6 +270,52 @@ integer, parameter :: batch_size = 64
 
 
 contains
+
+
+
+!--------------------------------------------------------------------------!
+subroutine copy_graph(g, h, trans)                                         !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(graph_interface), intent(inout) :: g
+    class(graph_interface), intent(in)    :: h
+    logical, intent(in), optional :: trans
+    ! local variables
+    logical :: tr
+    integer :: nv(2)
+
+    ! Ascertain whether or not 
+    tr = .false.
+    if (present(trans)) tr = trans
+
+    nv = [h%n, h%m]
+    if (tr) nv = [h%m, h%n]
+
+    call g%init_from_iterator(nv(1), nv(2), iterator, get_cursor, trans)
+
+contains
+
+    ! These nested functions are used as callbacks to `h`, so it can be
+    ! accessed in a scope in which it doesn't actually exist. MIND = BLOWN
+    function get_cursor() result(cursor)
+        type(graph_edge_cursor) :: cursor
+
+        cursor = h%make_cursor()
+
+    end function get_cursor
+
+
+    subroutine iterator(edges, cursor, num_edges, num_returned)
+        integer, intent(in) :: num_edges
+        integer, intent(out) :: edges(2, num_edges)
+        type(graph_edge_cursor), intent(inout) :: cursor
+        integer, intent(out) :: num_returned
+
+        call h%get_edges(edges, cursor, num_edges, num_returned)
+
+    end subroutine iterator
+
+end subroutine copy_graph
 
 
 

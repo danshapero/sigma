@@ -17,8 +17,8 @@ type, extends(graph_interface) :: ll_graph                                 !
 contains
     !--------------
     ! Constructors
-    procedure :: init => ll_graph_init
-    procedure :: copy => ll_graph_copy
+    procedure :: init_empty => ll_graph_init
+    procedure :: init_from_iterator => ll_graph_init_from_iterator
 
     !-----------
     ! Accessors
@@ -100,49 +100,41 @@ end subroutine ll_graph_init
 
 
 !--------------------------------------------------------------------------!
-subroutine ll_graph_copy(g, h, trans)                                      !
+subroutine ll_graph_init_from_iterator(g, n, m, &                          !
+                                            & iterator, get_cursor, trans) !
 !--------------------------------------------------------------------------!
-    ! input/output variables
-    class(ll_graph), intent(inout)     :: g
-    class(graph_interface), intent(in) :: h
+    class(ll_graph), intent(inout) :: g
+    integer, intent(in) :: n, m
+    procedure(edge_iterator) :: iterator
+    procedure(new_cursor) :: get_cursor
     logical, intent(in), optional :: trans
     ! local variables
-    integer :: ind(2), ord(2), nv(2), k
+    integer :: ord(2)
+    integer :: i, j, k
     integer :: num_returned, edges(2, batch_size)
     type(graph_edge_cursor) :: cursor
 
-    ! Check if we're copying h or h with all directed edges reversed
-    nv = [h%n, h%m]
     ord = [1, 2]
-
     if (present(trans)) then
-        if (trans) then
-            nv = [h%m, h%n]
-            ord = [2,1]
-        endif
+        if (trans) ord = [2, 1]
     endif
 
-    ! Initialize g to have the same number of left- and right-nodes as h
-    call g%init(nv(1), nv(2))
+    call g%init(n, m)
 
-    ! Get a cursor from h with which to iterate through its edges
-    cursor = h%make_cursor()
+    cursor = get_cursor()
 
-    ! Iterate through all the chunks
-    do while(.not. cursor%done())
-        ! Get a chunk of edges from h
-        call h%get_edges(edges, cursor, batch_size, num_returned)
+    do while (.not. cursor%done())
+        call iterator(edges, cursor, batch_size, num_returned)
 
-        ! For each edge,
         do k = 1, num_returned
-            ind = edges(ord, k)
+            i = edges(ord(1), k)
+            j = edges(ord(2), k)
 
-            ! add it to g
-            call g%add_edge(ind(1), ind(2))
+            call g%add_edge(i, j)
         enddo
     enddo
 
-end subroutine ll_graph_copy
+end subroutine ll_graph_init_from_iterator
 
 
 

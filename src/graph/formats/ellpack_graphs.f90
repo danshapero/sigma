@@ -22,8 +22,8 @@ type, extends(graph_interface) :: ellpack_graph                            !
 contains
     !--------------
     ! Constructors
-    procedure :: init => ellpack_graph_init
-    procedure :: copy => ellpack_graph_copy
+    procedure :: init_empty => ellpack_graph_init
+    procedure :: init_from_iterator => ellpack_graph_init_from_iterator
 
     !-----------
     ! Accessors
@@ -102,101 +102,72 @@ end subroutine ellpack_graph_init
 
 
 !--------------------------------------------------------------------------!
-subroutine ellpack_graph_copy(g, h, trans)                                 !
+subroutine ellpack_graph_init_from_iterator(g, n, m, &                     !
+                                            & iterator, get_cursor, trans) !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(ellpack_graph), intent(inout) :: g
-    class(graph_interface), intent(in)  :: h
+    integer, intent(in) :: n, m
+    procedure(edge_iterator) :: iterator
+    procedure(new_cursor) :: get_cursor
     logical, intent(in), optional :: trans
     ! local variables
-    integer :: i, j, k, d, ord(2), nv(2)
+    integer :: ord(2)
+    integer :: i, j, k, d
     integer :: num_returned, edges(2, batch_size)
     type(graph_edge_cursor) :: cursor
-    logical :: tr
 
     call g%add_reference()
 
-    nv = [h%n, h%m]
     ord = [1, 2]
-
-    ! Check if we're copying h or h with all directed edges reversed
-    tr = .false.
-    if (present(trans)) tr = trans
-
-    if (tr) then
-        nv = [h%m, h%n]
-        ord = [2, 1]
+    if (present(trans)) then
+        if (trans) ord = [2, 1]
     endif
 
-    ! Copy the attributes of `g` from those of `h`
-    g%n = nv(1)
-    g%m = nv(2)
-    g%ne = h%get_num_edges()
+    g%n = n
+    g%m = m
 
-    ! Initialize the array of vertex degrees of `g`
+    cursor = get_cursor()
+
+    g%ne = cursor%last
+
     allocate(g%degrees(g%n))
     g%degrees = 0
 
+    do while (.not. cursor%done())
+        call iterator(edges, cursor, batch_size, num_returned)
 
-    ! If we're copying the transpose of `h`, we need to do some extra work
-    ! to find the maximum degree of `g`. If the in-degree of `h` is greater
-    ! than the out-degree, we could inadvertently end up allocating too
-    ! little space for the `node` array.
-    if (tr) then
-        ! Make an edge iterator for the copied graph `h`
-        cursor = h%make_cursor()
-
-        ! Iterate through all the edges of `h`
-        do while(.not. cursor%done())
-            call h%get_edges(edges, cursor, batch_size, num_returned)
-
-            ! For each edge, increment the degree of the starting vertex
-            do k = 1, num_returned
-                i = edges(ord(1), k)
-                j = edges(ord(2), k)
-
-                g%degrees(i) = g%degrees(i) + 1
-            enddo
+        do k = 1, num_returned
+            i = edges(ord(1), k)
+            g%degrees(i) = g%degrees(i) + 1
         enddo
+    enddo
 
-        ! Compute the maximum degree of `g` and allocate space for the
-        ! node array
-        g%max_d = maxval(g%degrees)
-
-        ! Reset the `degrees` array to 0 once we've found the maximum
-        ! degree, we'll use it as a temporary soon
-        g%degrees = 0
-
-    ! If we're not copying the transpose of `h`, then the max degree of
-    ! `g` is the same as the max degree of `h`.
-    else
-        g%max_d = h%get_max_degree()
-    endif
-
-    ! Knowing the max degree of `g`, allocate space for the `node` array 
+    g%max_d = maxval(g%degrees)
     allocate(g%node(g%max_d, g%n))
     g%node = 0
 
-    ! Iterate through the edges of `h`
-    cursor = h%make_cursor()
-    do while(.not. cursor%done())
-        call h%get_edges(edges, cursor, batch_size, num_returned)
+    ! We're using it as a temporary for now, fear not it'll be restored
+    g%degrees = 0
 
-        ! Add each edge of `h` into `g`
+    cursor = get_cursor()
+
+    do while (.not. cursor%done())
+        call iterator(edges, cursor, batch_size, num_returned)
+
         do k = 1, num_returned
             i = edges(ord(1), k)
             j = edges(ord(2), k)
 
             if (.not. g%connected(i, j)) then
                 d = g%degrees(i)
-                g%node(d + 1 :, i) = j
-
+                g%node(d+1:, i) = j
                 g%degrees(i) = g%degrees(i) + 1
             endif
         enddo
     enddo
 
-end subroutine ellpack_graph_copy
+end subroutine ellpack_graph_init_from_iterator
 
 
 

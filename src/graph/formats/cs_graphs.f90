@@ -20,8 +20,8 @@ type, extends(graph_interface) :: cs_graph                                 !
 contains
     !--------------
     ! Constructors
-    procedure :: init => cs_graph_init
-    procedure :: copy => cs_graph_copy
+    procedure :: init_empty => cs_graph_init
+    procedure :: init_from_iterator => cs_graph_init_from_iterator
 
     !-----------
     ! Accessors
@@ -106,74 +106,67 @@ end subroutine cs_graph_init
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_graph_copy(g, h, trans)                                      !
+subroutine cs_graph_init_from_iterator(g, n, m, &                          !
+                                            & iterator, get_cursor, trans) !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(cs_graph), intent(inout)     :: g
-    class(graph_interface), intent(in) :: h
+    class(cs_graph), intent(inout) :: g
+    integer, intent(in) :: n, m
+    procedure(edge_iterator) :: iterator
+    procedure(new_cursor) :: get_cursor
     logical, intent(in), optional :: trans
     ! local variables
-    integer :: i, j, k, l, ord(2), nv(2)
-    integer :: num_returned, edges(2,batch_size)
+    integer :: ord(2)
+    integer :: i, j, k, l
+    integer :: num_returned, edges(2, batch_size)
     type(graph_edge_cursor) :: cursor
 
     call g%add_reference()
 
-    nv = [h%n, h%m]
     ord = [1, 2]
-
-    ! Check whether we're copying h or h with all directed edes reversed
     if (present(trans)) then
-        if (trans) then
-            nv = [h%m, h%n]
-            ord = [2, 1]
-        endif
+        if (trans) ord = [2, 1]
     endif
 
-    ! Copy all of h's attributes to g
-    g%n = nv(1)
-    g%m = nv(2)
-    g%ne = h%get_num_edges()
+    g%n = n
+    g%m = m
 
-    ! Allocate g's ptr and node arrays
-    allocate(g%ptr(g%n+1), g%node(g%ne))
+    cursor = get_cursor()
 
-    ! Fill out the ptr array
+    g%ne = cursor%last
+
+    allocate(g%ptr(g%n + 1), g%node(g%ne))
+
+    ! Fill the ptr array
     g%ptr = 0
 
-    ! Iterate through the edges of h first to fill out the ptr array of g
-    cursor = h%make_cursor()
-    do while(.not. cursor%done())
-        ! Get a chunk of edges from h
-        call h%get_edges(edges, cursor, batch_size, num_returned)
+    do while (.not. cursor%done())
+        call iterator(edges, cursor, batch_size, num_returned)
 
-        ! For each edge,
         do k = 1, num_returned
             i = edges(ord(1), k)
-            j = edges(ord(2), k)
-
             g%ptr(i + 1) = g%ptr(i + 1) + 1
         enddo
     enddo
 
     g%ptr(1) = 1
     do i = 1, g%n
-        g%ptr(i + 1) = g%ptr(i) + g%ptr(i + 1)
+        g%ptr(i + 1) = g%ptr(i + 1) + g%ptr(i)
     enddo
 
-    ! Iterate through the edges of h again to fill the node array of g
-    cursor = h%make_cursor()
-
+    ! Iterate through all the edges again to fill the array `node`
     g%node = 0
 
-    do while(.not. cursor%done())
-        call h%get_edges(edges, cursor, batch_size, num_returned)
+    cursor = get_cursor()
+
+    do while (.not. cursor%done())
+        call iterator(edges, cursor, batch_size, num_returned)
 
         do k = 1,num_returned
             i = edges(ord(1), k)
             j = edges(ord(2), k)
 
-            !TODO check that this works, try to make it more efficient
+            !TODO try to make it more efficient
             do l = g%ptr(i), g%ptr(i + 1) - 1
                 ! We need this provision for copying graphs whose iterators
                 ! might return the same edge more than once
@@ -200,7 +193,7 @@ subroutine cs_graph_copy(g, h, trans)                                      !
         g%max_d = max(g%max_d, g%ptr(i + 1) - g%ptr(i))
     enddo
 
-end subroutine cs_graph_copy
+end subroutine cs_graph_init_from_iterator
 
 
 
