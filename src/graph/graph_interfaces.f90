@@ -180,7 +180,8 @@ abstract interface                                                         !
 
     subroutine init_graph_from_iterator_ifc(g, n, m, &
                                             & iterator, get_cursor, trans)
-        import :: graph_interface, graph_edge_cursor
+        import :: graph_interface, graph_edge_cursor, &
+                                            & new_cursor, edge_iterator
         class(graph_interface), intent(inout) :: g
         integer, intent(in) :: n, m
         procedure(edge_iterator) :: iterator
