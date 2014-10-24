@@ -17,8 +17,8 @@ type, extends(graph_interface) :: ll_graph                                 !
 contains
     !--------------
     ! Constructors
-    procedure :: init_empty => ll_graph_init
-    procedure :: init_from_iterator => ll_graph_init_from_iterator
+    procedure :: init => ll_graph_init
+    procedure :: build => ll_graph_build
 
     !-----------
     ! Accessors
@@ -100,13 +100,12 @@ end subroutine ll_graph_init
 
 
 !--------------------------------------------------------------------------!
-subroutine ll_graph_init_from_iterator(g, n, m, &                          !
-                                            & iterator, get_cursor, trans) !
+subroutine ll_graph_build(g, n, m, get_edges, make_cursor, trans)          !
 !--------------------------------------------------------------------------!
     class(ll_graph), intent(inout) :: g
     integer, intent(in) :: n, m
-    procedure(edge_iterator) :: iterator
-    procedure(new_cursor) :: get_cursor
+    procedure(get_edges_interface) :: get_edges
+    procedure(make_cursor_interface) :: make_cursor
     logical, intent(in), optional :: trans
     ! local variables
     integer :: ord(2)
@@ -121,10 +120,10 @@ subroutine ll_graph_init_from_iterator(g, n, m, &                          !
 
     call g%init(n, m)
 
-    cursor = get_cursor()
+    cursor = make_cursor()
 
     do while (.not. cursor%done())
-        call iterator(edges, cursor, batch_size, num_returned)
+        call get_edges(edges, cursor, batch_size, num_returned)
 
         do k = 1, num_returned
             i = edges(ord(1), k)
@@ -134,7 +133,7 @@ subroutine ll_graph_init_from_iterator(g, n, m, &                          !
         enddo
     enddo
 
-end subroutine ll_graph_init_from_iterator
+end subroutine ll_graph_build
 
 
 

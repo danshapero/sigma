@@ -25,12 +25,10 @@ contains
     !--------------
     ! Constructors
     !--------------
-    generic :: init => init_empty, init_from_iterator
-
-    procedure(init_graph_ifc), deferred :: init_empty
+    procedure(init_graph_ifc), deferred :: init
     ! Initialize an empty graph
 
-    procedure(init_graph_from_iterator_ifc), deferred :: init_from_iterator
+    procedure(build_graph_ifc), deferred :: build
     ! Initialize a graph and fill its values from an iterator callback
 
     procedure :: copy => copy_graph
@@ -152,18 +150,18 @@ interface                                                                  !
 ! that can be called to get a batch of edges from somewhere. That could be !
 ! another graph, a sparse matrix, a file, etc.                             !
 !--------------------------------------------------------------------------!
-    function new_cursor() result(cursor)
+    function make_cursor_interface() result(cursor)
         import :: graph_edge_cursor
         type(graph_edge_cursor) :: cursor
-    end function
+    end function make_cursor_interface
 
-    subroutine edge_iterator(edges, cursor, num_edges, num_returned)
+    subroutine get_edges_interface(edges, cursor, num_edges, num_returned)
         import :: graph_edge_cursor
         integer, intent(in) :: num_edges
         integer, intent(out) :: edges(2, num_edges)
         type(graph_edge_cursor), intent(inout) :: cursor
         integer, intent(out) :: num_returned
-    end subroutine edge_iterator
+    end subroutine get_edges_interface
 end interface
 
 
@@ -178,16 +176,15 @@ abstract interface                                                         !
         integer, intent(in), optional :: m
     end subroutine init_graph_ifc
 
-    subroutine init_graph_from_iterator_ifc(g, n, m, &
-                                            & iterator, get_cursor, trans)
+    subroutine build_graph_ifc(g, n, m, get_edges, make_cursor, trans)
         import :: graph_interface, graph_edge_cursor, &
-                                            & new_cursor, edge_iterator
+                               & make_cursor_interface, get_edges_interface
         class(graph_interface), intent(inout) :: g
         integer, intent(in) :: n, m
-        procedure(edge_iterator) :: iterator
-        procedure(new_cursor) :: get_cursor
+        procedure(get_edges_interface) :: get_edges
+        procedure(make_cursor_interface) :: make_cursor
         logical, intent(in), optional :: trans
-    end subroutine init_graph_from_iterator_ifc
+    end subroutine build_graph_ifc
 
     function get_num_edges_ifc(g) result(k)
         import :: graph_interface
@@ -292,7 +289,7 @@ subroutine copy_graph(g, h, trans)                                         !
     nv = [h%n, h%m]
     if (tr) nv = [h%m, h%n]
 
-    call g%init_from_iterator(nv(1), nv(2), iterator, get_cursor, trans)
+    call g%build(nv(1), nv(2), iterator, get_cursor, trans)
 
 contains
 

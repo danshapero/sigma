@@ -20,8 +20,8 @@ type, extends(graph_interface) :: cs_graph                                 !
 contains
     !--------------
     ! Constructors
-    procedure :: init_empty => cs_graph_init
-    procedure :: init_from_iterator => cs_graph_init_from_iterator
+    procedure :: init => cs_graph_init
+    procedure :: build => cs_graph_build
 
     !-----------
     ! Accessors
@@ -106,14 +106,13 @@ end subroutine cs_graph_init
 
 
 !--------------------------------------------------------------------------!
-subroutine cs_graph_init_from_iterator(g, n, m, &                          !
-                                            & iterator, get_cursor, trans) !
+subroutine cs_graph_build(g, n, m, get_edges, make_cursor, trans)          !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(cs_graph), intent(inout) :: g
     integer, intent(in) :: n, m
-    procedure(edge_iterator) :: iterator
-    procedure(new_cursor) :: get_cursor
+    procedure(get_edges_interface) :: get_edges
+    procedure(make_cursor_interface) :: make_cursor
     logical, intent(in), optional :: trans
     ! local variables
     integer :: ord(2)
@@ -131,7 +130,7 @@ subroutine cs_graph_init_from_iterator(g, n, m, &                          !
     g%n = n
     g%m = m
 
-    cursor = get_cursor()
+    cursor = make_cursor()
 
     g%ne = cursor%last
 
@@ -141,7 +140,7 @@ subroutine cs_graph_init_from_iterator(g, n, m, &                          !
     g%ptr = 0
 
     do while (.not. cursor%done())
-        call iterator(edges, cursor, batch_size, num_returned)
+        call get_edges(edges, cursor, batch_size, num_returned)
 
         do k = 1, num_returned
             i = edges(ord(1), k)
@@ -157,10 +156,10 @@ subroutine cs_graph_init_from_iterator(g, n, m, &                          !
     ! Iterate through all the edges again to fill the array `node`
     g%node = 0
 
-    cursor = get_cursor()
+    cursor = make_cursor()
 
     do while (.not. cursor%done())
-        call iterator(edges, cursor, batch_size, num_returned)
+        call get_edges(edges, cursor, batch_size, num_returned)
 
         do k = 1,num_returned
             i = edges(ord(1), k)
@@ -193,7 +192,7 @@ subroutine cs_graph_init_from_iterator(g, n, m, &                          !
         g%max_d = max(g%max_d, g%ptr(i + 1) - g%ptr(i))
     enddo
 
-end subroutine cs_graph_init_from_iterator
+end subroutine cs_graph_build
 
 
 

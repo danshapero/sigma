@@ -15,8 +15,8 @@ type, extends(graph_interface) :: coo_graph                                !
 contains
     !--------------
     ! Constructors
-    procedure :: init_empty => coo_graph_init
-    procedure :: init_from_iterator => coo_graph_init_from_iterator
+    procedure :: init => coo_graph_init
+    procedure :: build => coo_graph_build
 
     !-----------
     ! Accessors
@@ -89,14 +89,13 @@ end subroutine coo_graph_init
 
 
 !--------------------------------------------------------------------------!
-subroutine coo_graph_init_from_iterator(g, n, m, &                         !
-                                            & iterator, get_cursor, trans) !
+subroutine coo_graph_build(g, n, m, get_edges, make_cursor, trans)         !
 !--------------------------------------------------------------------------!
     ! input/output variables
     class(coo_graph), intent(inout) :: g
     integer, intent(in) :: n, m
-    procedure(edge_iterator) :: iterator
-    procedure(new_cursor) :: get_cursor
+    procedure(get_edges_interface) :: get_edges
+    procedure(make_cursor_interface) :: make_cursor
     logical, intent(in), optional :: trans
     ! local variables
     integer :: ord(2)
@@ -114,7 +113,7 @@ subroutine coo_graph_init_from_iterator(g, n, m, &                         !
     g%n = n
     g%m = m
 
-    cursor = get_cursor()
+    cursor = make_cursor()
 
     g%ne = cursor%last
 
@@ -122,7 +121,7 @@ subroutine coo_graph_init_from_iterator(g, n, m, &                         !
     call g%edges(2)%init(capacity = g%ne + 16)
 
     do while (.not. cursor%done())
-        call iterator(edges, cursor, batch_size, num_returned)
+        call get_edges(edges, cursor, batch_size, num_returned)
 
         do k = 1, num_returned
             i = edges(ord(1), k)
@@ -133,8 +132,7 @@ subroutine coo_graph_init_from_iterator(g, n, m, &                         !
         enddo
     enddo
 
-
-end subroutine coo_graph_init_from_iterator
+end subroutine coo_graph_build
 
 
 
