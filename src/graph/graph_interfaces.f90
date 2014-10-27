@@ -158,9 +158,8 @@ interface                                                                  !
     subroutine get_edges_interface(edges, cursor, num_edges, num_returned)
         import :: graph_edge_cursor
         integer, intent(in) :: num_edges
-        integer, intent(out) :: edges(2, num_edges)
+        integer, intent(out) :: edges(2, num_edges), num_returned
         type(graph_edge_cursor), intent(inout) :: cursor
-        integer, intent(out) :: num_returned
     end subroutine get_edges_interface
 end interface
 

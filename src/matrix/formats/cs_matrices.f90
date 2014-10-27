@@ -33,12 +33,13 @@ type, abstract, extends(sparse_matrix_interface) :: cs_matrix              !
 !--------------------------------------------------------------------------!
     class(cs_graph), pointer :: g => null()
     real(dp), allocatable :: val(:)
-    logical, private :: get_row_is_fast, get_col_is_fast
+    logical, private :: get_row_is_fast = .false., get_col_is_fast = .false.
 contains
     !--------------
     ! Constructors
     !--------------
     procedure :: set_graph => cs_matrix_set_graph
+    procedure :: copy_graph => cs_matrix_copy_graph
 
 
     !-----------
@@ -113,7 +114,6 @@ contains
     ! Constructors
     !--------------
     procedure :: set_dimensions => csr_matrix_set_dimensions
-    procedure :: copy_graph => csr_matrix_copy_graph
 
     !-----------
     ! Accessors
@@ -157,7 +157,6 @@ contains
     ! Constructors
     !--------------
     procedure :: set_dimensions => csc_matrix_set_dimensions
-    procedure :: copy_graph => csc_matrix_copy_graph
 
     !-----------
     ! Accessors
@@ -226,6 +225,42 @@ contains
 !==========================================================================!
 !==== Constructors                                                     ====!
 !==========================================================================!
+
+!--------------------------------------------------------------------------!
+subroutine cs_matrix_copy_graph(A, g)                                      !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(cs_matrix), intent(inout) :: A
+    class(graph_interface), intent(in) :: g
+    ! local variables
+    logical :: tr
+
+    ! Make sure the dimensions of the matrix and the graph we're copying
+    ! are consistent
+    if (A%nrow /= g%n .or. A%ncol /= g%m) then
+        print *, "Attempted to copy CS matrix connectivity structure from"
+        print *, "a graph of inconsistent dimensions."
+        print *, "Dimensions of matrix:", A%nrow, A%ncol
+        print *, "Dimensions of graph: ", g%n, g%m
+        call exit(1)
+    endif
+
+    ! Allocate the matrix's connectivity structure if need be
+    if (.not. associated(A%g)) allocate(A%g)
+
+    ! Copy the input graph to the matrix's connectivity structure. If the
+    ! matrix is in column-major ordering, we're actually copying the
+    ! transpose of the graph.
+    call A%g%copy(g, trans = A%get_col_is_fast)
+
+    allocate(A%val(g%get_num_edges()))
+    A%val = 0.0_dp
+
+    A%graph_set = .true.
+
+end subroutine cs_matrix_copy_graph
+
+
 
 !--------------------------------------------------------------------------!
 subroutine cs_matrix_set_graph(A, g)                                       !
@@ -598,32 +633,6 @@ end subroutine csr_matrix_set_dimensions
 
 
 !--------------------------------------------------------------------------!
-subroutine csr_matrix_copy_graph(A, g)                                     !
-!--------------------------------------------------------------------------!
-    class(csr_matrix), intent(inout) :: A
-    class(graph_interface), intent(in) :: g
-
-    if (A%nrow /= g%n .or. A%ncol /= g%m) then
-        print *, 'Attempted to set CSR matrix connectivity structure to'
-        print *, 'graph with inconsistent dimensions.'
-        print *, 'Dimensions of matrix:', A%nrow, A%ncol
-        print *, 'Dimensions of graph:', g%n, g%m
-        call exit(1)
-    endif
-
-    if (.not. associated(A%g)) allocate(A%g)
-    call A%g%copy(g)
-
-    allocate(A%val(g%get_num_edges()))
-    A%val = 0.0_dp
-
-    A%graph_set = .true.
-
-end subroutine csr_matrix_copy_graph
-
-
-
-!--------------------------------------------------------------------------!
 subroutine csc_matrix_set_dimensions(A, nrow, ncol)                        !
 !--------------------------------------------------------------------------!
     class(csc_matrix), intent(inout) :: A
@@ -640,32 +649,6 @@ subroutine csc_matrix_set_dimensions(A, nrow, ncol)                        !
     A%get_col_is_fast = .true.
 
 end subroutine csc_matrix_set_dimensions
-
-
-
-!--------------------------------------------------------------------------!
-subroutine csc_matrix_copy_graph(A, g)                                     !
-!--------------------------------------------------------------------------!
-    class(csc_matrix), intent(inout) :: A
-    class(graph_interface), intent(in) :: g
-
-    if (A%nrow /= g%n .or. A%ncol /= g%m) then
-        print *, 'Attempted to set CSC matrix connectivity structure to'
-        print *, 'graph with inconsistent dimensions.'
-        print *, 'Dimensions of matrix:', A%nrow, A%ncol
-        print *, 'Dimensions of graph:', g%n, g%m
-        call exit(1)
-    endif
-
-    if (.not. associated(A%g)) allocate(A%g)
-    call A%g%copy(g, trans = .true.)
-
-    allocate(A%val(g%get_num_edges()))
-    A%val = 0.0_dp
-
-    A%graph_set = .true.
-
-end subroutine csc_matrix_copy_graph
 
 
 
