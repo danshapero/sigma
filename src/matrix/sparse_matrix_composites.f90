@@ -67,6 +67,7 @@ contains
 
     procedure :: copy_graph => composite_mat_copy_graph
     procedure :: set_graph  => composite_mat_set_graph
+    procedure :: copy_matrix => composite_mat_copy_matrix
     ! Create the connectivity structure of a leaf matrix
 
     procedure :: copy_graph_submat => composite_mat_copy_graph_submat
@@ -360,6 +361,35 @@ subroutine composite_mat_set_graph(A, g)                                   !
     call A%sub_mats(1, 1)%mat%set_graph(g)
 
 end subroutine composite_mat_set_graph
+
+
+
+!--------------------------------------------------------------------------!
+subroutine composite_mat_copy_matrix(A, B, trans)                          !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix), intent(inout) :: A
+    class(sparse_matrix_interface), intent(in) :: B
+    logical, intent(in), optional :: trans
+
+    if (.not. A%dimensions_set) then
+        print *, "Attempted to copy to a sparse matrix which has not had"
+        print *, "had its dimensions set."
+        call exit(1)
+    endif
+
+    if (A%block_sizes_set .and. .not. A%is_leaf()) then
+        print *, "Attempted to copy to a composite matrix which is not a"
+        print *, "leaf."
+        call exit(1)
+    endif
+
+    if (.not. A%block_sizes_set) then
+        call A%set_block_sizes( [A%nrow], [A%ncol] )
+    endif
+
+    call A%sub_mats(1, 1)%mat%copy_matrix(B, trans)
+
+end subroutine composite_mat_copy_matrix
 
 
 

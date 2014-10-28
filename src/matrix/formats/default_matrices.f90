@@ -35,6 +35,7 @@ contains
     !--------------
     procedure :: copy_graph => default_matrix_copy_graph
     procedure :: set_graph => default_matrix_set_graph
+    procedure :: copy_matrix => default_matrix_copy_matrix
 
 
     !-----------
@@ -240,6 +241,37 @@ subroutine default_matrix_set_graph(A, g)                                  !
     A%graph_set = .true.
 
 end subroutine default_matrix_set_graph
+
+
+
+!--------------------------------------------------------------------------!
+subroutine default_matrix_copy_matrix(A, B, trans)                         !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(default_matrix), intent(inout) :: A
+    class(sparse_matrix_interface), intent(in) :: B
+    logical, intent(in), optional :: trans
+    ! local variables
+    logical :: tr
+    integer :: nv(2)
+
+    tr = A%ord(1) == 2
+
+    if (present(trans)) tr = tr .neqv. trans
+
+    nv = [B%nrow, B%ncol]
+    if (tr) nv = [B%ncol, B%nrow]
+
+    call check_source_dimensions(A, nv(1), nv(2))
+
+    if (.not. associated(A%g)) allocate(ll_graph :: A%g)
+    call build_graph_from_matrix(A%g, B, tr)
+
+    A%graph_set = .true.
+
+    call copy_matrix_values(A, B, tr)
+
+end subroutine default_matrix_copy_matrix
 
 
 

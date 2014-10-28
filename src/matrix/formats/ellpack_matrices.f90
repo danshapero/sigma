@@ -36,6 +36,7 @@ contains
     !--------------
     procedure :: copy_graph => ellpack_matrix_copy_graph
     procedure :: set_graph => ellpack_matrix_set_graph
+    procedure :: copy_matrix => ellpack_matrix_copy_matrix
 
 
     !-----------
@@ -159,6 +160,36 @@ subroutine ellpack_matrix_set_graph(A, g)                                  !
     A%graph_set = .true.
 
 end subroutine ellpack_matrix_set_graph
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ellpack_matrix_copy_matrix(A, B, trans)                         !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(ellpack_matrix), intent(inout) :: A
+    class(sparse_matrix_interface), intent(in) :: B
+    logical, intent(in), optional :: trans
+    ! local variables
+    logical :: tr
+    integer :: nv(2)
+
+    tr = .false.
+    if (present(trans)) tr = trans
+
+    nv = [B%nrow, B%ncol]
+    if (tr) nv = [B%ncol, B%nrow]
+
+    call check_source_dimensions(A, nv(1), nv(2))
+
+    if (.not. associated(A%g)) allocate(A%g)
+    call build_graph_from_matrix(A%g, B, trans)
+
+    A%graph_set = .true.
+
+    call copy_matrix_values(A, B, trans)
+
+end subroutine ellpack_matrix_copy_matrix
 
 
 

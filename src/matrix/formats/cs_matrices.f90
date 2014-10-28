@@ -38,8 +38,9 @@ contains
     !--------------
     ! Constructors
     !--------------
-    procedure :: set_graph => cs_matrix_set_graph
     procedure :: copy_graph => cs_matrix_copy_graph
+    procedure :: set_graph => cs_matrix_set_graph
+    procedure :: copy_matrix => cs_matrix_copy_matrix
 
 
     !-----------
@@ -286,6 +287,36 @@ subroutine cs_matrix_set_graph(A, g)                                       !
     A%graph_set = .true.
 
 end subroutine cs_matrix_set_graph
+
+
+
+!--------------------------------------------------------------------------!
+subroutine cs_matrix_copy_matrix(A, B, trans)                              !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(cs_matrix), intent(inout) :: A
+    class(sparse_matrix_interface), intent(in) :: B
+    logical, intent(in), optional :: trans
+    ! local variables
+    logical :: tr
+    integer :: nv(2)
+
+    tr = A%get_col_is_fast
+    if (present(trans)) tr = tr .neqv. trans
+
+    nv = [B%nrow, B%ncol]
+    if (tr) nv = [B%ncol, B%nrow]
+
+    call check_source_dimensions(A, nv(1), nv(2))
+
+    if (.not. associated(A%g)) allocate(A%g)
+    call build_graph_from_matrix(A%g, B, tr)
+
+    A%graph_set = .true.
+
+    call copy_matrix_values(A, B, tr)
+
+end subroutine cs_matrix_copy_matrix
 
 
 

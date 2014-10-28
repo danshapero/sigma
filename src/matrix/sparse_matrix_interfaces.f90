@@ -60,6 +60,10 @@ contains
     ! is of a type compatible with the invoking matrix. If so, make the
     ! matrix point to that graph; if not, throw an error.
 
+    procedure(sparse_mat_copy_matrix_ifc), deferred :: copy_matrix
+    ! Copy the sparse matrix's structure and values from another sparse
+    ! sparse matrix. The copied matrix need not be of the same format.
+
 
     !-----------
     ! Accessors
@@ -181,6 +185,13 @@ abstract interface                                                         !
         class(sparse_matrix_interface), intent(inout) :: A
         class(graph_interface), target, intent(in) :: g
     end subroutine sparse_mat_set_graph_ifc
+
+    subroutine sparse_mat_copy_matrix_ifc(A, B, trans)
+        import :: sparse_matrix_interface
+        class(sparse_matrix_interface), intent(inout) :: A
+        class(sparse_matrix_interface), intent(in) :: B
+        logical, intent(in), optional :: trans
+    end subroutine sparse_mat_copy_matrix_ifc
 
     function sparse_mat_get_nnz_ifc(A) result(nnz)
         import :: sparse_matrix_interface
@@ -548,7 +559,19 @@ end subroutine sparse_matrix_to_file
 
 
 
-subroutine check_source_dimensions(A, nrow, ncol)
+
+!==========================================================================!
+!==== Other useful procedures                                          ====!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
+subroutine check_source_dimensions(A, nrow, ncol)                          !
+!--------------------------------------------------------------------------!
+!     This is a common procedure to check that the dimensions of a sparse  !
+! matrix agree with the dimensions of a potential input source to build    !
+! its structure, e.g. a graph or matrix to copy. It is called in the       !
+! various modules for implementing the sparse matrix interface.            !
+!--------------------------------------------------------------------------!
     class(sparse_matrix_interface), intent(in) :: A
     integer, intent(in) :: nrow, ncol
 
@@ -567,6 +590,91 @@ subroutine check_source_dimensions(A, nrow, ncol)
     endif
 
 end subroutine check_source_dimensions
+
+
+
+!--------------------------------------------------------------------------!
+subroutine build_graph_from_matrix(g, B, trans)                            !
+!--------------------------------------------------------------------------!
+!     This procedure copies the structure of a matrix `B` or its transpose !
+! to a graph `g` with callbacks that iterate over all the entries of `B`.  !
+! It is a helper routine for copying one matrix to another; first, this    !
+! procedure is used to create the graph, then the values of `B` are copied !
+! in the following procedure.                                              !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(graph_interface), intent(inout) :: g
+    class(sparse_matrix_interface), intent(in) :: B
+    logical, intent(in), optional :: trans
+    ! local variables
+    integer :: nv(2)
+
+    nv = [B%nrow, B%ncol]
+    if (present(trans)) then
+        if (trans) nv = [B%ncol, B%nrow]
+    endif
+
+    call g%build(nv(1), nv(2), get_edges, make_cursor, trans)
+
+contains
+    !----------------------------------------------------------------------!
+    ! Callbacks                                                            !
+    !----------------------------------------------------------------------!
+    function make_cursor() result(cursor)
+        type(graph_edge_cursor) :: cursor
+
+        cursor = B%make_cursor()
+
+    end function make_cursor
+
+
+    subroutine get_edges(edges, cursor, num_edges, num_returned)
+        integer, intent(in) :: num_edges
+        integer, intent(out) :: edges(2, num_edges), num_returned
+        type(graph_edge_cursor), intent(inout) :: cursor
+
+        call B%get_edges(edges, cursor, num_edges, num_returned)
+
+    end subroutine get_edges
+
+end subroutine build_graph_from_matrix
+
+
+
+!--------------------------------------------------------------------------!
+subroutine copy_matrix_values(A, B, trans)                                 !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix_interface), intent(inout) :: A
+    class(sparse_matrix_interface), intent(in) :: B
+    logical, intent(in), optional :: trans
+    ! local variables
+    integer :: ord(2), i, j, k
+    integer :: num_returned, edges(2, batch_size)
+    real(dp) :: vals(batch_size), z
+    type(graph_edge_cursor) :: cursor
+
+    ord = [1, 2]
+    if (present(trans)) then
+        if (trans) ord = [2, 1]
+    endif
+
+    cursor = B%make_cursor()
+
+    do while (.not. cursor%done())
+        call B%get_entries(edges, vals, cursor, batch_size, num_returned)
+
+        do k = 1, num_returned
+            i = edges(ord(1), k)
+            j = edges(ord(2), k)
+            z = vals(k)
+
+            call A%set(i, j, z)
+        enddo
+    enddo
+
+end subroutine copy_matrix_values
+
 
 
 
