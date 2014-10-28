@@ -257,8 +257,18 @@ end subroutine cs_matrix_copy_graph
 !--------------------------------------------------------------------------!
 subroutine cs_matrix_set_graph(A, g)                                       !
 !--------------------------------------------------------------------------!
+    ! input/output variables
     class(cs_matrix), intent(inout) :: A
     class(graph_interface), target, intent(in) :: g
+    ! local variables
+    integer :: nv(2)
+
+    ! Make sure that the input graph's dimensions are consistent with those
+    ! of the matrix `A`. If `A` is a column-matrix, the dimensions have to
+    ! be the reverse of what they are for a row matrix.
+    nv = [g%n, g%m]
+    if (A%get_col_is_fast) nv = [g%m, g%n]
+    call check_source_dimensions(A, nv(1), nv(2))
 
     select type(g)
         class is(cs_graph)

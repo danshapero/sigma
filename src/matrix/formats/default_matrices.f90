@@ -229,6 +229,7 @@ subroutine default_matrix_set_graph(A, g)                                  !
     class(graph_interface), target, intent(in) :: g
 
     call A%set_ordering()
+    call check_source_dimensions(A, g%n, g%m)
 
     A%g => g
     call A%g%add_reference()
