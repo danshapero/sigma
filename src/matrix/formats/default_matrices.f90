@@ -197,21 +197,10 @@ subroutine default_matrix_copy_graph(A, g)                                 !
     class(default_matrix), intent(inout) :: A
     class(graph_interface), intent(in) :: g
     ! local variables
-    integer :: nv(2)
     logical :: trans
 
     call A%set_ordering()
-
-    nv = [g%n, g%m]
-    nv = nv(A%ord)
-
-    if (A%nrow /= nv(1) .or. A%ncol /= nv(2)) then
-        print *, 'Attemped to set default matrix connectivity structure to'
-        print *, 'graph with inconsistent dimensions.'
-        print *, 'Dimensions of matrix:', A%nrow, A%ncol
-        print *, 'Dimensions of graph: ', nv(1), nv(2)
-        call exit(1)
-    endif
+    call check_source_dimensions(A, g%n, g%m)
 
     ! Default to a list-of-lists graph for the underlying matrix format.
     ! We could choose the same format as the input graph, but this will
@@ -219,6 +208,8 @@ subroutine default_matrix_copy_graph(A, g)                                 !
     !TODO: make it allocate A%g as a mold of g
     if (.not. associated(A%g)) allocate(ll_graph :: A%g)
 
+    ! Copy the input graph `g` to the connectivity structure of `A`. If `A`
+    ! is in column-major ordering, we actually copy the transpose of `g`.
     trans = A%ord(1) == 2
     call A%g%copy(g, trans)
 

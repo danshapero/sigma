@@ -235,15 +235,7 @@ subroutine cs_matrix_copy_graph(A, g)                                      !
     ! local variables
     logical :: tr
 
-    ! Make sure the dimensions of the matrix and the graph we're copying
-    ! are consistent
-    if (A%nrow /= g%n .or. A%ncol /= g%m) then
-        print *, "Attempted to copy CS matrix connectivity structure from"
-        print *, "a graph of inconsistent dimensions."
-        print *, "Dimensions of matrix:", A%nrow, A%ncol
-        print *, "Dimensions of graph: ", g%n, g%m
-        call exit(1)
-    endif
+    call check_source_dimensions(A, g%n, g%m)
 
     ! Allocate the matrix's connectivity structure if need be
     if (.not. associated(A%g)) allocate(A%g)

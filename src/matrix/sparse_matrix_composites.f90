@@ -312,13 +312,7 @@ subroutine composite_mat_copy_graph(A, g)                                  !
     class(sparse_matrix), intent(inout) :: A
     class(graph_interface), intent(in) :: g
 
-    ! The matrix dimensions must have been set before giving it a graph
-    ! structure
-    if (.not. A%dimensions_set) then
-        print *, "Attempted to copy a graph's structure to a composite "
-        print *, "matrix which has not had its dimensions set."
-        call exit(1)
-    endif
+    call check_source_dimensions(A, g%n, g%m)
 
     ! Ensure that we're not treating a composite matrix as if it were a leaf
     if (A%block_sizes_set .and. .not. A%is_leaf()) then

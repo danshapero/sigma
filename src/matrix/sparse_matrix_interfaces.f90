@@ -548,6 +548,27 @@ end subroutine sparse_matrix_to_file
 
 
 
+subroutine check_source_dimensions(A, nrow, ncol)
+    class(sparse_matrix_interface), intent(in) :: A
+    integer, intent(in) :: nrow, ncol
+
+    if (.not. A%dimensions_set) then
+        print *, "Attempted to build the structure of a sparse matrix which"
+        print *, "has not yet had its dimensions set."
+        call exit(1)
+    endif
+
+    if (A%nrow /= nrow .or. A%ncol /= ncol) then
+        print *, "Attempted to build the structure of a sparse matrix with"
+        print *, "inconsistent dimensions."
+        print *, "Matrix dimensions:", A%nrow, A%ncol
+        print *, "Source dimensions:", nrow, ncol
+        call exit(1)
+    endif
+
+end subroutine check_source_dimensions
+
+
 
 end module sparse_matrix_interfaces
 

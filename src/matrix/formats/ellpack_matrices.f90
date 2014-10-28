@@ -119,13 +119,7 @@ subroutine ellpack_matrix_copy_graph(A, g)                                 !
     class(ellpack_matrix), intent(inout) :: A
     class(graph_interface), intent(in) :: g
 
-    if (A%nrow /= g%n .or. A%ncol /= g%m) then
-        print *, 'Attemped to set ellpack matrix connectivity structure to'
-        print *, 'graph with inconsistent dimensions.'
-        print *, 'Dimensions of matrix:', A%nrow, A%ncol
-        print *, 'Dimensions of graph: ', g%n, g%m
-        call exit(1)
-    endif
+    call check_source_dimensions(A, g%n, g%m)
 
     if (.not. associated(A%g)) allocate(A%g)
     call A%g%copy(g)
