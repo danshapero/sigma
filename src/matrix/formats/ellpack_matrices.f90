@@ -187,6 +187,10 @@ subroutine ellpack_matrix_copy_matrix(A, B, trans)                         !
 
     A%graph_set = .true.
 
+    A%nnz = A%g%get_num_edges()
+    allocate(A%val(A%g%max_d, A%g%n))
+    A%val = 0.0_dp
+
     call copy_matrix_values(A, B, trans)
 
 end subroutine ellpack_matrix_copy_matrix

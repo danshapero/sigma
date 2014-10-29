@@ -255,9 +255,10 @@ subroutine default_matrix_copy_matrix(A, B, trans)                         !
     logical :: tr
     integer :: nv(2)
 
-    tr = A%ord(1) == 2
+    call A%set_ordering()
 
-    if (present(trans)) tr = tr .neqv. trans
+    tr = .false.
+    if (present(trans)) tr = trans
 
     nv = [B%nrow, B%ncol]
     if (tr) nv = [B%ncol, B%nrow]
@@ -265,9 +266,13 @@ subroutine default_matrix_copy_matrix(A, B, trans)                         !
     call check_source_dimensions(A, nv(1), nv(2))
 
     if (.not. associated(A%g)) allocate(ll_graph :: A%g)
-    call build_graph_from_matrix(A%g, B, tr)
+    call build_graph_from_matrix(A%g, B, (A%ord(1) == 2) .neqv. tr)
 
     A%graph_set = .true.
+
+    call A%g%add_reference()
+    allocate(A%val(A%g%get_num_edges()))
+    A%val = 0.0_dp
 
     call copy_matrix_values(A, B, tr)
 

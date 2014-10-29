@@ -230,11 +230,8 @@ contains
 !--------------------------------------------------------------------------!
 subroutine cs_matrix_copy_graph(A, g)                                      !
 !--------------------------------------------------------------------------!
-    ! input/output variables
     class(cs_matrix), intent(inout) :: A
     class(graph_interface), intent(in) :: g
-    ! local variables
-    logical :: tr
 
     call check_source_dimensions(A, g%n, g%m)
 
@@ -301,8 +298,8 @@ subroutine cs_matrix_copy_matrix(A, B, trans)                              !
     logical :: tr
     integer :: nv(2)
 
-    tr = A%get_col_is_fast
-    if (present(trans)) tr = tr .neqv. trans
+    tr = .false.
+    if (present(trans)) tr = trans
 
     nv = [B%nrow, B%ncol]
     if (tr) nv = [B%ncol, B%nrow]
@@ -310,7 +307,11 @@ subroutine cs_matrix_copy_matrix(A, B, trans)                              !
     call check_source_dimensions(A, nv(1), nv(2))
 
     if (.not. associated(A%g)) allocate(A%g)
-    call build_graph_from_matrix(A%g, B, tr)
+    call build_graph_from_matrix(A%g, B, A%get_col_is_fast .neqv. tr)
+
+    call A%g%add_reference()
+    allocate(A%val(A%g%get_num_edges()))
+    A%val = 0.0_dp
 
     A%graph_set = .true.
 

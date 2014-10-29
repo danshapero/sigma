@@ -2,7 +2,7 @@
 program graph_test_copy                                                    !
 !--------------------------------------------------------------------------!
 !     This program tests whether the graph copy constructor works. A       !
-! random linked-list graph `h` is generated, from which a graph `g` is     !
+! random list-of-lists graph `h` is generated, from which a graph `g` is   !
 ! copied for each graph type. The two are then checked for isomorphism.    !
 !--------------------------------------------------------------------------!
 
