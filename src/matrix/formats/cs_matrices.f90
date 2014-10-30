@@ -309,7 +309,6 @@ subroutine cs_matrix_copy_matrix(A, B, trans)                              !
     if (.not. associated(A%g)) allocate(A%g)
     call build_graph_from_matrix(A%g, B, A%get_col_is_fast .neqv. tr)
 
-    call A%g%add_reference()
     allocate(A%val(A%g%get_num_edges()))
     A%val = 0.0_dp
 

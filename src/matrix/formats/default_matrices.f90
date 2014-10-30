@@ -270,7 +270,6 @@ subroutine default_matrix_copy_matrix(A, B, trans)                         !
 
     A%graph_set = .true.
 
-    call A%g%add_reference()
     allocate(A%val(A%g%get_num_edges()))
     A%val = 0.0_dp
 
