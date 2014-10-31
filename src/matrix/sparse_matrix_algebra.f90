@@ -153,6 +153,11 @@ end subroutine sparse_matrix_sum_fill_entries
 !--------------------------------------------------------------------------!
 subroutine sparse_matrix_product(A, B, C)                                  !
 !--------------------------------------------------------------------------!
+! This is a driver routine for computing the product                       !
+!     A = B * C                                                            !
+! of two sparse matrices; it selects the proper implementation to use      !
+! based on whether the factors are stored in row / column major format.    !
+!--------------------------------------------------------------------------!
     ! input/output variables
     class(sparse_matrix_interface), intent(inout) :: A
     class(sparse_matrix_interface), intent(in) :: B, C
@@ -217,11 +222,7 @@ contains
         call g%init(B%nrow, C%ncol)
 
         ! Allocate arrays for getting slices from `B`
-    !    d = C%max_column_degree() ! Haha this doesn't even exist dumbass
-        d = 0
-        do j = 1, B%ncol
-            d = max(d, B%get_column_degree(j))
-        enddo
+        d = B%get_max_column_degree()
         allocate(nodes(d), slice(d))
 
         ! Iterate through all the edges of `C`
@@ -270,13 +271,8 @@ contains
         call A%zero()
 
         ! Allocate arrays for getting slices from `B`
-    !    d = C%max_column_degree() ! Haha this doesn't even exist dumbass
-        d = 0
-        do j = 1, B%ncol
-            d = max(d, B%get_column_degree(j))
-        enddo
+        d = B%get_max_column_degree()
         allocate(nodes(d), slice(d))
-
 
         ! Iterate through all the edges of `C`
         cursor = C%make_cursor()
@@ -342,11 +338,7 @@ contains
         call g%init(B%nrow, C%ncol)
 
         ! Allocate arrays for getting slices from `C`
-    !    d = C%max_row_degree() ! Haha this doesn't even exist dumbass
-        d = 0
-        do i = 1, C%nrow
-            d = max(d, C%get_row_degree(i))
-        enddo
+        d = C%get_max_row_degree()
         allocate(nodes(d), slice(d))
 
         ! Iterate through all the edges of `B`
@@ -395,13 +387,8 @@ contains
         call A%zero()
 
         ! Allocate arrays for getting slices from `C`
-        !d = C%max_row_degree()
-        d = 0
-        do i = 1, C%nrow
-            d = max(d, C%get_row_degree(i))
-        enddo
+        d = C%get_max_row_degree()
         allocate(nodes(d), slice(d))
-
 
         ! Iterate through all the edges of `B`
         cursor = B%make_cursor()
@@ -430,6 +417,125 @@ contains
     end subroutine
 
 end subroutine sparse_matrix_product_C
+
+
+
+
+!--------------------------------------------------------------------------!
+subroutine PtAP(B, A, P)                                                   !
+!--------------------------------------------------------------------------!
+! This procedure computes the congruent product                            !
+!     B = P^T * A * P                                                      !
+! of the sparse matrices A, P. This operation is common in multigrid and   !
+! domain-decomposition methods. It is assumed that the matrix `P` is in a  !
+! format for which getting a matrix row can done quickly, otherwise this   !
+! operation will be very slow.                                             !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix_interface), intent(inout) :: B
+    class(sparse_matrix_interface), intent(in) :: A, P
+    ! local variables
+    integer :: i, j, k, l, m, d
+    real(dp) :: Akl, Pki, Plj
+    ! variables for getting row slices from P
+    integer :: n1, n2, d1, d2
+    integer, allocatable :: nodes1(:), nodes2(:)
+    real(dp), allocatable :: slice1(:), slice2(:)
+    ! variables for iterating through the values of A
+    type(graph_edge_cursor) :: cursor
+    integer :: num_returned, edges(2, batch_size)
+    real(dp) :: vals(batch_size)
+    ! graph for the connectivity structure of B
+    type(ll_graph) :: g
+
+    ! Check that all matrices have the right dimensions
+    if (A%nrow /= A%ncol) then
+        print *, "Cannot perform operation B = P^T * A * P for a non-"
+        print *, "square matrix A!"
+        call exit(1)
+    endif
+
+    if (A%ncol /= P%nrow) then
+        print *, "Dimension mismatch in operation B = P^T * A * P."
+        print *, "Dimension of A:", A%nrow, A%ncol
+        print *, "Dimension of P:", P%nrow, P%ncol
+        call exit(1)
+    endif
+
+    d = P%get_max_row_degree()
+    allocate(nodes1(d), nodes2(d), slice1(d), slice2(d))
+
+    call g%init(P%ncol, P%ncol)
+
+    ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -!
+    ! First, build the connectivity graph of B by iterating over all the   !
+    ! edges of `A` and using the relation                                  !
+    !     B_ij = sum_{k, l} P_ki * A_kl * P_lj                             !
+    !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - !
+    cursor = A%make_cursor()
+    do while (.not. cursor%done())
+        call A%get_edges(edges, cursor, batch_size, num_returned)
+
+        do m = 1, num_returned
+            k = edges(1, m)
+            l = edges(2, m)
+
+            d1 = P%get_row_degree(k)
+            call P%get_row(nodes1, slice1, k)
+
+            d2 = P%get_row_degree(l)
+            call P%get_row(nodes2, slice2, l)
+
+            do n1 = 1, d1
+                i = nodes1(n1)
+
+                do n2 = 1, d2
+                    j = nodes2(n2)
+                    call g%add_edge(i, j)
+                enddo
+            enddo
+        enddo
+    enddo
+
+    call B%init(P%ncol, P%ncol, g)
+    call B%zero()
+
+    call g%destroy()
+
+
+    ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -!
+    ! Fill the entries of B                                                !
+    !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - !
+    cursor = A%make_cursor()
+    do while (.not. cursor%done())
+        call A%get_entries(edges, vals, cursor, batch_size, num_returned)
+
+        do m = 1, num_returned
+            k = edges(1, m)
+            l = edges(2, m)
+            Akl = vals(m)
+
+            d1 = P%get_row_degree(k)
+            call P%get_row(nodes1, slice1, k)
+
+            d2 = P%get_row_degree(l)
+            call P%get_row(nodes2, slice2, l)
+
+            do n1 = 1, d1
+                i = nodes1(n1)
+                Pki = slice1(n1)
+
+                do n2 = 1, d2
+                    j = nodes2(n2)
+                    Plj = slice2(n2)
+
+                    call B%add(i, j, Pki * Akl * Plj)
+                enddo
+            enddo
+        enddo
+    enddo
+
+end subroutine PtAP
 
 
 
