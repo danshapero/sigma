@@ -11,7 +11,7 @@ use ll_graphs
 implicit none
 
 private
-public :: sparse_matrix_sum, sparse_matrix_product
+public :: sparse_matrix_sum, sparse_matrix_product, PtAP
 
 contains
 
@@ -420,12 +420,11 @@ end subroutine sparse_matrix_product_C
 
 
 
-
 !--------------------------------------------------------------------------!
 subroutine PtAP(B, A, P)                                                   !
 !--------------------------------------------------------------------------!
 ! This procedure computes the congruent product                            !
-!     B = P^T * A * P                                                      !
+!     B = P^t * A * P                                                      !
 ! of the sparse matrices A, P. This operation is common in multigrid and   !
 ! domain-decomposition methods. It is assumed that the matrix `P` is in a  !
 ! format for which getting a matrix row can done quickly, otherwise this   !
@@ -450,13 +449,13 @@ subroutine PtAP(B, A, P)                                                   !
 
     ! Check that all matrices have the right dimensions
     if (A%nrow /= A%ncol) then
-        print *, "Cannot perform operation B = P^T * A * P for a non-"
+        print *, "Cannot perform operation B = P^t * A * P for a non-"
         print *, "square matrix A!"
         call exit(1)
     endif
 
     if (A%ncol /= P%nrow) then
-        print *, "Dimension mismatch in operation B = P^T * A * P."
+        print *, "Dimension mismatch in operation B = P^t * A * P."
         print *, "Dimension of A:", A%nrow, A%ncol
         print *, "Dimension of P:", P%nrow, P%ncol
         call exit(1)

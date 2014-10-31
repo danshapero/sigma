@@ -12,7 +12,7 @@ use cs_matrices
 use ellpack_matrices
 use sparse_matrix_composites
 use sparse_matrix_factory
-use sparse_matrix_algebra, only: sparse_matrix_sum, sparse_matrix_product
+use sparse_matrix_algebra
 
 
 

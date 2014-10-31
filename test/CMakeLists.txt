@@ -10,6 +10,7 @@ matrix_test_copy.f90
 matrix_test_query_slice_speed.f90
 matrix_test_sum.f90
 matrix_test_product.f90
+matrix_test_ptap.f90
 matrix_test_strategy.f90
 matrix_test_composite.f90
 linear_operator_test_algebra.f90
