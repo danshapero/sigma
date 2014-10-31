@@ -46,6 +46,7 @@ contains
     procedure :: get_value => ellpack_matrix_get_value
     procedure :: get_row_degree    => ellpack_matrix_get_row_degree
     procedure :: get_column_degree => ellpack_matrix_get_column_degree
+    procedure :: get_max_row_degree => ellpack_matrix_get_max_row_degree
     procedure :: get_row    => ellpack_matrix_get_row
     procedure :: get_column => ellpack_matrix_get_column
 
@@ -259,6 +260,18 @@ function ellpack_matrix_get_column_degree(A, k) result(d)                  !
     d = get_degree_discontiguous(A%g, k)
 
 end function ellpack_matrix_get_column_degree
+
+
+
+!--------------------------------------------------------------------------!
+function ellpack_matrix_get_max_row_degree(A) result(d)                    !
+!--------------------------------------------------------------------------!
+    class(ellpack_matrix), intent(in) :: A
+    integer :: d
+
+    d = A%g%get_max_degree()
+
+end function ellpack_matrix_get_max_row_degree
 
 
 

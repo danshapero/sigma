@@ -75,6 +75,9 @@ contains
     procedure(sparse_mat_get_degree_ifc), deferred :: get_column_degree
     ! Return the number of non-zero entries in a given row/column
 
+    procedure :: get_max_row_degree
+    procedure :: get_max_column_degree
+
     procedure(sparse_mat_get_slice_ifc), deferred :: get_row
     procedure(sparse_mat_get_slice_ifc), deferred :: get_column
     ! Return all the indices of the non-zero entries in a given row/column
@@ -306,6 +309,49 @@ subroutine set_sparse_matrix_dimensions(A, nrow, ncol)                     !
     call A%add_reference()
 
 end subroutine set_sparse_matrix_dimensions
+
+
+
+
+!==========================================================================!
+!==== Accessors                                                        ====!
+!==========================================================================!
+
+!--------------------------------------------------------------------------!
+function get_max_row_degree(A) result(d)                                   !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix_interface), intent(in) :: A
+    integer :: d
+    ! local variables
+    integer :: i
+
+    d = 0
+
+    do i = 1, A%nrow
+        d = max(d, A%get_row_degree(i))
+    enddo
+
+end function get_max_row_degree
+
+
+
+!--------------------------------------------------------------------------!
+function get_max_column_degree(A) result(d)                                !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix_interface), intent(in) :: A
+    integer :: d
+    ! local variables
+    integer :: j
+
+    d = 0
+
+    do j = 1, A%ncol
+        d = max(d, A%get_column_degree(j))
+    enddo
+
+end function get_max_column_degree
 
 
 

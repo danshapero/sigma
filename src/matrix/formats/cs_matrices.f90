@@ -120,6 +120,7 @@ contains
     ! Accessors
     !-----------
     procedure :: get_value => csr_matrix_get_value
+    procedure :: get_max_row_degree => csr_matrix_get_max_row_degree
     procedure, nopass :: row_deg_impl => get_degree_contiguous
     procedure, nopass :: col_deg_impl => get_degree_discontiguous
     procedure, nopass :: get_row_impl => get_slice_contiguous
@@ -163,6 +164,7 @@ contains
     ! Accessors
     !-----------
     procedure :: get_value => csc_matrix_get_value
+    procedure :: get_max_column_degree => csc_matrix_get_max_column_degree
     procedure, nopass :: row_deg_impl => get_degree_discontiguous
     procedure, nopass :: col_deg_impl => get_degree_contiguous
     procedure, nopass :: get_row_impl => get_slice_discontiguous
@@ -727,6 +729,30 @@ function csc_matrix_get_value(A, i, j) result(z)                           !
     enddo
 
 end function csc_matrix_get_value
+
+
+
+!--------------------------------------------------------------------------!
+function csr_matrix_get_max_row_degree(A) result(d)                        !
+!--------------------------------------------------------------------------!
+    class(csr_matrix), intent(in) :: A
+    integer :: d
+
+    d = A%g%get_max_degree()
+
+end function csr_matrix_get_max_row_degree
+
+
+
+!--------------------------------------------------------------------------!
+function csc_matrix_get_max_column_degree(A) result(d)                     !
+!--------------------------------------------------------------------------!
+    class(csc_matrix), intent(in) :: A
+    integer :: d
+
+    d = A%g%get_max_degree()
+
+end function csc_matrix_get_max_column_degree
 
 
 
