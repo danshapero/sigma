@@ -259,7 +259,7 @@ contains
         class(sparse_matrix_interface), intent(in) :: B, C
         ! local variables
         integer :: i, j, k, l, m, d
-        real(dp) :: Bik, Ckj
+        real(dp) :: B_ik, C_kj
         ! variables for getting matrix slices
         integer, allocatable :: nodes(:)
         real(dp), allocatable :: slice(:)
@@ -283,7 +283,7 @@ contains
                 ! For each edge (k, j) in `C`
                 k = edges(1, l)
                 j = edges(2, l)
-                Ckj = vals(l)
+                C_kj = vals(l)
 
                 ! Find all edges (i, k) in `B` and add B(i, k) * C(k, j)
                 ! to A(i, j)
@@ -292,9 +292,9 @@ contains
 
                 do m = 1, d
                     i = nodes(m)
-                    Bik = slice(m)
+                    B_ik = slice(m)
 
-                    call A%add_value(i, j, Bik * Ckj)
+                    call A%add_value(i, j, B_ik * C_kj)
                 enddo
             enddo
         enddo
@@ -375,7 +375,7 @@ contains
         class(sparse_matrix_interface), intent(in) :: B, C
         ! local variables
         integer :: i, j, k, l, m, d
-        real(dp) :: Bik, Ckj
+        real(dp) :: B_ik, C_kj
         ! variables for getting matrix slices
         integer, allocatable :: nodes(:)
         real(dp), allocatable :: slice(:)
@@ -399,7 +399,7 @@ contains
                 ! For each edge (i, k) in `B`
                 i = edges(1, l)
                 k = edges(2, l)
-                Bik = vals(l)
+                B_ik = vals(l)
 
                 ! Find all edges (k, j) in `C` and add B(i, k) * C(k, j)
                 ! to A(i, j)
@@ -407,9 +407,9 @@ contains
                 d = C%get_row_degree(k)
                 do m = 1, d
                     j = nodes(m)
-                    Ckj = slice(m)
+                    C_kj = slice(m)
 
-                    call A%add_value(i, j, Bik * Ckj)
+                    call A%add_value(i, j, B_ik * C_kj)
                 enddo
             enddo
         enddo
@@ -435,7 +435,7 @@ subroutine PtAP(B, A, P)                                                   !
     class(sparse_matrix_interface), intent(in) :: A, P
     ! local variables
     integer :: i, j, k, l, m, d
-    real(dp) :: Akl, Pki, Plj
+    real(dp) :: A_kl, P_ki, P_lj
     ! variables for getting row slices from P
     integer :: n1, n2, d1, d2
     integer, allocatable :: nodes1(:), nodes2(:)
@@ -512,7 +512,7 @@ subroutine PtAP(B, A, P)                                                   !
         do m = 1, num_returned
             k = edges(1, m)
             l = edges(2, m)
-            Akl = vals(m)
+            A_kl = vals(m)
 
             d1 = P%get_row_degree(k)
             call P%get_row(nodes1, slice1, k)
@@ -522,13 +522,13 @@ subroutine PtAP(B, A, P)                                                   !
 
             do n1 = 1, d1
                 i = nodes1(n1)
-                Pki = slice1(n1)
+                P_ki = slice1(n1)
 
                 do n2 = 1, d2
                     j = nodes2(n2)
-                    Plj = slice2(n2)
+                    P_lj = slice2(n2)
 
-                    call B%add(i, j, Pki * Akl * Plj)
+                    call B%add(i, j, P_ki * A_kl * P_lj)
                 enddo
             enddo
         enddo
@@ -552,7 +552,7 @@ subroutine RARt(B, A, R)                                                   !
     class(sparse_matrix_interface), intent(in) :: A, R
     ! local variables
     integer :: i, j, k, l, m, d
-    real(dp) :: Akl, Rik, Rjl
+    real(dp) :: A_kl, R_ik, R_jl
     ! variables for getting row slices from P
     integer :: n1, n2, d1, d2
     integer, allocatable :: nodes1(:), nodes2(:)
@@ -629,7 +629,7 @@ subroutine RARt(B, A, R)                                                   !
         do m = 1, num_returned
             k = edges(1, m)
             l = edges(2, m)
-            Akl = vals(m)
+            A_kl = vals(m)
 
             d1 = R%get_column_degree(k)
             call R%get_column(nodes1, slice1, k)
@@ -639,13 +639,13 @@ subroutine RARt(B, A, R)                                                   !
 
             do n1 = 1, d1
                 i = nodes1(n1)
-                Rik = slice1(n1)
+                R_ik = slice1(n1)
 
                 do n2 = 1, d2
                     j = nodes2(n2)
-                    Rjl = slice2(n2)
+                    R_jl = slice2(n2)
 
-                    call B%add(i, j, Rik * Akl * Rjl)
+                    call B%add(i, j, R_ik * A_kl * R_jl)
                 enddo
             enddo
         enddo
