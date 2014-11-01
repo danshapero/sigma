@@ -178,7 +178,7 @@ implicit none
 
     misfit = maxval(dabs( BD - matmul(transpose(PD), matmul(AD, PD)) ))
 
-    if (misfit > 1.0e-15) then
+    if (misfit > 1.0e-14) then
         print *, "Computing congruent product B = P^t * A * P failed."
         print *, "Misfit:", misfit
         call exit(1)
@@ -219,7 +219,7 @@ implicit none
 
     misfit = maxval(dabs( BD - matmul(RD, matmul(AD, transpose(RD))) ))
 
-    if (misfit > 1.0e-15) then
+    if (misfit > 1.0e-14) then
         print *, "Computing congruent product B = R * A * R^t failed."
         print *, "Misfit:", misfit
         call exit(1)
