@@ -13,8 +13,8 @@ implicit none
     type(ll_graph) :: g, h
 
     ! sparse and dense matrices
-    class(sparse_matrix_interface), pointer :: A, B, P
-    real(dp), allocatable :: AD(:,:), BD(:,:), PD(:,:)
+    class(sparse_matrix_interface), pointer :: A, B, P, R
+    real(dp), allocatable :: AD(:,:), BD(:,:), PD(:,:), RD(:,:)
 
     ! indices
     integer :: i, j, k, l, n, nn, nnc
@@ -176,9 +176,7 @@ implicit none
     call P%to_dense_matrix(PD)
     call B%to_dense_matrix(BD)
 
-
     misfit = maxval(dabs( BD - matmul(transpose(PD), matmul(AD, PD)) ))
-
 
     if (misfit > 1.0e-15) then
         print *, "Computing congruent product B = P^t * A * P failed."
@@ -187,12 +185,62 @@ implicit none
     endif
 
 
+
+    !----------------------------------------------------------------------!
+    ! Compute the congruent product B = R * A * R^t                        !
+    !----------------------------------------------------------------------!
+
+    allocate(csc_matrix :: R)
+    call R%set_dimensions(nnc, nn)
+    call R%copy_matrix(P, trans = .true.)
+
+    call B%destroy()
+    call RARt(B, A, R)
+
+    if (verbose) then
+        print *, "o Done computing product R * A * R^t."
+        print *, "    Number of vertices:", B%nrow, B%ncol
+        print *, "    Number of edges:   ", B%get_nnz()
+        print *, "    Max degree:        ", B%get_max_column_degree()
+    endif
+
+
+
+    !----------------------------------------------------------------------!
+    ! Check that computing the congruent product worked                    !
+    !----------------------------------------------------------------------!
+
+    allocate(RD(nnc, nn))
+    RD = 0.0_dp
+    call R%to_dense_matrix(RD)
+
+    BD = 0.0_dp
+    call B%to_dense_matrix(BD)
+
+    misfit = maxval(dabs( BD - matmul(RD, matmul(AD, transpose(RD))) ))
+
+    if (misfit > 1.0e-15) then
+        print *, "Computing congruent product B = R * A * R^t failed."
+        print *, "Misfit:", misfit
+        call exit(1)
+    endif
+
+
+
+    !----------------------------------------------------------------------!
+    ! Cleanup                                                              !
+    !----------------------------------------------------------------------!
+
+    if (verbose) print *, "o All done! Congruent product passes test."
+
     call A%destroy()
     call P%destroy()
+    call R%destroy()
     call B%destroy()
 
     deallocate(A)
     deallocate(P)
+    deallocate(R)
     deallocate(B)
 
 

@@ -11,7 +11,7 @@ use ll_graphs
 implicit none
 
 private
-public :: sparse_matrix_sum, sparse_matrix_product, PtAP
+public :: sparse_matrix_sum, sparse_matrix_product, PtAP, RARt
 
 contains
 
@@ -535,6 +535,123 @@ subroutine PtAP(B, A, P)                                                   !
     enddo
 
 end subroutine PtAP
+
+
+
+!--------------------------------------------------------------------------!
+subroutine RARt(B, A, R)                                                   !
+!--------------------------------------------------------------------------!
+! This procedure computes the congruent product                            !
+!     B = R * A * R^t                                                      !
+! of the sparse matrices A, R. This operation is common in multigrid and   !
+! domain-decomposition methods. It is assumed that the matrix `R` is in a  !
+! format for which getting a matrix column can done quickly, otherwise     !
+! this operation will be very slow.                                        !
+!--------------------------------------------------------------------------!
+    class(sparse_matrix_interface), intent(inout) :: B
+    class(sparse_matrix_interface), intent(in) :: A, R
+    ! local variables
+    integer :: i, j, k, l, m, d
+    real(dp) :: Akl, Rik, Rjl
+    ! variables for getting row slices from P
+    integer :: n1, n2, d1, d2
+    integer, allocatable :: nodes1(:), nodes2(:)
+    real(dp), allocatable :: slice1(:), slice2(:)
+    ! variables for iterating through the values of A
+    type(graph_edge_cursor) :: cursor
+    integer :: num_returned, edges(2, batch_size)
+    real(dp) :: vals(batch_size)
+    ! graph for the connectivity structure of B
+    type(ll_graph) :: g
+
+    ! Check that all matrices have the right dimensions
+    if (A%nrow /= A%ncol) then
+        print *, "Cannot perform operation B = P^t * A * P for a non-"
+        print *, "square matrix A!"
+        call exit(1)
+    endif
+
+    if (R%ncol /= A%nrow) then
+        print *, "Dimension mismatch in operation B = R * A * R^t."
+        print *, "Dimension of A:", A%nrow, A%ncol
+        print *, "Dimension of P:", R%nrow, R%ncol
+        call exit(1)
+    endif
+
+    d = R%get_max_column_degree()
+    allocate(nodes1(d), nodes2(d), slice1(d), slice2(d))
+
+    call g%init(R%nrow, R%nrow)
+
+    ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -!
+    ! First, build the connectivity graph of B by iterating over all the   !
+    ! edges of `A` and using the relation                                  !
+    !     B_ij = sum_{k, l} R_ik * A_kl * R_jl                             !
+    !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - !
+    cursor = A%make_cursor()
+    do while (.not. cursor%done())
+        call A%get_edges(edges, cursor, batch_size, num_returned)
+
+        do m = 1, num_returned
+            k = edges(1, m)
+            l = edges(2, m)
+
+            d1 = R%get_column_degree(k)
+            call R%get_column(nodes1, slice1, k)
+
+            d2 = R%get_column_degree(l)
+            call R%get_column(nodes2, slice2, l)
+
+            do n1 = 1, d1
+                i = nodes1(n1)
+
+                do n2 = 1, d2
+                    j = nodes2(n2)
+                    call g%add_edge(i, j)
+                enddo
+            enddo
+        enddo
+    enddo
+
+    call B%init(R%nrow, R%nrow, g)
+    call B%zero()
+
+    call g%destroy()
+
+
+    ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -!
+    ! Fill the entries of B                                                !
+    !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - !
+    cursor = A%make_cursor()
+    do while (.not. cursor%done())
+        call A%get_entries(edges, vals, cursor, batch_size, num_returned)
+
+        do m = 1, num_returned
+            k = edges(1, m)
+            l = edges(2, m)
+            Akl = vals(m)
+
+            d1 = R%get_column_degree(k)
+            call R%get_column(nodes1, slice1, k)
+
+            d2 = R%get_column_degree(l)
+            call R%get_column(nodes2, slice2, l)
+
+            do n1 = 1, d1
+                i = nodes1(n1)
+                Rik = slice1(n1)
+
+                do n2 = 1, d2
+                    j = nodes2(n2)
+                    Rjl = slice2(n2)
+
+                    call B%add(i, j, Rik * Akl * Rjl)
+                enddo
+            enddo
+        enddo
+    enddo
+
+end subroutine RARt
 
 
 
