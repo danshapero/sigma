@@ -19,11 +19,11 @@ contains
 
 
 !--------------------------------------------------------------------------!
-subroutine breadth_first_search(g, p)                                      !
+subroutine breadth_first_search(p, g)                                      !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(graph_interface), intent(in) :: g
     integer, intent(out) :: p(:)
+    class(graph_interface), intent(in) :: g
     ! local variables
     integer :: i, j, k, d, num
     integer, allocatable :: neighbors(:)
@@ -80,11 +80,11 @@ end subroutine breadth_first_search
 
 
 !--------------------------------------------------------------------------!
-subroutine greedy_coloring(g, colors)                                      !
+subroutine greedy_coloring(colors, g)                                      !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(graph_interface), intent(in) :: g
     integer, intent(out) :: colors(:)
+    class(graph_interface), intent(in) :: g
     ! local variables
     integer :: i, j, k, d, used_colors, color, min_occupancy
     integer, allocatable , dimension(:) :: neighbors, neighbor_colors, &
@@ -164,11 +164,11 @@ end subroutine greedy_coloring
 
 
 !--------------------------------------------------------------------------!
-subroutine greedy_color_ordering(g, p, ptrs, num_colors)                   !
+subroutine greedy_color_ordering(p, ptrs, num_colors, g)                   !
 !--------------------------------------------------------------------------!
     ! input/output variables
-    class(graph_interface), intent(in) :: g
     integer, intent(out) :: p(:), ptrs(:), num_colors
+    class(graph_interface), intent(in) :: g
     ! local variables
     integer :: i, k, d, color
     integer, allocatable :: added(:)
@@ -179,7 +179,7 @@ subroutine greedy_color_ordering(g, p, ptrs, num_colors)                   !
     allocate(added(d + 1))
 
     ! Assign colors to all the nodes and put them in the array p
-    call greedy_coloring(g, p)
+    call greedy_coloring(p, g)
 
     ! Find the total number of colors used
     num_colors = maxval(p)
