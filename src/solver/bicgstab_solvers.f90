@@ -12,6 +12,7 @@ type, extends(linear_solver) :: bicgstab_solver                            !
     ! scratch vectors and scalars for BiCG algorithm
     real(dp), allocatable :: p(:), q(:), r(:), r0(:), v(:), s(:), t(:), z(:)
     real(dp) :: alpha, beta, omega, rho, rho_old
+    integer :: iterations
 
     ! parameters determining the behavior of the solver
     real(dp) :: tolerance
@@ -66,6 +67,9 @@ subroutine bicgstab_setup(solver,A)                                        !
     ! Set the matrix dimension for this solver
     nn = A%nrow
     solver%nn = nn
+
+    ! Set the iteration count to 0
+    solver%iterations = 0
 
     ! If the solver parameters have not been set, call the set_params
     ! subroutine to set them all to defaults
@@ -164,6 +168,8 @@ subroutine bicgstab_solve(solver,A,x,b)                                    !
 
         res2 = dot_product(r,r)
         rho_old = rho
+
+        solver%iterations = solver%iterations + 1
     enddo
 
     end associate
@@ -222,6 +228,8 @@ subroutine bicgstab_solve_pc(solver,A,x,b,pc)                              !
 
         rho_old = rho
         res2 = dot_product(r,r)
+
+        solver%iterations = solver%iterations + 1
     enddo
 
     end associate
