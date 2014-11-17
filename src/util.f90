@@ -103,6 +103,27 @@ end subroutine
 
 
 
+!--------------------------------------------------------------------------!
+function c_string_to_f_string(c_str) result(f_str)                         !
+!--------------------------------------------------------------------------!
+    use, intrinsic :: iso_c_binding, only: c_char, c_null_char
+    ! input/output variables
+    character(kind=c_char, len=1), intent(in) :: c_str(*)
+    character(len=:), allocatable :: f_str
+    ! local variables
+    integer :: i, nchars
+
+    i = 1
+    do while(c_str(i) /= c_null_char)
+        i = i + 1
+    enddo
+    nchars = i - 1
+    allocate(character(len=nchars) :: f_str)
+    f_str = transfer(c_str(1:nchars), f_str)
+
+end function c_string_to_f_string
+
+
 
 
 
