@@ -125,6 +125,9 @@ contains
     procedure(sparse_mat_zero_ifc), deferred :: zero
     ! Zero out all matrix entries
 
+    procedure(sparse_mat_scalar_multiply_ifc), deferred :: scalar_multiply
+    ! Scale every matrix entry by a scalar
+
     procedure(sparse_mat_permute_ifc), deferred :: left_permute
     ! Permute the rows of a matrix
 
@@ -260,6 +263,12 @@ abstract interface                                                         !
         import :: sparse_matrix_interface
         class(sparse_matrix_interface), intent(inout) :: A
     end subroutine sparse_mat_zero_ifc
+
+    subroutine sparse_mat_scalar_multiply_ifc(A, alpha)
+        import :: sparse_matrix_interface, dp
+        class(sparse_matrix_interface), intent(inout) :: A
+        real(dp), intent(in) :: alpha
+    end subroutine sparse_mat_scalar_multiply_ifc
 
     subroutine sparse_mat_permute_ifc(A, p)
         import :: sparse_matrix_interface

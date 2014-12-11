@@ -63,6 +63,7 @@ contains
     procedure :: set_value => default_matrix_set_value
     procedure :: add_value => default_matrix_add_value
     procedure :: zero => default_matrix_zero
+    procedure :: scalar_multiply => default_matrix_scalar_multiply
     procedure :: left_permute => default_matrix_left_permute
     procedure :: right_permute => default_matrix_right_permute
 
@@ -513,6 +514,18 @@ subroutine default_matrix_zero(A)                                          !
     A%val = 0.0_dp
 
 end subroutine default_matrix_zero
+
+
+
+!--------------------------------------------------------------------------!
+subroutine default_matrix_scalar_multiply(A, alpha)                        !
+!--------------------------------------------------------------------------!
+    class(default_matrix), intent(inout) :: A
+    real(dp), intent(in) :: alpha
+
+    A%val = alpha * A%val
+
+end subroutine default_matrix_scalar_multiply
 
 
 

@@ -71,6 +71,7 @@ contains
     ! Mutators
     !----------
     procedure :: zero => cs_matrix_zero
+    procedure :: scalar_multiply => cs_matrix_scalar_multiply
     procedure :: left_permute => cs_matrix_left_permute
     procedure :: right_permute => cs_matrix_right_permute
 
@@ -451,6 +452,18 @@ subroutine cs_matrix_zero(A)                                               !
     A%val = 0.0_dp
 
 end subroutine cs_matrix_zero
+
+
+
+!--------------------------------------------------------------------------!
+subroutine cs_matrix_scalar_multiply(A, alpha)                             !
+!--------------------------------------------------------------------------!
+    class(cs_matrix), intent(inout) :: A
+    real(dp), intent(in) :: alpha
+
+    A%val = alpha * A%val
+
+end subroutine cs_matrix_scalar_multiply
 
 
 

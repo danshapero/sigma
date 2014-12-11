@@ -67,6 +67,7 @@ contains
     procedure :: set_multiple_values => ellpack_matrix_set_multiple_values
     procedure :: add_multiple_values => ellpack_matrix_add_multiple_values
     procedure :: zero => ellpack_matrix_zero
+    procedure :: scalar_multiply => ellpack_matrix_scalar_multiply
     procedure :: left_permute  => ellpack_matrix_left_permute
     procedure :: right_permute => ellpack_matrix_right_permute
 
@@ -581,6 +582,18 @@ subroutine ellpack_matrix_zero(A)                                          !
     A%val = 0.0_dp
 
 end subroutine ellpack_matrix_zero
+
+
+
+!--------------------------------------------------------------------------!
+subroutine ellpack_matrix_scalar_multiply(A, alpha)                        !
+!--------------------------------------------------------------------------!
+    class(ellpack_matrix), intent(inout) :: A
+    real(dp), intent(in) :: alpha
+
+    A%val = alpha * A%val
+
+end subroutine ellpack_matrix_scalar_multiply
 
 
 

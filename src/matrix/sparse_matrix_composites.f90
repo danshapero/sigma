@@ -122,6 +122,7 @@ contains
     ! global indexing
 
     procedure :: zero                => composite_mat_zero
+    procedure :: scalar_multiply     => composite_mat_scalar_multiply
     procedure :: left_permute        => composite_mat_left_permute
     procedure :: right_permute       => composite_mat_right_permute
 
@@ -968,6 +969,27 @@ subroutine composite_mat_zero(A)                                           !
     enddo
 
 end subroutine composite_mat_zero
+
+
+
+!--------------------------------------------------------------------------!
+subroutine composite_mat_scalar_multiply(A, alpha)                         !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix), intent(inout) :: A
+    real(dp), intent(in) :: alpha
+    ! local variables
+    integer :: it, jt
+    class(sparse_matrix_interface), pointer :: C
+
+    do jt = 1, A%num_col_mats
+        do it = 1, A%num_row_mats
+            C => A%sub_mats(it, jt)%mat
+            call C%scalar_multiply(alpha)
+        enddo
+    enddo
+
+end subroutine composite_mat_scalar_multiply
 
 
 
