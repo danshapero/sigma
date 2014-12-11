@@ -113,8 +113,13 @@ contains
     procedure :: add_multiple_values => sparse_mat_add_multiple_values
     ! Set/add values to dense submatrices
 
+    procedure :: add_sparse_matrix => sparse_mat_add_sparse_matrix
+    ! Add a multiple of another sparse matrix to the calling matrix; the
+    ! matrix to add should be a sub-matrix of the caller, otherwise this
+    ! operation will be slow
+
     generic :: set => set_value, set_multiple_values
-    generic :: add => add_value, add_multiple_values
+    generic :: add => add_value, add_multiple_values, add_sparse_matrix
     ! Generics for each of the mutators
 
     procedure(sparse_mat_zero_ifc), deferred :: zero
@@ -409,6 +414,41 @@ subroutine sparse_mat_add_multiple_values(A, is, js, B)                    !
     enddo
 
 end subroutine sparse_mat_add_multiple_values
+
+
+
+!--------------------------------------------------------------------------!
+subroutine sparse_mat_add_sparse_matrix(A, B, alpha)                       !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    class(sparse_matrix_interface), intent(inout) :: A
+    class(sparse_matrix_interface), intent(in) :: B
+    real(dp), intent(in), optional :: alpha
+    ! local variables
+    integer :: i, j, k
+    real(dp) :: beta, z
+    ! variables for iterating over the entries of `B`
+    integer :: num_returned, edges(2, batch_size)
+    real(dp) :: vals(batch_size)
+    type(graph_edge_cursor) :: cursor
+
+    beta = 1.0_dp
+    if (present(alpha)) beta = alpha
+
+    cursor = B%make_cursor()
+    do while (.not. cursor%done())
+        call B%get_entries(edges, vals, cursor, batch_size, num_returned)
+
+        do k = 1, num_returned
+            i = edges(1, k)
+            j = edges(2, k)
+
+            z = beta * vals(k)
+            call A%add_value(i, j, z)
+        enddo
+    enddo
+
+end subroutine sparse_mat_add_sparse_matrix
 
 
 
