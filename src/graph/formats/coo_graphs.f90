@@ -103,8 +103,6 @@ subroutine coo_graph_build(g, n, m, get_edges, make_cursor, trans)         !
     integer :: num_returned, edges(2, batch_size)
     type(graph_edge_cursor) :: cursor
 
-    call g%add_reference()
-
     ord = [1, 2]
     if (present(trans)) then
         if (trans) ord = [2, 1]
@@ -116,6 +114,9 @@ subroutine coo_graph_build(g, n, m, get_edges, make_cursor, trans)         !
     cursor = make_cursor()
 
     g%ne = cursor%last
+
+    call g%edges(1)%free()
+    call g%edges(2)%free()
 
     call g%edges(1)%init(capacity = g%ne + 16)
     call g%edges(2)%init(capacity = g%ne + 16)

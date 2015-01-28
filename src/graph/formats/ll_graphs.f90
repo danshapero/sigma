@@ -118,7 +118,20 @@ subroutine ll_graph_build(g, n, m, get_edges, make_cursor, trans)          !
         if (trans) ord = [2, 1]
     endif
 
-    call g%init(n, m)
+    g%n = n
+    g%m = m
+
+    if (allocated(g%lists)) then
+        do k = 1, size(g%lists)
+            call g%lists(k)%free()
+        enddo
+        deallocate(g%lists)
+        allocate(g%lists(n))
+    endif
+
+    do k = 1, n
+        call g%lists(k)%init(capacity = 4, min_capacity = 2)
+    enddo
 
     cursor = make_cursor()
 

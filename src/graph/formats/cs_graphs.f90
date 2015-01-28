@@ -120,8 +120,6 @@ subroutine cs_graph_build(g, n, m, get_edges, make_cursor, trans)          !
     integer :: num_returned, edges(2, batch_size)
     type(graph_edge_cursor) :: cursor
 
-    call g%add_reference()
-
     ord = [1, 2]
     if (present(trans)) then
         if (trans) ord = [2, 1]
@@ -133,6 +131,10 @@ subroutine cs_graph_build(g, n, m, get_edges, make_cursor, trans)          !
     cursor = make_cursor()
 
     g%ne = cursor%last
+
+    ! If the graph is already populated, clear it
+    if (allocated(g%ptr)) deallocate(g%ptr)
+    if (allocated(g%node)) deallocate(g%node)
 
     allocate(g%ptr(g%n + 1), g%node(g%ne))
 

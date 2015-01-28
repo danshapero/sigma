@@ -26,10 +26,12 @@ contains
     ! Constructors
     !--------------
     procedure(init_graph_ifc), deferred :: init
-    ! Initialize an empty graph
+    ! Initialize an empty graph.
+    ! Post-condition: reference count of 1.
 
     procedure(build_graph_ifc), deferred :: build
-    ! Initialize a graph and fill its values from an iterator callback
+    ! Fill an initialized graph from an iterator callback.
+    ! Contract: does not alter reference count.
 
     procedure :: copy => copy_graph
     ! Copy the connectivity structure of another graph, which can be of a
@@ -288,6 +290,7 @@ subroutine copy_graph(g, h, trans)                                         !
     nv = [h%n, h%m]
     if (tr) nv = [h%m, h%n]
 
+    call g%init(nv(1), nv(2))
     call g%build(nv(1), nv(2), iterator, get_cursor, trans)
 
 contains

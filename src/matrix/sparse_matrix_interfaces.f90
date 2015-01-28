@@ -709,6 +709,7 @@ subroutine build_graph_from_matrix(g, B, trans)                            !
         if (trans) nv = [B%ncol, B%nrow]
     endif
 
+    call g%init(nv(1), nv(2))
     call g%build(nv(1), nv(2), get_edges, make_cursor, trans)
 
 contains

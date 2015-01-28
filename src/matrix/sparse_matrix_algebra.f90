@@ -183,6 +183,7 @@ subroutine sparse_matrix_product(A, B, C)                                  !
         call CC%set_dimensions(B%nrow, C%ncol)
         call CC%copy_matrix(C)
         call sparse_matrix_product_C(A, B, CC)
+        call CC%destroy()
     endif
 
 end subroutine sparse_matrix_product

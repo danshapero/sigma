@@ -116,8 +116,6 @@ subroutine ellpack_graph_build(g, n, m, get_edges, make_cursor, trans)     !
     integer :: num_returned, edges(2, batch_size)
     type(graph_edge_cursor) :: cursor
 
-    call g%add_reference()
-
     ord = [1, 2]
     if (present(trans)) then
         if (trans) ord = [2, 1]
@@ -130,6 +128,7 @@ subroutine ellpack_graph_build(g, n, m, get_edges, make_cursor, trans)     !
 
     g%ne = cursor%last
 
+    if (allocated(g%degrees)) deallocate(g%degrees)
     allocate(g%degrees(g%n))
     g%degrees = 0
 
@@ -143,6 +142,8 @@ subroutine ellpack_graph_build(g, n, m, get_edges, make_cursor, trans)     !
     enddo
 
     g%max_d = maxval(g%degrees)
+
+    if (allocated(g%node)) deallocate(g%node)
     allocate(g%node(g%max_d, g%n))
     g%node = 0
 
