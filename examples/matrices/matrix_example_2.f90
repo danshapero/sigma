@@ -132,7 +132,7 @@ implicit none
     !----------------------------------------------------------------------!
     ! Call the eigensolver                                                 !
     !----------------------------------------------------------------------!
-    call eigensolve(A, lambda, V, n)
+    call eigensolve(A, lambda, V)
     write(*,30) lambda(2), lambda(3), lambda(4)
 30  format('Three smallest eigenvalues of graph: ',F9.6,', ',F9.6,', ',F9.6)
     write(*,40) (lambda(3) - lambda(2)) / lambda(2)
