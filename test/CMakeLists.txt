@@ -18,6 +18,7 @@ solver_test_diffusion_1d.f90
 solver_test_advection_diffusion_1d.f90
 solver_test_jacobi.f90
 solver_test_incomplete_cholesky.f90
+eigensolver_test.f90
 #test/matrix_tests_4.f90
 #test/matrix_tests_5.f90
 #test/wrapper_tests.c
