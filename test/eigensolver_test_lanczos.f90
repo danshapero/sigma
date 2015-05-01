@@ -1,5 +1,5 @@
 !--------------------------------------------------------------------------!
-program eigensolver_test                                                   !
+program eigensolver_test_lanczos                                           !
 !--------------------------------------------------------------------------!
 ! This program tests the correctness of the implementation of the Lanczos  !
 ! algorithm and approximate eigensolvers.                                  !
@@ -153,6 +153,8 @@ implicit none
     do i = 1, nq
         Q(i, i) = Q(i, i) - 1.0_dp
     enddo
+
+    ! Compute the Frobenius norm of `Q`
     Q = matmul(transpose(Q), Q)
 
     err = 0.0_dp
@@ -171,4 +173,4 @@ implicit none
         print *, "o Lanczos vectors are orthogonal to machine precision!"
     endif
 
-end program eigensolver_test
+end program eigensolver_test_lanczos
