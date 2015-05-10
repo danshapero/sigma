@@ -26,7 +26,7 @@ implicit none
     integer, allocatable :: nodes(:)
 
     ! Lanczos vectors and tridiagonal matrix
-    real(dp), allocatable :: V(:,:), T(:,:), Q(:,:)
+    real(dp), allocatable :: V(:,:), alpha(:), beta(:), Q(:,:)
 
     ! random numbers
     real(dp) :: w, z, p
@@ -120,8 +120,8 @@ implicit none
     !----------------------------------------------------------------------!
     nq = int(dsqrt(1.0_dp * nn))
 
-    allocate(T(3, nq), V(nn, nq), Q(nq, nq), x(nn), y(nn))
-    call lanczos(A, T, V)
+    allocate(alpha(nq), beta(nq), V(nn, nq), Q(nq, nq), x(nn), y(nn))
+    call lanczos(A, alpha, beta, V)
 
     if (verbose) then
         print *, "o Done executing Lanczos algorithm."
@@ -129,7 +129,7 @@ implicit none
 
     do i = 2, nq - 1
         call A%matvec(V(:, i), x)
-        y = T(2, i) * V(:, i) + T(1, i-1) * V(:, i-1) + T(3, i) * V(:, i+1)
+        y = alpha(i) * V(:, i) + beta(i) * V(:, i-1) + beta(i+1) * V(:, i+1)
 
         err = dsqrt(sum((y - x) * (y - x)) / sum(x * x))
 

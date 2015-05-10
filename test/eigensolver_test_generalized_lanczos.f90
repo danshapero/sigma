@@ -17,20 +17,24 @@ implicit none
     type(sparse_matrix) :: A, B
 
     ! element stiffness/mass matrices
-    real(dp) :: AE(3, 3), BE(3, 3), area
+    real(dp) :: AE(3, 3), BE(3, 3), area, dx, dy
     integer :: elem(3)
 
     ! ints
     integer :: i, j, k, l, ny, nx, nn, nq
 
     ! Lanczos vectors and tridiagonal matrix
-    real(dp), allocatable :: U(:,:), V(:,:), T(:,:), Q(:,:)
+    real(dp), allocatable :: U(:,:), V(:,:), alpha(:), beta(:), Q(:,:)
 
     ! vectors
     real(dp), allocatable :: w(:), z(:)
 
     ! approximation error
     real(dp) :: err
+
+    ! eigenstuff
+    real(dp), allocatable :: lambda(:), work(:)
+    integer :: info
 
     ! command-line argument parsing
     character(len=16) :: arg
@@ -56,9 +60,12 @@ implicit none
     ! Make a graph representing a regular grid                             !
     !----------------------------------------------------------------------!
 
-    nx = 48
+    nx = 32
     ny = 32
     nn = ny * nx
+
+    dx = 1.d0 / nx
+    dy = 1.d0 / ny
 
     call g%init(nn)
 
@@ -102,19 +109,23 @@ implicit none
     call A%zero()
     call B%zero()
 
-    area = 0.5d0
+    area = 0.5d0 * dx * dy
     BE = area / 12.0_dp
     do k = 1, 3
         BE(k, k) = area / 6.0_dp
     enddo
 
-    !    x
+    ! -------------------
+    !
+    !    3
     !   /|
     !  / |
-    ! x--x
-    AE(:, 1) = [+area,  -area, 0.0_dp]
-    AE(:, 2) = [-area,  2*area, -area]
-    AE(:, 3) = [0.0_dp, -area,  +area]
+    ! 1--2
+    !
+    ! -------------------
+    AE(:, 1) = [+area/dx**2,  -area/dx**2,                0.0_dp    ]
+    AE(:, 2) = [-area/dx**2,   area*(1/dx**2 + 1/dy**2), -area/dy**2]
+    AE(:, 3) = [0.0_dp,       -area/dy**2,               +area/dy**2]
 
     do i = 1, ny
         do j = 1, nx
@@ -125,7 +136,9 @@ implicit none
             call A%add(elem, elem, AE)
             call B%add(elem, elem, BE)
 
+            elem(1) = indx(mod(i, ny) + 1, mod(j, nx) + 1)
             elem(2) = indx(mod(i, ny) + 1, j)
+            elem(3) = indx(i, j)
 
             call A%add(elem, elem, AE)
             call B%add(elem, elem, BE)
@@ -140,8 +153,16 @@ implicit none
     !----------------------------------------------------------------------!
     ! Perform a few steps of the generalized Lanczos process               !
     !----------------------------------------------------------------------!
-    nq = max(nx, ny)
-    allocate(T(3, nq), U(nn, nq), V(nn, nq), Q(nq, nq), w(nn), z(nn))
+    nq = nx + ny
+    allocate(alpha(nq), beta(nq), U(nn, nq), V(nn, nq), Q(nq, nq), w(nn), z(nn))
+    alpha = 0.0_dp
+    beta = 0.0_dp
+    U = 0.0_dp
+    V = 0.0_dp
+    Q = 0.0_dp
+    w = 0.0_dp
+    z = 0.0_dp
+
 
     ! `B` must have a solver; it plays the role in the generalized Lanczos
     ! algorithm that the preconditioner does in PCG.
@@ -149,7 +170,7 @@ implicit none
     ! if the underlying triangulation is nice enough.
     call B%set_solver(cg(1.0d-15))
 
-    call generalized_lanczos(A, B, T, V)
+    call generalized_lanczos(A, B, alpha, beta, V)
 
     if (verbose) then
         print *, "o Done executing Lanczos algorithm."
@@ -161,13 +182,14 @@ implicit none
 
     do i = 2, nq - 1
         call A%matvec(V(:, i), w)
-        z = T(2, i) * U(:, i) + T(1, i-1) * U(:, i-1) + T(3, i) * U(:, i+1)
+        z = alpha(i) * U(:, i) + beta(i) * U(:, i-1) + beta(i+1) * U(:, i+1)
 
         err = dsqrt(sum((w-z) * (w-z)) / sum(w * w))
 
         if (err > 1.0e-14) then
             print *, "Computing Lanczos vector failed!"
             print *, "Relative error in three-term recurrence:", err
+            call exit(1)
         endif
     enddo
 
@@ -194,14 +216,16 @@ implicit none
     enddo
     err = dsqrt(err) / nq
 
-    if (err > 1.0e-14) then
+    if (err > 1.0e-10) then
         print *, "Lanczos vectors are not B-orthogonal!"
         print *, "|| V^t * B * V - I ||_F = ", err
+        call exit(1)
     endif
 
     if (verbose) then
         print *, "o Lanczos vectors are B-orthogonal to machine precision!"
     endif
+
 
 contains
 
