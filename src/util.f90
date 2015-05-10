@@ -24,24 +24,55 @@ function order(list)                                                       !
     integer, intent(in) :: list(:)
     integer :: order(size(list))
     ! local variables
-    integer :: i,j,key,indx
+    integer :: i, j, key, indx
 
-    do i=1,size(list)
+    do i = 1, size(list)
         order(i) = i
     enddo
 
-    do i=2,size(list)
+    do i = 2, size(list)
         indx = order(i)
         key = list(indx)
-        do j=i-1,1,-1
-            if (list(order(j))<=key) exit
-            order(j+1) = order(j)
+        do j = i-1, 1, -1
+            if (list(order(j)) <= key) exit
+            order(j + 1) = order(j)
         enddo
-        order(j+1) = indx
+        order(j + 1) = indx
     enddo
 
 end function order
 
+
+
+!--------------------------------------------------------------------------!
+pure function member(list, i)                                              !
+!--------------------------------------------------------------------------!
+! Returns true if the sorted array `list` contains the integer `i`.        !
+!--------------------------------------------------------------------------!
+    ! input/output variables
+    integer, intent(in) :: list(:), i
+    logical :: member
+    ! local variables
+    integer :: k, m, n
+
+    member = .false.
+
+    m = 1
+    n = size(list)
+
+    do while (n - m >= 0)
+        k = (m + n) / 2
+        if (list(k) == i) then
+            member = .true.
+            exit
+        elseif (list(k) < i) then
+            m = k + 1
+        else
+            n = k - 1
+        endif
+    enddo
+
+end function member
 
 
 
@@ -100,10 +131,6 @@ subroutine init_seed()                                                     !
     deallocate(seed)
 
 end subroutine
-
-
-
-
 
 
 
